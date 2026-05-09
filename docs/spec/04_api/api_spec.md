@@ -1,0 +1,904 @@
+# API Specification — Shopping Memo
+
+**作成日**: 2026-05-09  
+**プロジェクト**: Shopping Memo  
+**目的**: REST API仕様の定義
+
+---
+
+## 概要
+
+### Base URL
+- **Development**: `http://localhost:3000/api/v1`
+- **Production**: `https://shopping-memo.vercel.app/api/v1`
+
+### 認証方式
+- **Type**: Bearer Token (JWT)
+- **Header**: `Authorization: Bearer <token>`
+- **Provider**: Supabase Auth
+
+### レスポンス形式
+- **Content-Type**: `application/json`
+- **文字コード**: UTF-8
+
+---
+
+## 共通仕様
+
+### 成功レスポンス
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Success message"
+}
+```
+
+### エラーレスポンス
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Error message",
+    "details": { ... }
+  }
+}
+```
+
+### HTTPステータスコード
+| コード | 意味 | 使用例 |
+|--------|------|--------|
+| 200 | OK | 成功（GET, PUT, PATCH） |
+| 201 | Created | リソース作成成功（POST） |
+| 204 | No Content | 削除成功（DELETE） |
+| 400 | Bad Request | リクエストパラメータ不正 |
+| 401 | Unauthorized | 認証失敗 |
+| 403 | Forbidden | 権限不足 |
+| 404 | Not Found | リソースが存在しない |
+| 409 | Conflict | リソース重複 |
+| 422 | Unprocessable Entity | バリデーションエラー |
+| 500 | Internal Server Error | サーバーエラー |
+
+---
+
+## 1. 認証API
+
+### 1.1 ユーザー登録
+
+**Endpoint**: `POST /auth/register`
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "display_name": "Tai"
+}
+```
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "display_name": "Tai",
+      "created_at": "2026-05-09T16:56:31.003Z"
+    }
+  },
+  "message": "Registration successful. Please check your email for verification."
+}
+```
+
+**Errors**:
+- `400`: Invalid email format
+- `409`: Email already exists
+- `422`: Password too weak
+
+---
+
+### 1.2 ログイン
+
+**Endpoint**: `POST /auth/login`
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "jwt-token",
+    "refresh_token": "refresh-token",
+    "expires_in": 3600,
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "display_name": "Tai"
+    }
+  }
+}
+```
+
+**Errors**:
+- `401`: Invalid credentials
+- `403`: Email not verified
+
+---
+
+### 1.3 ログアウト
+
+**Endpoint**: `POST /auth/logout`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+### 1.4 パスワードリセット
+
+**Endpoint**: `POST /auth/reset-password`
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Password reset email sent"
+}
+```
+
+---
+
+## 2. 料理API
+
+### 2.1 料理一覧取得
+
+**Endpoint**: `GET /dishes`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Query Parameters**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| category | string | No | - | カテゴリフィルタ（japanese/western/chinese/other） |
+| search | string | No | - | 料理名検索 |
+| sort | string | No | created_at | ソート（created_at/name） |
+| order | string | No | desc | 順序（asc/desc） |
+| limit | integer | No | 50 | 取得件数 |
+| offset | integer | No | 0 | オフセット |
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "dishes": [
+      {
+        "id": "uuid",
+        "name": "カレーライス",
+        "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+        "category": "japanese",
+        "created_at": "2026-05-09T16:56:31.003Z",
+        "updated_at": "2026-05-09T16:56:31.003Z"
+      }
+    ],
+    "total": 10,
+    "limit": 50,
+    "offset": 0
+  }
+}
+```
+
+**Errors**:
+- `401`: Unauthorized
+
+---
+
+### 2.2 料理詳細取得
+
+**Endpoint**: `GET /dishes/{dish_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "dish": {
+      "id": "uuid",
+      "name": "カレーライス",
+      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+      "category": "japanese",
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T16:56:31.003Z",
+      "usage_count": 5,
+      "last_used_at": "2026-05-01T10:00:00.000Z"
+    }
+  }
+}
+```
+
+**Errors**:
+- `401`: Unauthorized
+- `404`: Dish not found
+
+---
+
+### 2.3 料理登録
+
+**Endpoint**: `POST /dishes`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "name": "カレーライス",
+  "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+  "category": "japanese"
+}
+```
+
+**Validation**:
+- `name`: 必須、1〜100文字
+- `ingredients`: 任意、最大5000文字
+- `category`: 必須、Enum値（japanese/western/chinese/other）
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "dish": {
+      "id": "uuid",
+      "name": "カレーライス",
+      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+      "category": "japanese",
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T16:56:31.003Z"
+    }
+  },
+  "message": "Dish created successfully"
+}
+```
+
+**Errors**:
+- `400`: Invalid request body
+- `401`: Unauthorized
+- `422`: Validation error
+
+---
+
+### 2.4 料理更新
+
+**Endpoint**: `PUT /dishes/{dish_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "name": "カレーライス（辛口）",
+  "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー（辛口）",
+  "category": "japanese"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "dish": {
+      "id": "uuid",
+      "name": "カレーライス（辛口）",
+      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー（辛口）",
+      "category": "japanese",
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Dish updated successfully"
+}
+```
+
+**Errors**:
+- `401`: Unauthorized
+- `404`: Dish not found
+- `422`: Validation error
+
+---
+
+### 2.5 料理削除
+
+**Endpoint**: `DELETE /dishes/{dish_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (204):
+```
+No Content
+```
+
+**Errors**:
+- `401`: Unauthorized
+- `404`: Dish not found
+- `409`: Dish is used in active meal plan
+
+---
+
+## 3. 雑貨API
+
+### 3.1 雑貨一覧取得
+
+**Endpoint**: `GET /miscellaneous`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Query Parameters**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| category | string | No | - | カテゴリフィルタ（daily/consumable/other） |
+| search | string | No | - | 雑貨名検索 |
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "miscellaneous": [
+      {
+        "id": "uuid",
+        "name": "トイレットペーパー",
+        "category": "daily",
+        "created_at": "2026-05-09T16:56:31.003Z",
+        "updated_at": "2026-05-09T16:56:31.003Z"
+      }
+    ],
+    "total": 5
+  }
+}
+```
+
+---
+
+### 3.2 雑貨登録
+
+**Endpoint**: `POST /miscellaneous`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "name": "トイレットペーパー",
+  "category": "daily"
+}
+```
+
+**Validation**:
+- `name`: 必須、1〜100文字
+- `category`: 必須、Enum値（daily/consumable/other）
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "miscellaneous": {
+      "id": "uuid",
+      "name": "トイレットペーパー",
+      "category": "daily",
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T16:56:31.003Z"
+    }
+  },
+  "message": "Miscellaneous item created successfully"
+}
+```
+
+---
+
+### 3.3 雑貨更新
+
+**Endpoint**: `PUT /miscellaneous/{misc_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "name": "トイレットペーパー（12ロール）",
+  "category": "daily"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "miscellaneous": {
+      "id": "uuid",
+      "name": "トイレットペーパー（12ロール）",
+      "category": "daily",
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Miscellaneous item updated successfully"
+}
+```
+
+---
+
+### 3.4 雑貨削除
+
+**Endpoint**: `DELETE /miscellaneous/{misc_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (204):
+```
+No Content
+```
+
+---
+
+## 4. 食事計画API
+
+### 4.1 現在の食事計画取得
+
+**Endpoint**: `GET /meal-plans/current`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Query Parameters**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| week_start | date | No | 来週の月曜日 | 週の開始日（YYYY-MM-DD） |
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "meal_plan": {
+      "id": "uuid",
+      "week_start_date": "2026-05-12",
+      "status": "active",
+      "meals": [
+        {
+          "id": "uuid",
+          "day_of_week": 0,
+          "meal_type": "dinner",
+          "dish": {
+            "id": "uuid",
+            "name": "カレーライス",
+            "category": "japanese"
+          }
+        }
+      ],
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T16:56:31.003Z"
+    }
+  }
+}
+```
+
+**Errors**:
+- `401`: Unauthorized
+- `404`: Meal plan not found
+
+---
+
+### 4.2 食事計画作成
+
+**Endpoint**: `POST /meal-plans`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "week_start_date": "2026-05-12",
+  "meals": [
+    {
+      "day_of_week": 0,
+      "meal_type": "dinner",
+      "dish_id": "uuid"
+    },
+    {
+      "day_of_week": 1,
+      "meal_type": "dinner",
+      "dish_id": "uuid"
+    }
+  ]
+}
+```
+
+**Validation**:
+- `week_start_date`: 必須、月曜日の日付
+- `meals`: 配列、各要素は以下を含む
+  - `day_of_week`: 0〜6（0=月, 6=日）
+  - `meal_type`: breakfast/lunch/dinner
+  - `dish_id`: 存在する料理ID
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "meal_plan": {
+      "id": "uuid",
+      "week_start_date": "2026-05-12",
+      "status": "active",
+      "meals": [ ... ],
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T16:56:31.003Z"
+    }
+  },
+  "message": "Meal plan created successfully"
+}
+```
+
+**Errors**:
+- `400`: Invalid week_start_date (not Monday)
+- `401`: Unauthorized
+- `409`: Meal plan already exists for this week
+- `422`: Validation error
+
+---
+
+### 4.3 食事計画更新
+
+**Endpoint**: `PUT /meal-plans/{plan_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "meals": [
+    {
+      "day_of_week": 0,
+      "meal_type": "dinner",
+      "dish_id": "uuid"
+    }
+  ]
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "meal_plan": {
+      "id": "uuid",
+      "week_start_date": "2026-05-12",
+      "status": "active",
+      "meals": [ ... ],
+      "created_at": "2026-05-09T16:56:31.003Z",
+      "updated_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Meal plan updated successfully"
+}
+```
+
+---
+
+### 4.4 食事計画削除
+
+**Endpoint**: `DELETE /meal-plans/{plan_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (204):
+```
+No Content
+```
+
+---
+
+## 5. 買い物リストAPI
+
+### 5.1 買い物リスト生成
+
+**Endpoint**: `POST /shopping-lists/generate`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "meal_plan_id": "uuid",
+  "miscellaneous_ids": ["uuid1", "uuid2"]
+}
+```
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "shopping_list": {
+      "id": "uuid",
+      "week_start_date": "2026-05-12",
+      "status": "active",
+      "items": [
+        {
+          "id": "uuid",
+          "name": "じゃがいも",
+          "category": "vegetables",
+          "source_type": "dish",
+          "source_id": "dish-uuid",
+          "is_checked": false,
+          "created_at": "2026-05-09T16:56:31.003Z"
+        }
+      ],
+      "total_items": 15,
+      "checked_items": 0,
+      "created_at": "2026-05-09T16:56:31.003Z"
+    }
+  },
+  "message": "Shopping list generated successfully"
+}
+```
+
+**Errors**:
+- `401`: Unauthorized
+- `404`: Meal plan not found
+- `409`: Shopping list already exists for this week
+
+---
+
+### 5.2 現在の買い物リスト取得
+
+**Endpoint**: `GET /shopping-lists/current`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "shopping_list": {
+      "id": "uuid",
+      "week_start_date": "2026-05-12",
+      "status": "active",
+      "items": [ ... ],
+      "total_items": 15,
+      "checked_items": 5,
+      "progress": 33.33,
+      "created_at": "2026-05-09T16:56:31.003Z"
+    }
+  }
+}
+```
+
+---
+
+### 5.3 アイテムチェック更新
+
+**Endpoint**: `PATCH /shopping-lists/{list_id}/items/{item_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "is_checked": true
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "item": {
+      "id": "uuid",
+      "name": "じゃがいも",
+      "is_checked": true,
+      "checked_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Item checked successfully"
+}
+```
+
+---
+
+### 5.4 手動アイテム追加
+
+**Endpoint**: `POST /shopping-lists/{list_id}/items`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request Body**:
+```json
+{
+  "name": "牛乳",
+  "category": "dairy"
+}
+```
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "data": {
+    "item": {
+      "id": "uuid",
+      "name": "牛乳",
+      "category": "dairy",
+      "source_type": "manual",
+      "is_checked": false,
+      "created_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Item added successfully"
+}
+```
+
+---
+
+### 5.5 買い物リスト完了
+
+**Endpoint**: `POST /shopping-lists/{list_id}/complete`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "shopping_list": {
+      "id": "uuid",
+      "status": "completed",
+      "completed_at": "2026-05-09T17:00:00.000Z"
+    }
+  },
+  "message": "Shopping list completed successfully"
+}
+```
+
+---
+
+### 5.6 買い物履歴取得（Nice to Have）
+
+**Endpoint**: `GET /shopping-lists/history`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Query Parameters**:
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| weeks | integer | No | 2 | 過去何週間分 |
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "history": [
+      {
+        "id": "uuid",
+        "week_start_date": "2026-05-05",
+        "status": "completed",
+        "total_items": 15,
+        "checked_items": 15,
+        "completed_at": "2026-05-06T10:00:00.000Z"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+---
+
+## 6. ダッシュボードAPI
+
+### 6.1 ダッシュボードサマリー取得
+
+**Endpoint**: `GET /dashboard/summary`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "data": {
+    "current_week": {
+      "meal_plan": {
+        "id": "uuid",
+        "week_start_date": "2026-05-12",
+        "meals_count": 7
+      },
+      "shopping_list": {
+        "id": "uuid",
+        "total_items": 15,
+        "checked_items": 5,
+        "progress": 33.33
+      }
+    },
+    "stats": {
+      "total_dishes": 25,
+      "total_miscellaneous": 10,
+      "completed_shopping_lists": 8
+    },
+    "recent_activities": [
+      {
+        "type": "meal_plan_created",
+        "timestamp": "2026-05-09T16:56:31.003Z",
+        "description": "Created meal plan for week of 2026-05-12"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## レート制限
+
+| エンドポイント | 制限 |
+|---------------|------|
+| 認証API | 10 req/min |
+| その他API | 100 req/min |
+
+**レート制限超過時のレスポンス** (429):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Too many requests. Please try again later.",
+    "retry_after": 60
+  }
+}
+```
+
+---
+
+## 次のステップ
+
+1. **Tracking Log作成** → `05_tracking/decisions.md`
+2. **OpenAPI Spec生成** → `04_api/openapi.yaml`
+3. **API実装開始** → Backend開発
+
+---
+
+**作成者**: Claude + Tai  
+**レビュー日**: 2026-05-09  
+**ステータス**: ✅ Draft
