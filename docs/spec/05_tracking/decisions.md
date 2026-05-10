@@ -304,6 +304,53 @@ def deduplicate_items(items):
 
 ---
 
+### DEC-010: 既存Supabaseテーブル名の保持
+**日付**: 2026-05-10  
+**決定者**: Tai + Claude  
+**ステータス**: ✅ Approved
+
+#### 背景
+- 既存Supabaseに `meals`, `products`, `weekly_plans`, `weekly_checklist_items` が存在
+- 新設計では `dishes`, `miscellaneous` という名前を使用予定
+- 既存データ（特に画像）を保持したい
+
+#### 選択肢
+| 選択肢 | メリット | デメリット |
+|--------|---------|-----------|
+| **既存テーブル名保持（meals, products）** | - データ移行不要<br>- 画像URL保持<br>- カラム追加のみ | - 新設計と名前が異なる |
+| 新テーブル名採用（dishes, miscellaneous） | - 新設計に統一<br>- クリーンスタート | - データ移行必要<br>- 画像URL再アップロード |
+
+#### 決定内容
+**既存テーブル名（meals, products）を保持**
+
+#### 理由
+1. 既存データ（特に画像）を保持
+2. データ移行の手間を削減
+3. カラム追加のみで対応可能
+4. API名を既存テーブル名に合わせる
+
+#### 影響範囲
+- **テーブル名**: `dishes` → `meals`, `miscellaneous` → `products`
+- **API**: `/api/v1/dishes` → `/api/v1/meals`, `/api/v1/miscellaneous` → `/api/v1/products`
+- **Schema変更**:
+  - `meals`: `user_id`, `category`, `deleted_at` 追加
+  - `products`: `user_id`, `category`, `deleted_at` 追加、`image_url` 保持
+  - `meals.ingredients`: JSONB保持（Backend で TEXT ↔ JSONB 変換）
+- **削除**: `weekly_plans`, `weekly_checklist_items` → 新設計で再構築
+
+#### 技術的決定
+- `meals.ingredients` は JSONB のまま保持
+- Backend (FastAPI) で JSONB ↔ TEXT 変換を実装
+- Frontend は改行区切りテキストで扱う
+
+#### Migration Steps
+1. `weekly_plans`, `weekly_checklist_items` 削除
+2. `meals`, `products` にカラム追加（`user_id`, `category`, `deleted_at`）
+3. 新規テーブル作成（`meal_plans`, `meal_plan_items`, `shopping_lists`, `shopping_items`）
+4. RLS (Row Level Security) 設定
+
+---
+
 ## 未決定事項
 
 ### PENDING-001: UI Component Library
@@ -349,6 +396,7 @@ def deduplicate_items(items):
 | 2026-05-09 | DEC-006 | Supabase Auth採用 | 開発時間短縮 |
 | 2026-05-09 | DEC-007 | RESTful API採用 | 標準的設計 |
 | 2026-05-09 | DEC-009 | デプロイ戦略決定 | 無料枠活用 |
+| 2026-05-10 | DEC-010 | 既存テーブル名保持 | データ保持・移行削減 |
 
 ---
 
