@@ -271,6 +271,54 @@
 
 ---
 
+### [2026-05-10 12:00] - Products / Meal Plans / Shopping Lists API実装
+
+**担当**: Antigravity (AI Assistant)  
+**タイプ**: Feature  
+**関連US**: US-004 (products), US-005 (meal plans), US-006 (shopping lists)  
+**影響範囲**: Backend, API
+
+#### 変更内容
+
+**Products API** (`/api/v1/products`):
+- `GET /products` — list with category/search filter
+- `POST /products` — create with category validation (daily/consumable/other)
+- `PUT /products/{id}` — partial update
+- `DELETE /products/{id}` — soft delete
+
+**Meal Plans API** (`/api/v1/meal-plans`):
+- `GET /meal-plans/current` — fetch plan by week_start (default: next Monday)
+- `POST /meal-plans` — create plan + bulk insert meal_plan_items; validate Monday + no duplicate
+- `PUT /meal-plans/{id}` — replace all items (delete + re-insert strategy)
+- `DELETE /meal-plans/{id}` — hard delete (cascades to meal_plan_items)
+
+**Shopping Lists API** (`/api/v1/shopping-lists`):
+- `POST /shopping-lists/generate` — extract ingredients from meal plan (JSONB→list, deduped), append products
+- `GET /shopping-lists/current` — latest active list with items + progress %
+- `PATCH /shopping-lists/{id}/items/{item_id}` — toggle is_checked + checked_at
+- `POST /shopping-lists/{id}/items` — manual add item
+- `POST /shopping-lists/{id}/complete` — mark completed + completed_at
+
+#### 実装詳細
+- ファイル: `backend/app/api/v1/products.py`
+- ファイル: `backend/app/api/v1/meal_plans.py`
+- ファイル: `backend/app/api/v1/shopping_lists.py`
+- 全API: `supabase_admin` client使用、user_idでowner確認
+- Meal Plans: week_start_date Monday validation (Pydantic field_validator)
+- Shopping Lists generate: ingredients JSONB→list変換、全meal分dedupe、products追加
+- Shopping Lists: 409 block on duplicate active list per week
+
+#### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了 (curl)
+- [x] エラーハンドリング確認（400, 404, 409, 422）
+
+#### 備考
+- Backend API全エンドポイント実装完了（meals + products + meal-plans + shopping-lists）
+- 次: Frontend (Next.js) 実装
+
+---
+
 ### [2026-05-10 11:00] - Meals API実装
 
 **担当**: Antigravity (AI Assistant)  
