@@ -11,12 +11,12 @@
 | フェーズ | 進捗 | ステータス | 完了予定 |
 |---------|------|-----------|----------|
 | 要件定義・設計 | 100% | ✅ 完了 | 2026-05-09 |
-| Backend開発 | 0% | 🟡 予定 | 2026-05-13 |
+| Backend開発 | 80% | 🟡 進行中 | 2026-05-13 |
 | Frontend開発 | 0% | 🟡 予定 | 2026-05-15 |
 | 統合テスト | 0% | 🟡 予定 | 2026-05-16 |
 | デプロイ | 0% | 🟡 予定 | 2026-05-20 |
 
-**全体進捗**: 20% (設計フェーズ完了)
+**全体進捗**: 60% (設計 + Backend実装進行中)
 
 ---
 
@@ -66,11 +66,21 @@
   - セットアップ手順
   - 開発スケジュール
 
+### 2026-05-13
+
+#### Backend実装進捗
+- ✅ FastAPI backend core routes 実装
+- ✅ Supabase client + auth middleware 実装
+- ✅ Meals, Products, Meal Plans, Shopping Lists API 実装
+- ✅ Database migration scripts 用意
+- 🟡 次: Backend unit test 作成と frontend 実装開始
+
 ---
 
 ## 🟡 進行中タスク
 
-なし
+- Backend unit test の準備
+- Frontend project scaffold の開始
 
 ---
 
@@ -79,11 +89,11 @@
 ### Day 2-3: Backend開発準備（2026-05-10 〜 2026-05-11）
 
 #### プロジェクトセットアップ
-- [ ] Backend project structure作成
-- [ ] FastAPI初期設定
-- [ ] Supabase接続設定
-- [ ] Database migration setup
-- [ ] 環境変数設定（.env）
+- [x] Backend project structure作成
+- [x] FastAPI初期設定
+- [x] Supabase接続設定
+- [x] Database migration setup
+- [x] 環境変数設定（.env）
 
 #### Database Migration
 - [ ] Alembic setup
@@ -93,7 +103,7 @@
 
 #### 認証API実装
 - [ ] Supabase Auth統合
-- [ ] JWT検証ミドルウェア
+- [x] JWT検証ミドルウェア
 - [ ] `/auth/register` エンドポイント
 - [ ] `/auth/login` エンドポイント
 - [ ] `/auth/logout` エンドポイント
@@ -103,34 +113,34 @@
 ### Day 4: Backend API実装（2026-05-12）
 
 #### 料理API
-- [ ] `/dishes` GET（一覧）
-- [ ] `/dishes/{id}` GET（詳細）
-- [ ] `/dishes` POST（登録）
-- [ ] `/dishes/{id}` PUT（更新）
-- [ ] `/dishes/{id}` DELETE（削除）
+- [x] `/api/v1/meals` GET（一覧）
+- [x] `/api/v1/meals/{id}` GET（詳細）
+- [x] `/api/v1/meals` POST（登録）
+- [x] `/api/v1/meals/{id}` PUT（更新）
+- [x] `/api/v1/meals/{id}` DELETE（削除）
 
 #### 雑貨API
-- [ ] `/miscellaneous` GET（一覧）
-- [ ] `/miscellaneous` POST（登録）
-- [ ] `/miscellaneous/{id}` PUT（更新）
-- [ ] `/miscellaneous/{id}` DELETE（削除）
+- [x] `/api/v1/products` GET（一覧）
+- [x] `/api/v1/products` POST（登録）
+- [x] `/api/v1/products/{id}` PUT（更新）
+- [x] `/api/v1/products/{id}` DELETE（削除）
 
 ---
 
 ### Day 5: Backend API実装（続き）（2026-05-13）
 
 #### 食事計画API
-- [ ] `/meal-plans/current` GET
-- [ ] `/meal-plans` POST
-- [ ] `/meal-plans/{id}` PUT
-- [ ] `/meal-plans/{id}` DELETE
+- [x] `/api/v1/meal-plans/current` GET
+- [x] `/api/v1/meal-plans` POST
+- [x] `/api/v1/meal-plans/{id}` PUT
+- [x] `/api/v1/meal-plans/{id}` DELETE
 
 #### 買い物リストAPI
-- [ ] `/shopping-lists/generate` POST
-- [ ] `/shopping-lists/current` GET
-- [ ] `/shopping-lists/{id}/items/{item_id}` PATCH
-- [ ] `/shopping-lists/{id}/items` POST
-- [ ] `/shopping-lists/{id}/complete` POST
+- [x] `/api/v1/shopping-lists/generate` POST
+- [x] `/api/v1/shopping-lists/current` GET
+- [x] `/api/v1/shopping-lists/{id}/items/{item_id}` PATCH
+- [x] `/api/v1/shopping-lists/{id}/items` POST
+- [x] `/api/v1/shopping-lists/{id}/complete` POST
 
 #### ダッシュボードAPI
 - [ ] `/dashboard/summary` GET

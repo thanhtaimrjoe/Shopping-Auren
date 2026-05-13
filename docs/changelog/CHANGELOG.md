@@ -355,6 +355,44 @@
 
 ---
 
+### [2026-05-13 12:00] - Backend API Implementation Progress
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-003, US-004, US-005, US-006  
+**影響範囲**: Backend, API, Docs
+
+### 変更内容
+- FastAPI backend core routes 実装
+- Supabase client と auth middleware 実装
+- Meals, Products, Meal Plans, Shopping Lists API を構築
+- Database migration scripts をリポジトリに準備
+- Progress tracking と changelog を最新状態に更新
+
+### 実装詳細
+- ファイル: `backend/app/main.py`
+- ファイル: `backend/app/api/v1/meals.py`
+- ファイル: `backend/app/api/v1/products.py`
+- ファイル: `backend/app/api/v1/meal_plans.py`
+- ファイル: `backend/app/api/v1/shopping_lists.py`
+- ファイル: `backend/app/core/auth.py`
+- ファイル: `backend/app/core/supabase.py`
+- ファイル: `backend/app/core/config.py`
+- ファイル: `backend/migrations/*.sql`
+- ファイル: `docs/spec/05_tracking/progress.md`
+- ファイル: `docs/changelog/CHANGELOG.md`
+
+### テスト
+- [ ] Unit Test追加
+- [ ] Frontend 実装確認
+- [ ] `/dashboard/summary` API 追加
+
+### 備考
+- Frontend 実装はまだリポジトリに存在しないため、次は UI 側の構築に移行
+- 認証エンドポイントは未実装のため、Supabase Auth 連携と JWT 保証を継続
+
+---
+
 ## 次の開発者へ
 
 このファイルに必ず変更内容を記録してください。
