@@ -393,6 +393,103 @@
 
 ---
 
+### [2026-05-13 18:30] - Điều chỉnh kích thước tiêu đề chính (h1 -> h3)
+
+**担当**: AI Assistant
+**タイプ**: Refactor/UI
+**関連US**: US-007
+**影響範囲**: Frontend
+
+### 変更内容
+- Thay đổi thẻ tiêu đề chính `h1` ("Weekly Alignment") thành `h3`.
+- Điều chỉnh kích thước font chữ từ `text-7xl` (quá lớn) xuống `text-3xl` (mobile) và `text-4xl` (desktop).
+- Đảm bảo tính responsive và thẩm mỹ theo chuẩn thiết kế editorial.
+- Duy trì cấu trúc semantic bằng cách giữ lại `h1` trong Sidebar làm tiêu đề cấp cao nhất của ứng dụng.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更 lý do: Tiêu đề hiện tại quá lớn so với tổng thể thiết kế và cần được chuẩn hóa về mức h3 để phù hợp với phân cấp thông tin.
+- 技術的な quyết định: Sử dụng `text-3xl md:text-4xl` để đảm bảo tiêu đề vẫn nổi bật nhưng không lấn át các thành phần khác. Giữ nguyên font-serif để duy trì phong cách editorial.
+
+### テスト
+- [x] Kiểm tra hiển thị trên các kích thước màn hình khác nhau (Responsive).
+- [x] Xác nhận không có xung đột CSS.
+- [x] Kiểm tra cấu trúc HTML semantic (vẫn còn h1 trong Sidebar).
+
+---
+
+### [2026-05-13 19:15] - Thiết lập lại phân cấp thị giác cho tiêu đề ngày
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Đảo ngược phân cấp thị giác trong phần header của mỗi ngày:
+    - Tên thứ (Weekday) trở thành thành phần chính: font-size lớn (`text-lg` ~ 18px), đậm, và độ tương phản cao.
+    - Ngày tháng (Date) trở thành thành phần phụ: font-size nhỏ (`text-sm` ~ 14px), màu sắc mờ hơn (`text-bark/40`).
+- Thay đổi định dạng tháng từ viết tắt (MMM) sang đầy đủ (MMMM) để tăng tính thẩm mỹ cho font-size nhỏ.
+- Điều chỉnh khoảng cách (spacing) và tracking để tối ưu hóa khả năng đọc trên nhiều thiết bị.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更 lý do: Theo yêu cầu của người dùng để làm nổi bật tên thứ trong tuần, giúp người dùng dễ dàng định vị thời gian khi xem lịch trình.
+
+### テスト
+- [x] Kiểm tra hiển thị trên mobile/desktop.
+- [x] Xác nhận độ tương phản (contrast) giữa tên thứ và ngày tháng đạt yêu cầu.
+- [x] Kiểm tra tính nhất quán với phong cách Magazine chung.
+
+---
+
+### [2026-05-13 19:00] - Loại bỏ nhãn danh mục bữa ăn (Meal Category Labels)
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Loại bỏ các thẻ `span` hiển thị nhãn "Breakfast", "Lunch", "Dinner" trong danh sách bữa ăn hàng ngày.
+- Đảm bảo cấu trúc các ô nhập liệu bữa ăn vẫn được giữ nguyên.
+- Tối giản hóa giao diện theo phong cách tạp chí (Magazine style).
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更 lý do: Theo yêu cầu của người dùng để làm gọn giao diện và loại bỏ các thành phần không cần thiết.
+
+### テスト
+- [x] Kiểm tra layout sau khi xóa nhãn.
+- [x] Đảm bảo các nút "Compose menu..." vẫn hoạt động bình thường.
+- [x] Xác nhận không có lỗi JavaScript do thay đổi cấu trúc.
+
+---
+
+### [2026-05-13 18:45] - Loại bỏ widget "Today's Rhythm" và nút "Reset Counters"
+
+**担当**: AI Assistant
+**タイプ**: Refactor
+**関連US**: US-007
+**影響範囲**: Frontend
+
+### 変更内容
+- Loại bỏ nút "Reset Counters" và đường kẻ phân cách trong tiêu đề trang [page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/page.tsx).
+- Loại bỏ widget "Today's Rhythm" ở phía dưới thanh Sidebar trong [Sidebar.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/components/Sidebar.tsx).
+- Dọn dẹp các biểu tượng không còn sử dụng (`Info`, `Menu`) từ thư viện `lucide-react`.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `frontend/src/components/Sidebar.tsx`
+- 変更 lý do: Tối giản hóa giao diện theo yêu cầu người dùng, loại bỏ các chức năng chưa cần thiết hoặc làm rối giao diện.
+- 技術的な quyết định: Xóa bỏ trực tiếp các phần tử JSX và dọn dẹp import để tối ưu hóa code.
+
+### テスト
+- [x] Kiểm tra lỗi biên dịch (không có lỗi import).
+- [x] Kiểm tra giao diện người dùng (các thành phần đã biến mất và layout vẫn ổn định).
+
+---
+
 ## 次の開発者へ
 
 このファイルに必ず変更内容を記録してください。

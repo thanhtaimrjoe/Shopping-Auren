@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, Save, ShoppingCart, Calendar, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, Save, ShoppingCart, Calendar } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -24,17 +24,13 @@ export default function MealPlanPage() {
         <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block mb-4">
           Wednesday, May 13
         </span>
-        <h1 className="text-7xl text-bark font-serif mb-6 leading-tight">
+        <h3 className="text-3xl md:text-4xl text-bark font-serif mb-6 leading-tight">
           Weekly Alignment
-        </h1>
+        </h3>
         <div className="flex items-center gap-4 text-bark/60">
           <p className="text-xl max-w-2xl leading-relaxed">
             Choose each meal with intention. Begin your day with a nourish mind.
           </p>
-          <div className="h-[1px] flex-1 bg-bark/10" />
-          <button className="flex items-center gap-2 text-sm font-semibold text-sage-deep hover:text-sage transition-colors whitespace-nowrap">
-            <Info className="h-4 w-4" /> Reset Counters
-          </button>
         </div>
       </header>
 
@@ -71,14 +67,14 @@ export default function MealPlanPage() {
               <div className="flex items-end justify-between mb-12">
                 <div>
                   <h4 className={cn(
-                    "text-xs font-bold uppercase tracking-[0.4em] mb-3",
-                    isToday ? "text-sage-deep" : "text-bark/30"
+                    "text-lg font-bold uppercase tracking-[0.2em] mb-1",
+                    isToday ? "text-sage-deep" : "text-bark"
                   )}>
                     {format(day, 'EEEE')}
                   </h4>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-serif text-bark">{format(day, 'd')}</span>
-                    <span className="text-lg font-serif text-bark/40">{format(day, 'MMM')}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-medium text-bark/40">{format(day, 'd')}</span>
+                    <span className="text-sm font-medium text-bark/40">{format(day, 'MMMM')}</span>
                   </div>
                 </div>
                 {isToday && (
@@ -92,9 +88,6 @@ export default function MealPlanPage() {
               <div className="space-y-10">
                 {MEAL_CATEGORIES.map((cat) => (
                   <div key={cat} className="group/item">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-bold text-bark/30 uppercase tracking-[0.3em]">{cat}</span>
-                    </div>
                     <button className="w-full text-left bg-hemp/20 rounded-2xl p-6 border-0 group-hover/item:bg-hemp/40 transition-all duration-500">
                       <div className="flex items-center justify-between">
                          <span className="text-lg text-bark/40 font-medium italic">Compose menu...</span>

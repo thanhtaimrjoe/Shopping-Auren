@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, CalendarDays, User, ShoppingCart } from 'lucide-react';
+import { CalendarDays, User, ShoppingCart } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -67,14 +67,6 @@ export function Sidebar() {
           <span className="font-medium tracking-wide">Settings</span>
         </Link>
       </nav>
-      
-      {/* Bottom Info Widget */}
-      <div className="p-6">
-        <div className="bg-hemp/60 rounded-2xl p-6">
-           <h4 className="text-xs font-bold text-bark uppercase tracking-[0.1em] mb-2">Today's Rhythm</h4>
-           <p className="text-sm text-bark/60">0 meals planned</p>
-        </div>
-      </div>
     </aside>
   );
 }
