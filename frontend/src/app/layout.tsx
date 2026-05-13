@@ -1,0 +1,39 @@
+import type { Metadata } from "next";
+import { Outfit, Fraunces } from "next/font/google";
+import "./globals.css";
+import { Sidebar } from "@/components/Sidebar";
+
+const outfit = Outfit({ 
+  subsets: ["latin"], 
+  variable: '--font-outfit' 
+});
+
+const fraunces = Fraunces({ 
+  subsets: ["latin"], 
+  variable: '--font-fraunces',
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  title: "Shopping Memo | Meal Planner",
+  description: "Plan your meals and generate shopping lists",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen`}>
+        <Sidebar />
+        <main className="flex-1 ml-[320px] p-6 min-h-screen relative z-10">
+          <div className="w-full h-full max-w-[1400px] mx-auto">
+            {children}
+          </div>
+        </main>
+      </body>
+    </html>
+  );
+}

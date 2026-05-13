@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --background: 42 30% 92%; /* Hemp */
+  --foreground: 24 8% 28%; /* Bark */
+
+  --primary: 100 8% 56%; /* Sage */
+  --primary-foreground: 40 33% 97%; /* Cream */
+
+  --secondary: 22 38% 75%; /* Clay */
+  --secondary-foreground: 24 8% 28%;
+
+  --card: 40 33% 97%; /* Cream */
+  --card-foreground: 24 8% 28%;
+
+  --border: 22 25% 80%;
+  --radius: 1.5rem;
+
+  --shadow-soft: 0 4px 30px -10px hsl(24 8% 28% / 0.08);
+  --shadow-warm: 0 20px 50px -15px hsl(24 20% 25% / 0.12);
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  
+  --color-primary: hsl(var(--primary));
+  --color-on-primary: hsl(var(--primary-foreground));
+  
+  --color-sage: hsl(100 8% 56%);
+  --color-sage-deep: hsl(100 12% 42%);
+  --color-clay: hsl(22 38% 75%);
+  --color-hemp: hsl(42 30% 92%);
+  --color-cream: hsl(40 33% 97%);
+  --color-bark: hsl(24 8% 28%);
+  
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2.5rem;
+  
+  --shadow-soft: var(--shadow-soft);
+  --shadow-warm: var(--shadow-warm);
+}
+
+body {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Page transitions */
+@keyframes page-enter {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
