@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
+import { AuthProvider } from "@/context/AuthContext";
 
 const outfit = Outfit({ 
   subsets: ["latin"], 
@@ -27,12 +28,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen`}>
-        <Sidebar />
-        <main className="flex-1 lg:ml-[260px] pt-16 lg:pt-0 p-4 md:p-8 lg:p-12 min-h-screen relative transition-all duration-300">
-          <div className="w-full h-full max-w-[1400px] mx-auto">
-            {children}
-          </div>
-        </main>
+        <AuthProvider>
+          <Sidebar />
+          <main className="flex-1 lg:ml-[260px] pt-16 lg:pt-0 p-4 md:p-8 lg:p-12 min-h-screen relative transition-all duration-300">
+            <div className="w-full h-full max-w-[1400px] mx-auto">
+              {children}
+            </div>
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

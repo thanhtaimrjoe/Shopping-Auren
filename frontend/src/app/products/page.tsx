@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
-  Plus, Search, Filter, ArrowUpDown, MoreVertical, Edit2, Trash2, 
-  X, Save, ChevronLeft, ChevronRight, Package, CheckCircle2,
-  AlertCircle, Loader2, Image, ShoppingBag
+  Plus, Search, ArrowUpDown, MoreVertical, Edit2, Trash2, 
+  X, Save, Loader2, Package, AlertCircle, CheckCircle2, Image as ImageIcon, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { productsApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,19 +19,10 @@ interface Product {
   id: string;
   name: string;
   category: 'daily' | 'consumable' | 'other';
-  imageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
 }
-
-const INITIAL_PRODUCTS: Product[] = [
-  { id: '1', name: 'Toilet Paper', category: 'daily', imageUrl: 'https://images.unsplash.com/photo-1584553421349-3557471bed79?w=100&h=100&fit=crop', createdAt: '2024-05-10T08:00:00Z', updatedAt: '2024-05-10T08:00:00Z' },
-  { id: '2', name: 'Dish Soap', category: 'daily', imageUrl: 'https://images.unsplash.com/photo-1585441695325-21557c88be28?w=100&h=100&fit=crop', createdAt: '2024-05-10T09:00:00Z', updatedAt: '2024-05-10T09:00:00Z' },
-  { id: '3', name: 'Laundry Detergent', category: 'consumable', imageUrl: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=100&h=100&fit=crop', createdAt: '2024-05-11T10:00:00Z', updatedAt: '2024-05-11T10:00:00Z' },
-  { id: '4', name: 'Paper Towels', category: 'daily', imageUrl: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=100&h=100&fit=crop', createdAt: '2024-05-12T11:00:00Z', updatedAt: '2024-05-12T11:00:00Z' },
-  { id: '5', name: 'Trash Bags', category: 'consumable', imageUrl: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?w=100&h=100&fit=crop', createdAt: '2024-05-13T12:00:00Z', updatedAt: '2024-05-13T12:00:00Z' },
-  { id: '6', name: 'Glass Cleaner', category: 'other', imageUrl: 'https://images.unsplash.com/photo-1563453392212-326f5e854b66?w=100&h=100&fit=crop', createdAt: '2024-05-14T13:00:00Z', updatedAt: '2024-05-14T13:00:00Z' },
-];
 
 const ITEMS_PER_PAGE = 15;
 
@@ -46,10 +39,13 @@ const CATEGORY_LABELS = {
 };
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
+  const [sortBy, setSortBy] = useState<'name' | 'created_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -57,10 +53,42 @@ export default function ProductsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   const [formState, setFormState] = useState<Partial<Product>>({});
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  const fetchProducts = useCallback(async () => {
+    if (!user) return;
+    setFetchLoading(true);
+    try {
+      const response = await productsApi.getAll();
+      if (response.data.success) {
+        setProducts(response.data.data.products);
+      }
+    } catch (error: any) {
+      if (error.message !== 'Network Error') {
+        console.error('Failed to fetch products:', error);
+        setNotification({ type: 'error', message: 'Không thể tải danh sách sản phẩm' });
+      }
+    } finally {
+      setFetchLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchProducts();
+    }
+  }, [fetchProducts, authLoading, user]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -87,7 +115,7 @@ export default function ProductsPage() {
       .sort((a, b) => {
         let comparison = 0;
         if (sortBy === 'name') comparison = a.name.localeCompare(b.name);
-        if (sortBy === 'date') comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        if (sortBy === 'created_at') comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         return sortOrder === 'asc' ? comparison : -comparison;
       });
   }, [products, searchQuery, filterCategory, sortBy, sortOrder]);
@@ -105,7 +133,7 @@ export default function ProductsPage() {
     setFormState({
       name: '',
       category: 'other',
-      imageUrl: ''
+      image_url: ''
     });
   };
 
@@ -116,39 +144,48 @@ export default function ProductsPage() {
     }
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    if (isAdding) {
-      const newProduct: Product = {
-        ...formState as Product,
-        id: Math.random().toString(36).substr(2, 9),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setProducts([newProduct, ...products]);
-      setSelectedProduct(newProduct);
-      setNotification({ type: 'success', message: 'Đã thêm sản phẩm mới thành công' });
-    } else {
-      const updated = { ...formState as Product, updatedAt: new Date().toISOString() };
-      setProducts(products.map(p => p.id === updated.id ? updated : p));
-      setSelectedProduct(updated);
-      setNotification({ type: 'success', message: 'Đã cập nhật sản phẩm thành công' });
+    try {
+      if (isAdding) {
+        const response = await productsApi.create(formState);
+        if (response.data.success) {
+          const newProduct = response.data.data.product;
+          setProducts([newProduct, ...products]);
+          setSelectedProduct(newProduct);
+          setNotification({ type: 'success', message: 'Đã thêm sản phẩm mới thành công' });
+        }
+      } else {
+        const response = await productsApi.update(selectedProduct!.id, formState);
+        if (response.data.success) {
+          const updatedProduct = response.data.data.product;
+          setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+          setSelectedProduct(updatedProduct);
+          setNotification({ type: 'success', message: 'Đã cập nhật sản phẩm thành công' });
+        }
+      }
+      setIsEditing(false);
+      setIsAdding(false);
+    } catch (error) {
+      console.error('Failed to save product:', error);
+      setNotification({ type: 'error', message: 'Lỗi khi lưu sản phẩm' });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsEditing(false);
-    setIsAdding(false);
-    setIsLoading(false);
   };
 
   const handleDelete = async (id: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setProducts(products.filter(p => p.id !== id));
-    if (selectedProduct?.id === id) setSelectedProduct(null);
-    setShowDeleteConfirm(null);
-    setNotification({ type: 'success', message: 'Đã xóa sản phẩm thành công' });
-    setIsLoading(false);
+    try {
+      await productsApi.delete(id);
+      setProducts(products.filter(p => p.id !== id));
+      if (selectedProduct?.id === id) setSelectedProduct(null);
+      setShowDeleteConfirm(null);
+      setNotification({ type: 'success', message: 'Đã xóa sản phẩm thành công' });
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      setNotification({ type: 'error', message: 'Không thể xóa sản phẩm' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -161,6 +198,14 @@ export default function ProductsPage() {
       setFormState(selectedProduct!);
     }
   };
+
+  if (authLoading || (fetchLoading && products.length === 0)) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-sage" />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24 animate-page-enter">
@@ -217,7 +262,7 @@ export default function ProductsPage() {
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-bark/5">
                 <button 
-                  onClick={() => setSortBy(sortBy === 'name' ? 'date' : 'name')}
+                  onClick={() => setSortBy(sortBy === 'name' ? 'created_at' : 'name')}
                   className="flex items-center gap-2 text-[10px] font-bold text-bark/40 uppercase tracking-widest hover:text-bark transition-colors"
                 >
                   <ArrowUpDown className="h-3 w-3" />
@@ -247,212 +292,174 @@ export default function ProductsPage() {
                     )}
                   >
                     <div className="h-14 w-14 rounded-2xl bg-hemp/30 overflow-hidden flex items-center justify-center shrink-0">
-                      {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                       ) : (
-                        <Package className="h-6 w-6 text-bark/20" />
+                        <Package className={cn(
+                          "h-6 w-6 transition-colors",
+                          selectedProduct?.id === product.id ? "text-sage-deep" : "text-bark/40"
+                        )} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold text-bark truncate">{product.name}</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter",
-                          CATEGORY_COLORS[product.category]
-                        )}>
-                          {CATEGORY_LABELS[product.category]}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-bark/40">
-                        Added {new Date(product.createdAt).toLocaleDateString()}
-                      </span>
+                      <h4 className="font-bold text-bark truncate">{product.name}</h4>
+                      <p className="text-[10px] font-bold text-bark/40 uppercase tracking-widest">{product.category}</p>
                     </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDeleteConfirm(product.id);
-                      }}
-                      className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all"
-                    >
-                      <Trash2 className="h-4 w-4" />
+                    <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-bark/5 rounded-lg transition-all">
+                      <MoreVertical className="h-4 w-4 text-bark/40" />
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12">
-                  <ShoppingBag className="h-12 w-12 text-bark/5 mx-auto mb-4" />
-                  <p className="text-sm text-bark/20 italic">No products found in database</p>
+                <div className="py-20 text-center">
+                  <div className="h-16 w-16 bg-hemp/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-6 w-6 text-bark/20" />
+                  </div>
+                  <p className="text-bark/40 font-medium">Không tìm thấy sản phẩm nào</p>
                 </div>
               )}
             </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-6 border-t border-bark/5">
-                <span className="text-[10px] font-bold text-bark/40 uppercase tracking-widest">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <button 
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => p - 1)}
-                    className="p-2 bg-hemp/20 rounded-xl disabled:opacity-30 hover:bg-hemp/30 transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button 
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => p + 1)}
-                    className="p-2 bg-hemp/20 rounded-xl disabled:opacity-30 hover:bg-hemp/30 transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+              <div className="flex items-center justify-center gap-4 pt-4 border-t border-bark/5">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  className="p-2 disabled:opacity-20 hover:bg-hemp/20 rounded-full transition-colors"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-xs font-bold text-bark/40">{currentPage} / {totalPages}</span>
+                <button 
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="p-2 disabled:opacity-20 hover:bg-hemp/20 rounded-full transition-colors"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Side: Detail / Edit Form */}
-        <div className="lg:col-span-7">
-          {(selectedProduct || isAdding) ? (
-            <div className="bg-cream rounded-[2.5rem] shadow-soft overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-              {/* Form Header */}
-              <div className="p-8 border-b border-bark/5 flex items-center justify-between bg-hemp/5">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-sage/20 flex items-center justify-center text-sage-deep overflow-hidden">
-                    {formState.imageUrl ? (
-                      <img src={formState.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                    ) : (
-                      <Package className="h-7 w-7" />
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl text-bark font-serif">
-                      {isAdding ? 'New Product' : isEditing ? 'Edit Product' : 'Product Details'}
-                    </h2>
-                    <p className="text-xs text-bark/40 uppercase tracking-widest mt-1">
-                      {isAdding ? 'Thêm vào kho hàng' : `ID: ${formState.id?.substr(0, 8)}`}
-                    </p>
-                  </div>
+        {/* Right Side: Detail & Form */}
+        <div className="lg:col-span-7 sticky top-8">
+          {selectedProduct || isAdding ? (
+            <div className="bg-cream rounded-[2.5rem] p-8 md:p-10 shadow-soft animate-page-enter">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">
+                  {isAdding ? 'Thêm sản phẩm mới' : isEditing ? 'Chỉnh sửa sản phẩm' : 'Chi tiết sản phẩm'}
+                </h3>
+                <div className="flex items-center gap-2">
+                  {!isEditing ? (
+                    <>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => setShowDeleteConfirm(selectedProduct!.id)}
+                        className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={handleCancel}
+                      className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-                {!isEditing && (
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="h-12 px-6 bg-cream border border-bark/10 rounded-xl flex items-center gap-2 hover:bg-bark/5 transition-all font-bold text-xs uppercase tracking-widest"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Edit
-                  </button>
-                )}
               </div>
 
-              {/* Form Body */}
-              <div className="p-8 space-y-8">
-                {/* Product Image Preview */}
-                <div className="flex justify-center">
-                  <div className="h-40 w-40 rounded-[2rem] bg-hemp/20 flex items-center justify-center overflow-hidden border-4 border-dashed border-bark/10">
-                    {formState.imageUrl ? (
-                      <img src={formState.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="text-center">
-                        <Image className="h-10 w-10 text-bark/20 mx-auto mb-2" />
-                        <span className="text-[10px] text-bark/30">No Image</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Name */}
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.2em] ml-2">Product Name</label>
+              {isEditing ? (
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Tên sản phẩm</label>
                     <input 
-                      disabled={!isEditing}
-                      type="text"
-                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all disabled:opacity-60"
+                      type="text" 
+                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-serif text-xl focus:ring-2 focus:ring-sage/20 transition-all"
                       value={formState.name || ''}
                       onChange={e => setFormState({...formState, name: e.target.value})}
-                      placeholder="e.g. Premium Toilet Paper"
+                      placeholder="Nhập tên sản phẩm..."
                     />
                   </div>
 
-                  {/* Category */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.2em] ml-2">Category</label>
-                    <select 
-                      disabled={!isEditing}
-                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all disabled:opacity-60 appearance-none"
-                      value={formState.category}
-                      onChange={e => setFormState({...formState, category: e.target.value as Product['category']})}
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="consumable">Consumable</option>
-                      <option value="other">Other</option>
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Phân loại</label>
+                      <select 
+                        className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all appearance-none"
+                        value={formState.category || 'other'}
+                        onChange={e => setFormState({...formState, category: e.target.value as any})}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="consumable">Consumable</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
                   </div>
 
-                  {/* Image URL */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.2em] ml-2">Image URL</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Link ảnh sản phẩm</label>
                     <div className="relative">
-                      <Image className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
+                      <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
                       <input 
-                        disabled={!isEditing}
-                        type="url"
-                        className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-14 pr-6 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all disabled:opacity-60"
-                        value={formState.imageUrl || ''}
-                        onChange={e => setFormState({...formState, imageUrl: e.target.value})}
-                        placeholder="https://..."
+                        type="text" 
+                        className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all"
+                        value={formState.image_url || ''}
+                        onChange={e => setFormState({...formState, image_url: e.target.value})}
+                        placeholder="https://images.unsplash.com/..."
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Timestamps (Read-only) */}
-                {!isAdding && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-bark/5">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-bark/40 uppercase tracking-widest">Created</span>
-                      <p className="text-sm text-bark/60">{new Date(formState.createdAt || '').toLocaleString()}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-bark/40 uppercase tracking-widest">Last Updated</span>
-                      <p className="text-sm text-bark/60">{new Date(formState.updatedAt || '').toLocaleString()}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Form Footer */}
-              {isEditing && (
-                <div className="p-8 bg-hemp/5 border-t border-bark/5 flex items-center justify-end gap-4">
-                  <button 
-                    onClick={handleCancel}
-                    className="h-12 px-8 text-bark/40 font-bold text-xs uppercase tracking-widest hover:text-bark transition-colors"
-                  >
-                    Cancel
-                  </button>
                   <button 
                     onClick={handleSave}
                     disabled={isLoading}
-                    className="h-12 px-10 bg-sage text-cream rounded-xl shadow-warm flex items-center gap-2 hover:bg-sage-deep transition-all font-bold text-xs uppercase tracking-widest disabled:opacity-50"
+                    className="w-full py-5 bg-sage text-cream rounded-[1.5rem] font-bold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
                   >
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Changes
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu sản phẩm</>}
                   </button>
+                </div>
+              ) : (
+                <div className="space-y-10 animate-page-enter">
+                  <div className="flex flex-col md:flex-row gap-8 items-start">
+                    <div className="h-48 w-48 rounded-[2rem] bg-hemp/10 overflow-hidden shadow-soft shrink-0">
+                      {selectedProduct!.image_url ? (
+                        <img src={selectedProduct!.image_url} alt={selectedProduct!.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-12 w-12 text-bark/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <span className={cn(
+                        "inline-block px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4",
+                        CATEGORY_COLORS[selectedProduct!.category]
+                      )}>
+                        {CATEGORY_LABELS[selectedProduct!.category]}
+                      </span>
+                      <h2 className="text-4xl md:text-5xl text-bark font-serif leading-tight">{selectedProduct!.name}</h2>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="h-[600px] border-4 border-dashed border-bark/5 rounded-[3rem] flex flex-col items-center justify-center text-center p-12">
-              <div className="h-24 w-24 bg-hemp/20 rounded-full flex items-center justify-center mb-6">
+            <div className="h-[600px] border-2 border-dashed border-bark/5 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center bg-cream/30">
+              <div className="h-24 w-24 bg-hemp/10 rounded-full flex items-center justify-center mb-6">
                 <Package className="h-10 w-10 text-bark/20" />
               </div>
-              <h2 className="text-2xl text-bark font-serif mb-4">No Product Selected</h2>
-              <p className="text-bark/40 max-w-sm leading-relaxed">
-                Select a product from the list to view details or add a new one to expand your inventory.
-              </p>
+              <h3 className="text-xl font-serif text-bark mb-2">Chọn một sản phẩm</h3>
+              <p className="text-bark/40 max-w-xs">Chọn một sản phẩm từ danh sách để xem chi tiết hoặc thêm mới.</p>
             </div>
           )}
         </div>
@@ -461,38 +468,36 @@ export default function ProductsPage() {
       {/* Notifications */}
       {notification && (
         <div className={cn(
-          "fixed top-8 right-8 z-[100] p-6 rounded-3xl shadow-warm animate-in slide-in-from-top duration-500 flex items-center gap-4 max-w-md",
-          notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-cream"
+          "fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-warm flex items-center gap-3 animate-slide-up z-50",
+          notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-white"
         )}>
-          {notification.type === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
-          <p className="font-bold text-sm">{notification.message}</p>
+          {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+          <span className="text-sm font-bold uppercase tracking-widest">{notification.message}</span>
         </div>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-bark/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(null)} />
-          <div className="relative bg-cream rounded-[3rem] p-10 max-w-sm w-full shadow-warm text-center animate-in zoom-in-95 duration-300">
-            <div className="h-20 w-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trash2 className="h-10 w-10" />
+        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-cream rounded-[2.5rem] p-10 max-w-sm w-full shadow-warm animate-scale-in">
+            <div className="h-16 w-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+              <AlertCircle className="h-8 w-8" />
             </div>
-            <h3 className="text-2xl text-bark font-serif mb-4">Xác nhận xóa?</h3>
-            <p className="text-bark/40 text-sm mb-8 leading-relaxed">
-              Hành động này không thể hoàn tác. Sản phẩm sẽ bị xóa vĩnh viễn khỏi cơ sở dữ liệu.
-            </p>
+            <h3 className="text-2xl font-serif text-bark mb-4">Xác nhận xóa?</h3>
+            <p className="text-bark/60 mb-8 leading-relaxed">Sản phẩm này sẽ bị xóa vĩnh viễn khỏi danh sách của bạn.</p>
             <div className="flex gap-4">
               <button 
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 py-4 text-bark/40 font-bold text-xs uppercase tracking-widest hover:text-bark transition-colors"
+                className="flex-1 py-4 bg-hemp/20 text-bark rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-hemp/30 transition-all"
               >
                 Hủy
               </button>
               <button 
                 onClick={() => handleDelete(showDeleteConfirm)}
-                className="flex-1 py-4 bg-red-500 text-cream rounded-2xl font-bold text-xs uppercase tracking-widest shadow-soft hover:bg-red-600 transition-colors"
+                disabled={isLoading}
+                className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-red-600 shadow-soft transition-all"
               >
-                Xóa ngay
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Xóa ngay'}
               </button>
             </div>
           </div>

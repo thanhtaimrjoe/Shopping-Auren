@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, User, ShoppingCart, Menu, X, UtensilsCrossed, Package } from 'lucide-react';
+import { CalendarDays, User as UserIcon, ShoppingCart, Menu, X, UtensilsCrossed, Package, LogOut } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useAuth } from '@/context/AuthContext';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,6 +13,7 @@ function cn(...inputs: ClassValue[]) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close mobile menu when pathname changes
@@ -31,12 +33,15 @@ export function Sidebar() {
     };
   }, [isMobileMenuOpen]);
 
+  // Don't show sidebar on login page
+  if (pathname === '/login') return null;
+
   const navItems = [
     { href: '/', label: 'Weekly Plan', icon: CalendarDays },
     { href: '/meals', label: 'Meals Library', icon: UtensilsCrossed },
     { href: '/products', label: 'Products', icon: Package },
     { href: '/shopping', label: 'Shopping List', icon: ShoppingCart },
-    { href: '/settings', label: 'Settings', icon: User },
+    { href: '/settings', label: 'Settings', icon: UserIcon },
   ];
 
   return (
@@ -103,12 +108,18 @@ export function Sidebar() {
 
             <div className="p-4 bg-hemp/20 rounded-2xl flex items-center gap-4">
               <div className="h-12 w-12 rounded-full bg-sage/20 flex items-center justify-center text-sage-deep font-bold">
-                TM
+                {user?.email?.[0].toUpperCase() || 'U'}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-bark">Tai HT</p>
-                <p className="text-xs text-bark/40">Premium Plan</p>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-bold text-bark truncate">{user?.email}</p>
+                <p className="text-xs text-bark/40">Free Plan</p>
               </div>
+              <button 
+                onClick={() => signOut()}
+                className="p-2 hover:bg-red-50 text-red-500 rounded-xl transition-all"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -159,14 +170,20 @@ export function Sidebar() {
 
         {/* Footer / User Profile Brief */}
         <div className="p-4 border-t border-bark/5 bg-hemp/5">
-          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-hemp/20 transition-colors cursor-pointer group">
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-hemp/20 transition-colors group">
             <div className="h-8 w-8 rounded-full bg-sage/20 flex items-center justify-center text-sage-deep font-bold text-xs">
-              TM
+              {user?.email?.[0].toUpperCase() || 'U'}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold text-bark truncate">Tai HT</p>
-              <p className="text-[10px] text-bark/40 truncate">Premium Plan</p>
+              <p className="text-xs font-bold text-bark truncate">{user?.email}</p>
+              <p className="text-[10px] text-bark/40 truncate">Free Plan</p>
             </div>
+            <button 
+              onClick={() => signOut()}
+              className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>

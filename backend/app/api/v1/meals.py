@@ -101,11 +101,11 @@ async def get_meals(
         )
 
     try:
+        print(f"Fetching meals for user_id: {user_id}")
         query = (
             db.table("meals")
             .select("id, name, ingredients, category, created_at, updated_at")
             .eq("user_id", user_id)
-            .is_("deleted_at", "null")
         )
         if category:
             query = query.eq("category", category)
@@ -118,14 +118,18 @@ async def get_meals(
         query = query.range(offset, offset + limit - 1)
 
         response = query.execute()
-        meals = [format_meal(row) for row in response.data]
+        
+        if response.data is None:
+            print("Warning: query.execute() returned None data")
+            meals = []
+        else:
+            meals = [format_meal(row) for row in response.data]
 
         # Separate count query
         count_query = (
             db.table("meals")
             .select("id", count="exact")
             .eq("user_id", user_id)
-            .is_("deleted_at", "null")
         )
         if category:
             count_query = count_query.eq("category", category)
@@ -135,6 +139,7 @@ async def get_meals(
         count_response = count_query.execute()
         total = count_response.count if count_response.count is not None else len(meals)
 
+        print(f"Successfully fetched {len(meals)} meals (Total: {total})")
         return {
             "success": True,
             "data": {"meals": meals, "total": total, "limit": limit, "offset": offset},
@@ -143,6 +148,7 @@ async def get_meals(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"Error fetching meals: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch meals: {str(e)}")
 
 
@@ -152,22 +158,22 @@ async def get_meal(meal_id: str, user: dict = Depends(get_current_user)):
     user_id = user["id"]
 
     try:
+        print(f"Fetching meal {meal_id} for user_id: {user_id}")
         response = (
             db.table("meals")
             .select("id, name, ingredients, category, created_at, updated_at")
             .eq("id", meal_id)
             .eq("user_id", user_id)
-            .is_("deleted_at", "null")
             .single()
             .execute()
         )
+        return {"success": True, "data": {"meal": format_meal(response.data)}}
     except Exception as e:
         error_msg = str(e)
+        print(f"Error fetching meal {meal_id}: {error_msg}")
         if "PGRST116" in error_msg or "Results contain 0 rows" in error_msg:
             raise HTTPException(status_code=404, detail="Meal not found")
         raise HTTPException(status_code=500, detail=f"Failed to fetch meal: {error_msg}")
-
-    return {"success": True, "data": {"meal": format_meal(response.data)}}
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

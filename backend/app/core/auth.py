@@ -1,7 +1,6 @@
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
-from app.core.config import settings
+from app.core.supabase import supabase
 
 security = HTTPBearer()
 
@@ -9,23 +8,22 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security)
 ) -> dict:
-    """Verify JWT token from Supabase Auth and return user info."""
+    """Verify JWT token using Supabase Auth API and return user info."""
     token = credentials.credentials
 
     try:
-        # Decode JWT without verification first to get the header
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False}
-        )
+        # Verify the token with Supabase
+        response = supabase.auth.get_user(token)
+        
+        if not response.user:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        return {
+            "id": response.user.id,
+            "email": response.user.email,
+            "display_name": response.user.user_metadata.get("display_name")
+        }
 
-        return {"id": user_id, "email": payload.get("email")}
-
-    except JWTError:
+    except Exception as e:
+        print(f"Auth error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid or expired token")

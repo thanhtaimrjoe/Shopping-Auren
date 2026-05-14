@@ -1,38 +1,35 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Sparkles, Save, ShoppingCart, Calendar, MoreHorizontal, X, Search, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2 } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { mealsApi, mealPlansApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const MEAL_DATABASE = [
-  'Oatmeal with Berries', 'Avocado Toast', 'Grilled Chicken Salad', 'Quinoa Buddha Bowl',
-  'Pan-Seared Salmon', 'Mushroom Risotto', 'Greek Yogurt Parfait', 'Lentil Soup',
-  'Spaghetti Carbonara', 'Beef Stir-fry', 'Tuna Poke Bowl', 'Roasted Vegetable Wrap',
-  'Chicken Tikka Masala', 'Shrimp Tacos', 'Eggplant Parmesan', 'Minestrone Soup',
-  'Turkey Club Sandwich', 'Caprese Salad', 'Bibimbap', 'Falafel Pita',
-  'Beef Bourguignon', 'Pad Thai', 'Lemon Herb Chicken', 'Vegetable Curry',
-  'Margherita Pizza', 'Cobb Salad', 'Miso Ramen', 'Fish and Chips',
-  'Spinach and Feta Omelet', 'Hummus and Veggie Plate', 'Clam Chowder', 'Chicken Alfredo',
-  'Pork Banh Mi', 'Mediterranean Mezze Platter', 'Butternut Squash Soup', 'Steak Frites',
-  'Cauliflower Wings', 'Poke Bowl with Salmon', 'French Onion Soup', 'Zucchini Noodles',
-  'Classic Cheeseburger', 'Caesar Salad', 'Sushi Platter', 'Ratatouille',
-  'Lentil Dahl', 'Eggs Benedict', 'Pulled Pork Sandwich', 'Caprese Skewers',
-  'Mango Sticky Rice', 'Greek Salad'
-];
+interface Meal {
+  id: string;
+  name: string;
+}
 
 export default function MealPlanPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMeals, setSelectedMeals] = useState<Record<string, string[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
+  const [fetchLoading, setFetchLoading] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +37,61 @@ export default function MealPlanPage() {
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
+  // Fetch meals for the modal
+  const fetchMeals = useCallback(async () => {
+    if (!user) return;
+    setFetchLoading(true);
+    try {
+      const response = await mealsApi.getAll();
+      if (response.data.success) {
+        setMealDatabase(response.data.data.meals);
+      }
+    } catch (error: any) {
+      if (error.message !== 'Network Error') {
+        console.error('Failed to fetch meals:', error);
+      }
+    } finally {
+      setFetchLoading(false);
+    }
+  }, [user]);
+
+  // Fetch current meal plan
+  const fetchMealPlan = useCallback(async () => {
+    if (!user) return;
+    try {
+      const startDate = format(weekStart, 'yyyy-MM-dd');
+      const endDate = format(addDays(weekStart, 6), 'yyyy-MM-dd');
+      const response = await mealPlansApi.getCurrent({ start_date: startDate, end_date: endDate });
+      if (response.data.success) {
+        // Transform backend format to local state format
+        const plan = response.data.data.meal_plan || {};
+        const transformed: Record<string, string[]> = {};
+        Object.entries(plan).forEach(([date, data]: [string, any]) => {
+          transformed[date] = data.meals.map((m: any) => m.name);
+        });
+        setSelectedMeals(transformed);
+      }
+    } catch (error: any) {
+      if (error.message !== 'Network Error') {
+        console.error('Failed to fetch meal plan:', error);
+      }
+    }
+  }, [user, weekStart]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchMeals();
+      fetchMealPlan();
+    }
+  }, [fetchMeals, fetchMealPlan, authLoading, user]);
 
   // Handle week navigation
   const handlePrevWeek = () => {
@@ -60,7 +112,6 @@ export default function MealPlanPage() {
   const triggerDatePicker = () => {
     if (dateInputRef.current) {
       try {
-        // Modern browsers support showPicker()
         if ('showPicker' in HTMLInputElement.prototype) {
           dateInputRef.current.showPicker();
         } else {
@@ -72,7 +123,6 @@ export default function MealPlanPage() {
     }
   };
 
-  // Handle modal close on click outside or escape key
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') setIsModalOpen(false);
@@ -90,43 +140,72 @@ export default function MealPlanPage() {
     setSearchQuery('');
   };
 
-  const handleSelectMeal = (meal: string) => {
-    if (!activeDayKey) return;
+  const handleSelectMeal = async (mealName: string) => {
+    if (!activeDayKey || !user) return;
     
     setIsLoading(true);
-    // Simulate loading state
-    setTimeout(() => {
+    try {
       const currentMeals = selectedMeals[activeDayKey] || [];
-      if (!currentMeals.includes(meal)) {
+      if (!currentMeals.includes(mealName)) {
+        const updatedMeals = [...currentMeals, mealName];
+        
+        // Save to backend
+        await mealPlansApi.save({
+          date: activeDayKey,
+          meal_names: updatedMeals
+        });
+
         setSelectedMeals({
           ...selectedMeals,
-          [activeDayKey]: [...currentMeals, meal]
+          [activeDayKey]: updatedMeals
         });
       }
-      setIsLoading(false);
       setIsModalOpen(false);
-    }, 300);
+    } catch (error) {
+      console.error('Failed to save meal plan:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeMeal = (dayKey: string, mealIndex: number) => {
+  const removeMeal = async (dayKey: string, mealIndex: number) => {
+    if (!user) return;
     const currentMeals = selectedMeals[dayKey] || [];
     const updatedMeals = currentMeals.filter((_, i) => i !== mealIndex);
-    setSelectedMeals({
-      ...selectedMeals,
-      [dayKey]: updatedMeals
-    });
+    
+    try {
+      await mealPlansApi.save({
+        date: dayKey,
+        meal_names: updatedMeals
+      });
+
+      setSelectedMeals({
+        ...selectedMeals,
+        [dayKey]: updatedMeals
+      });
+    } catch (error) {
+      console.error('Failed to update meal plan:', error);
+    }
   };
 
-  const filteredMeals = MEAL_DATABASE.filter(meal => 
-    meal.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMeals = mealDatabase.filter(meal => 
+    meal.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (authLoading) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-sage" />
+      </div>
+    );
+  }
 
   return (
     <div className="pb-24 animate-page-enter">
       {/* Editorial Header */}
       <header className="mb-20">
         <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-4">
-          Wednesday, May 13
+          {format(currentDate, 'EEEE, MMMM d')}
         </span>
         <h3 className="text-3xl md:text-4xl text-bark font-serif mb-6 leading-tight">
           Weekly Alignment
@@ -248,105 +327,60 @@ export default function MealPlanPage() {
 
       {/* Modal Popup */}
       {isModalOpen && (
-        <div 
-          className="fixed inset-0 bg-bark/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-300"
-          onClick={() => setIsModalOpen(false)}
-        >
+        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div 
-            className="bg-cream w-full max-w-2xl rounded-[3rem] shadow-warm overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-            onClick={e => e.stopPropagation()}
             ref={modalRef}
+            className="bg-cream rounded-[2.5rem] w-full max-w-lg shadow-warm animate-scale-in overflow-hidden"
           >
-            {/* Modal Header */}
-            <div className="p-8 border-b border-bark/5 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl text-bark font-serif">Chọn món ăn</h2>
-                <p className="text-xs text-bark/40 uppercase tracking-widest mt-1">
-                  {activeDayKey && format(new Date(activeDayKey), 'EEEE, d MMMM')}
-                </p>
+            <div className="p-8 border-b border-bark/5">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Chọn món ăn</h3>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-hemp/50 rounded-full transition-all"
+                >
+                  <X className="h-5 w-5 text-bark/40" />
+                </button>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-3 hover:bg-hemp/30 rounded-full transition-colors"
-              >
-                <X className="h-6 w-6 text-bark/40" />
-              </button>
-            </div>
-
-            {/* Search Bar */}
-            <div className="p-6 bg-hemp/10">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/30" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
                 <input 
                   ref={searchInputRef}
                   type="text" 
                   placeholder="Tìm kiếm món ăn..."
-                  className="w-full bg-cream border-0 rounded-2xl py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 shadow-soft focus:ring-2 focus:ring-sage/20 transition-all"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
-
-            {/* Meals List */}
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-              {isLoading ? (
-                <div className="h-40 flex flex-col items-center justify-center gap-4">
-                  <Loader2 className="h-8 w-8 text-sage animate-spin" />
-                  <p className="text-sm text-bark/40">Đang cập nhật thực đơn...</p>
+            
+            <div className="max-h-[400px] overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {fetchLoading ? (
+                <div className="py-12 flex justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-sage" />
                 </div>
               ) : filteredMeals.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filteredMeals.map((meal) => {
-                    const isSelected = activeDayKey && selectedMeals[activeDayKey]?.includes(meal);
-                    return (
-                      <button
-                        key={meal}
-                        disabled={isSelected || isLoading}
-                        onClick={() => handleSelectMeal(meal)}
-                        className={cn(
-                          "text-left p-4 rounded-2xl transition-all border border-transparent",
-                          isSelected 
-                            ? "bg-bark/5 text-bark/30 cursor-not-allowed opacity-60" 
-                            : "bg-hemp/20 hover:bg-sage/10 hover:border-sage/20 text-bark"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{meal}</span>
-                          {isSelected && <span className="text-[10px] font-bold uppercase tracking-tighter bg-bark/10 px-2 py-0.5 rounded-full">Đã chọn</span>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                filteredMeals.map((meal, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSelectMeal(meal.name)}
+                    disabled={isLoading}
+                    className="w-full text-left px-6 py-4 rounded-2xl hover:bg-sage/10 hover:text-sage-deep transition-all font-medium text-bark flex items-center justify-between group"
+                  >
+                    {meal.name}
+                    <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
+                  </button>
+                ))
               ) : (
-                <div className="h-40 flex flex-col items-center justify-center text-center p-8">
-                  <p className="text-bark/40 italic">Không tìm thấy món ăn nào phù hợp với "{searchQuery}"</p>
+                <div className="py-12 text-center text-bark/40 italic">
+                  Không tìm thấy món ăn nào trong thư viện
                 </div>
               )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 bg-hemp/5 text-center">
-              <p className="text-[10px] text-bark/30 uppercase tracking-[0.2em]">
-                {filteredMeals.length} món ăn khả dụng
-              </p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Floating Action Bar */}
-      <div className="fixed bottom-8 right-6 md:bottom-12 md:right-12 flex flex-col items-end gap-4 z-40">
-        <button className="h-14 w-14 md:h-16 md:w-16 bg-cream rounded-2xl shadow-warm flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
-          <Save className="h-6 w-6 text-bark group-hover:text-sage-deep" />
-        </button>
-        <button className="h-16 md:h-20 px-8 md:px-10 bg-sage text-cream rounded-[2rem] md:rounded-[2.5rem] shadow-warm flex items-center gap-4 hover:bg-sage-deep hover:-translate-y-1 active:translate-y-0 transition-all group">
-          <Sparkles className="h-5 w-5 md:h-6 md:w-6 fill-current" />
-          <span className="font-bold uppercase tracking-widest text-[10px] md:text-sm">Review List</span>
-          <ShoppingCart className="h-5 w-5 md:h-6 md:w-6" />
-        </button>
-      </div>
     </div>
   );
 }

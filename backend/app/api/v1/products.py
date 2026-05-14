@@ -71,11 +71,11 @@ async def get_products(
         )
 
     try:
+        print(f"Fetching products for user_id: {user_id}")
         query = (
             db.table("products")
             .select("id, name, category, image_url, created_at, updated_at")
             .eq("user_id", user_id)
-            .is_("deleted_at", "null")
         )
         if category:
             query = query.eq("category", category)
@@ -84,8 +84,14 @@ async def get_products(
 
         query = query.order("created_at", desc=True)
         response = query.execute()
-        products = [format_product(row) for row in response.data]
+        
+        if response.data is None:
+            print("Warning: query.execute() returned None data")
+            products = []
+        else:
+            products = [format_product(row) for row in response.data]
 
+        print(f"Successfully fetched {len(products)} products")
         return {
             "success": True,
             "data": {"products": products, "total": len(products)},
@@ -94,7 +100,32 @@ async def get_products(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"Error fetching products: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch products: {str(e)}")
+
+
+@router.get("/{product_id}", status_code=status.HTTP_200_OK)
+async def get_product(product_id: str, user: dict = Depends(get_current_user)):
+    """Get a single product by ID."""
+    user_id = user["id"]
+
+    try:
+        print(f"Fetching product {product_id} for user_id: {user_id}")
+        response = (
+            db.table("products")
+            .select("id, name, category, image_url, created_at, updated_at")
+            .eq("id", product_id)
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        return {"success": True, "data": {"product": format_product(response.data)}}
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Error fetching product {product_id}: {error_msg}")
+        if "PGRST116" in error_msg or "Results contain 0 rows" in error_msg:
+            raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch product: {error_msg}")
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
