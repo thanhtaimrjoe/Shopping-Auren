@@ -418,6 +418,136 @@
 
 ---
 
+### [2026-05-13 20:15] - Thiết kế lại Sidebar theo phong cách truyền thống và tối ưu Responsive
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: -  
+**影響範囲**: Frontend (Sidebar, Layout)
+
+### 変更内容
+- Thiết kế lại Sidebar với bố cục dọc cố định truyền thống:
+    - Thay thế dạng floating bằng bố cục cố định bên trái màn hình (`fixed left-0`).
+    - Sử dụng màu sắc trung tính (`bg-cream`) và đường viền mảnh (`border-r`) để tạo sự chuyên nghiệp.
+    - Chiều rộng cố định 260px cho trải nghiệm nhất quán.
+- Cải thiện trải nghiệm điều hướng:
+    - Thêm chỉ báo mục đang chọn (Active State Indicator) bằng vạch màu bên trái.
+    - Hiệu ứng hover nhẹ nhàng và thay đổi màu sắc icon linh hoạt.
+    - Tích hợp thêm phần thông tin người dùng (User Profile Brief) ở chân Sidebar.
+- Tối ưu hóa Responsive:
+    - Tự động ẩn Sidebar trên màn hình nhỏ và thay thế bằng nút Menu toggle.
+    - Thêm lớp phủ (Overlay) mờ khi mở Sidebar trên mobile.
+    - Điều chỉnh margin của nội dung chính (`ml-[260px]`) để khớp với Sidebar mới.
+
+### 実装詳細
+- ファイル: `frontend/src/components/Sidebar.tsx`, `frontend/src/app/layout.tsx`
+- Công nghệ: TailwindCSS (Responsive design, Transitions), Lucide Icons (`Menu`, `CalendarDays`, etc.).
+
+### テスト
+- [x] Kiểm tra hiển thị cố định trên Desktop.
+- [x] Kiểm tra tính năng đóng/mở trên Mobile.
+- [x] Xác nhận các liên kết điều hướng và trạng thái Active hoạt động chính xác.
+
+---
+
+### [2026-05-13 20:00] - Triển khai Modal chọn món ăn với thanh tìm kiếm
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Thay thế Dropdown bằng hệ thống Modal chuyên nghiệp để chọn món ăn:
+    - Cơ sở dữ liệu món ăn (`MEAL_DATABASE`) mở rộng lên 50 món đa dạng.
+    - Modal tích hợp thanh tìm kiếm (Search Bar) hỗ trợ lọc món ăn theo thời gian thực.
+- Tính năng và UX:
+    - Tìm kiếm tức thì: Kết quả cập nhật ngay khi người dùng nhập liệu.
+    - Xử lý trạng thái trống (Empty state) khi không tìm thấy món phù hợp.
+    - Hiệu ứng animation mượt mà (Fade-in, Zoom, Slide) khi đóng/mở Modal.
+    - Hỗ trợ phím tắt `Esc` để đóng Modal và tự động focus vào thanh tìm kiếm.
+    - Giả lập trạng thái tải dữ liệu (`isLoading`) với spinner quay đẹp mắt.
+- Giao diện (UI):
+    - Modal được thiết kế bo góc lớn (`rounded-[3rem]`) và đổ bóng mềm mại theo phong cách chung.
+    - Bố cục danh sách món ăn chia thành 2 cột trên màn hình rộng để tối ưu không gian.
+    - Hiển thị thông tin ngày đang chọn ngay trong tiêu đề Modal.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- Công nghệ: React Hooks (`useState`, `useRef`, `useEffect`), Lucide Icons (`Search`, `Loader2`, `X`).
+
+### テスト
+- [x] Kiểm tra tính năng tìm kiếm món ăn.
+- [x] Xác nhận phím tắt Esc và click outside hoạt động đúng.
+- [x] Kiểm tra hiển thị responsive trên mobile và desktop.
+- [x] Đảm bảo logic không chọn trùng món vẫn được duy trì.
+
+---
+
+### [2026-05-13 19:45] - Thiết kế lại logic chọn món với Dropdown
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Thay thế các nút chọn món mặc định bằng hệ thống Dropdown linh hoạt:
+    - Mỗi ngày có một nút "Thêm món" duy nhất.
+    - Click vào nút sẽ mở Dropdown hiển thị danh sách món ăn (`MEAL_OPTIONS`).
+- Quản lý trạng thái món ăn:
+    - Lưu trữ danh sách món đã chọn theo từng ngày (`selectedMeals` state).
+    - Cho phép chọn nhiều món cho một ngày hoặc không chọn món nào.
+    - Có chức năng xóa món đã chọn (icon X).
+- Logic và UX:
+    - Xử lý đóng Dropdown khi click ra ngoài (Click outside).
+    - Validate: Không cho phép chọn trùng món trong cùng một ngày (disable option đã chọn).
+    - Hiệu ứng animation mượt mà khi mở Dropdown.
+- Giao diện:
+    - Thiết kế responsive, hoạt động tốt trên cả mobile và desktop.
+    - Duy trì phong cách Magazine với các Card và màu sắc chủ đạo của dự án.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- Công nghệ: React Hooks (`useState`, `useRef`, `useEffect`), Lucide Icons.
+
+### テスト
+- [x] Kiểm tra việc thêm/xóa món ăn.
+- [x] Xác nhận logic không chọn trùng món.
+- [x] Kiểm tra tính năng click outside.
+- [x] Đảm bảo hiển thị đúng trên các kích thước màn hình.
+
+---
+
+### [2026-05-13 19:30] - Tối ưu hóa layout đa cột cho màn hình lớn
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Điều chỉnh Grid layout để hiển thị 4 cột (thay vì 3) trên màn hình 2K/4K (`2xl:grid-cols-4`).
+- Thu gọn kích thước các thẻ ngày (Card):
+    - Giảm padding từ `p-10` xuống `p-8`.
+    - Giảm bo góc từ `rounded-[3rem]` xuống `rounded-[2.5rem]`.
+- Tối ưu hóa không gian bên trong thẻ:
+    - Giảm khoảng cách tiêu đề (`mb-8`) và các mục bữa ăn (`space-y-4`).
+    - Giảm kích thước font chữ cho tên thứ (`text-base`), ngày tháng (`text-xs`), và nội dung bữa ăn.
+    - Thu nhỏ các nút bấm và icon để phù hợp với layout 4 cột.
+- Đảm bảo tính responsive mượt mà từ mobile (1 cột) đến desktop lớn (4 cột).
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更 lý do: Theo yêu cầu của người dùng để hiển thị được nhiều thông tin hơn (4 ngày) trên cùng một hàng ngang, giúp tối ưu hóa diện tích sử dụng trên màn hình desktop.
+
+### テスト
+- [x] Kiểm tra hiển thị 4 cột trên độ phân giải >1536px.
+- [x] Kiểm tra độ dễ đọc (readability) khi font-size nhỏ lại.
+- [x] Xác nhận layout không bị vỡ trên các trình duyệt phổ biến.
+
+---
+
 ### [2026-05-13 19:15] - Thiết lập lại phân cấp thị giác cho tiêu đề ngày
 
 **担当**: AI Assistant  
@@ -487,6 +617,39 @@
 ### テスト
 - [x] Kiểm tra lỗi biên dịch (không có lỗi import).
 - [x] Kiểm tra giao diện người dùng (các thành phần đã biến mất và layout vẫn ổn định).
+
+---
+
+### [2026-05-14 08:30] - Chuyển đổi Sidebar sang chế độ luôn hiển thị và tối ưu Responsive (Icon Rail)
+
+**担当**: AI Assistant  
+**タイプ**: Refactor/UI  
+**関連US**: -  
+**影響範囲**: Frontend (Sidebar, Layout)
+
+### 変更内容
+- Loại bỏ nút Menu toggle và lớp phủ (Overlay) trên mobile.
+- Thiết lập Sidebar luôn hiển thị mặc định trên mọi kích thước màn hình:
+    - Chế độ **Icon Rail** trên màn hình nhỏ: Sidebar thu hẹp (80px), chỉ hiển thị icon căn giữa.
+    - Chế độ **Full Sidebar** trên màn hình lớn (>=1024px): Sidebar rộng (260px), hiển thị đầy đủ icon và nhãn văn bản.
+- Tối ưu hóa layout nội dung chính:
+    - Điều chỉnh margin trái của `main` linh hoạt (`ml-20` trên mobile, `ml-[260px]` trên desktop) để không bị Sidebar che khuất.
+    - Thêm hiệu ứng chuyển cảnh mượt mà (`transition-all`) khi thay đổi kích thước màn hình.
+- Cải thiện UI Sidebar:
+    - Căn giữa các thành phần (Logo, Nav links, Profile) khi ở chế độ thu nhỏ.
+    - Đảm bảo background `bg-cream` và border được áp dụng nhất quán.
+
+### 実装詳細
+- ファイル: `frontend/src/components/Sidebar.tsx`
+- ファイル: `frontend/src/app/layout.tsx`
+- 変更 lý do: Theo yêu cầu của người dùng để Sidebar luôn hiện diện, giúp truy cập nhanh các tính năng mà không cần thao tác mở menu, đồng thời vẫn đảm bảo không gian hiển thị trên mobile bằng cách sử dụng dạng thanh icon (rail).
+- 技術的な quyết định: Sử dụng các class Tailwind responsive (`w-20 lg:w-[260px]`, `hidden lg:block`, `justify-center lg:justify-start`) để xử lý hiển thị mà không cần dùng JavaScript state.
+
+### テスト
+- [x] Kiểm tra hiển thị Sidebar trên Desktop (đầy đủ).
+- [x] Kiểm tra hiển thị Sidebar trên Mobile (dạng icon rail).
+- [x] Xác nhận nội dung chính không bị đè lên Sidebar.
+- [x] Kiểm tra các link điều hướng vẫn hoạt động tốt.
 
 ---
 

@@ -28,7 +28,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen`}>
         <Sidebar />
-        <main className="flex-1 ml-[320px] p-6 min-h-screen relative z-10">
+        <main className="flex-1 ml-20 lg:ml-[260px] p-6 min-h-screen relative z-10 transition-all duration-300">
           <div className="w-full h-full max-w-[1400px] mx-auto">
             {children}
           </div>
