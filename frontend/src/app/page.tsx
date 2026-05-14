@@ -36,9 +36,41 @@ export default function MealPlanPage() {
 
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Handle week navigation
+  const handlePrevWeek = () => {
+    setCurrentDate(addDays(currentDate, -7));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentDate(addDays(currentDate, 7));
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value);
+    if (!isNaN(newDate.getTime())) {
+      setCurrentDate(newDate);
+    }
+  };
+
+  const triggerDatePicker = () => {
+    if (dateInputRef.current) {
+      try {
+        // Modern browsers support showPicker()
+        if ('showPicker' in HTMLInputElement.prototype) {
+          dateInputRef.current.showPicker();
+        } else {
+          dateInputRef.current.click();
+        }
+      } catch (error) {
+        dateInputRef.current.click();
+      }
+    }
+  };
 
   // Handle modal close on click outside or escape key
   useEffect(() => {
@@ -90,7 +122,7 @@ export default function MealPlanPage() {
   );
 
   return (
-    <div className="pt-12 px-12 pb-24 animate-page-enter">
+    <div className="pb-24 animate-page-enter">
       {/* Editorial Header */}
       <header className="mb-20">
         <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block mb-4">
@@ -107,16 +139,33 @@ export default function MealPlanPage() {
       </header>
 
       {/* Week Navigation */}
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
         <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Week Schedule</h3>
-        <div className="flex items-center gap-4 bg-cream rounded-full p-1 shadow-soft">
-          <button className="p-3 hover:bg-hemp/50 rounded-full transition-all">
+        <div className="relative flex items-center gap-2 md:gap-4 bg-cream rounded-full p-1 shadow-soft w-fit">
+          <input 
+            type="date"
+            ref={dateInputRef}
+            className="absolute opacity-0 pointer-events-none w-0 h-0"
+            onChange={handleDateChange}
+          />
+          <button 
+            onClick={handlePrevWeek}
+            className="p-3 hover:bg-hemp/50 rounded-full transition-all active:scale-95"
+            aria-label="Previous week"
+          >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="text-sm font-bold text-bark min-w-[200px] text-center uppercase tracking-widest">
+          <div 
+            onClick={triggerDatePicker}
+            className="text-xs md:text-sm font-bold text-bark min-w-[150px] md:min-w-[200px] text-center uppercase tracking-widest cursor-pointer hover:text-sage-deep transition-colors select-none px-2"
+          >
              {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d')}
-          </span>
-          <button className="p-3 hover:bg-hemp/50 rounded-full transition-all">
+          </div>
+          <button 
+            onClick={handleNextWeek}
+            className="p-3 hover:bg-hemp/50 rounded-full transition-all active:scale-95"
+            aria-label="Next week"
+          >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
@@ -288,14 +337,14 @@ export default function MealPlanPage() {
       )}
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-12 right-12 flex flex-col gap-4 z-50">
-        <button className="h-16 w-16 bg-cream rounded-full shadow-warm flex items-center justify-center hover:scale-110 transition-transform group">
+      <div className="fixed bottom-8 right-6 md:bottom-12 md:right-12 flex flex-col items-end gap-4 z-40">
+        <button className="h-14 w-14 md:h-16 md:w-16 bg-cream rounded-2xl shadow-warm flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
           <Save className="h-6 w-6 text-bark group-hover:text-sage-deep" />
         </button>
-        <button className="h-20 px-10 bg-sage text-cream rounded-[2.5rem] shadow-warm flex items-center gap-4 hover:bg-sage-deep hover:-translate-y-1 transition-all group">
-          <Sparkles className="h-6 w-6 fill-current" />
-          <span className="font-bold uppercase tracking-widest text-sm">Review List</span>
-          <ShoppingCart className="h-6 w-6" />
+        <button className="h-16 md:h-20 px-8 md:px-10 bg-sage text-cream rounded-[2rem] md:rounded-[2.5rem] shadow-warm flex items-center gap-4 hover:bg-sage-deep hover:-translate-y-1 active:translate-y-0 transition-all group">
+          <Sparkles className="h-5 w-5 md:h-6 md:w-6 fill-current" />
+          <span className="font-bold uppercase tracking-widest text-[10px] md:text-sm">Review List</span>
+          <ShoppingCart className="h-5 w-5 md:h-6 md:w-6" />
         </button>
       </div>
     </div>

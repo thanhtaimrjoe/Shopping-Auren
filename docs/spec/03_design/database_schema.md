@@ -16,7 +16,7 @@
        │ 1:N
        ▼
 ┌─────────────┐         ┌──────────────┐
-│   dishes    │         │miscellaneous │
+│    meals    │         │   products   │
 └──────┬──────┘         └──────┬───────┘
        │                       │
        │ N:M                   │
@@ -48,11 +48,8 @@
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | ユーザーID（PK） |
 | email | VARCHAR(255) | NOT NULL | - | メールアドレス（Unique） |
-| password_hash | VARCHAR(255) | NOT NULL | - | パスワードハッシュ |
-| display_name | VARCHAR(100) | NULL | - | 表示名 |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-| last_login_at | TIMESTAMP | NULL | - | 最終ログイン日時 |
 
 **インデックス**:
 - PRIMARY KEY: `id`
@@ -60,50 +57,46 @@
 
 **備考**:
 - Supabase Authを使用するため、実際は`auth.users`テーブルを参照
-- このテーブルは拡張情報用
 
 ---
 
-### 2. dishes（料理）
+### 2. meals（料理）
 
 | カラム名 | 型 | NULL | デフォルト | 説明 |
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | 料理ID（PK） |
 | user_id | UUID | NOT NULL | - | ユーザーID（FK） |
 | name | VARCHAR(100) | NOT NULL | - | 料理名 |
-| ingredients | TEXT | NULL | - | 材料リスト（改行区切り） |
-| category | VARCHAR(50) | NOT NULL | - | カテゴリ（和食/洋食/中華/その他） |
+| ingredients | JSONB | NOT NULL | '[]'::jsonb | 材料 danh sách |
+| category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（japanese/western/chinese/other） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
 | deleted_at | TIMESTAMP | NULL | - | 削除日時（Soft Delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
-- FOREIGN KEY: `user_id` REFERENCES `users(id)` ON DELETE CASCADE
+- FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
 - INDEX: `user_id, deleted_at`
 - INDEX: `category`
 
-**備考**:
-- `ingredients`は改行区切りのテキスト（将来的に正規化検討）
-- Soft Deleteで履歴機能に対応
-
 ---
 
-### 3. miscellaneous（雑貨）
+### 3. products（雑貨）
 
 | カラム名 | 型 | NULL | デフォルト | 説明 |
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | 雑貨ID（PK） |
 | user_id | UUID | NOT NULL | - | ユーザーID（FK） |
 | name | VARCHAR(100) | NOT NULL | - | 雑貨名 |
-| category | VARCHAR(50) | NOT NULL | - | カテゴリ（日用品/消耗品/その他） |
+| image_url | TEXT | NULL | - | 画像URL |
+| category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（daily/consumable/other） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
 | deleted_at | TIMESTAMP | NULL | - | 削除日時（Soft Delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
-- FOREIGN KEY: `user_id` REFERENCES `users(id)` ON DELETE CASCADE
+- FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
 - INDEX: `user_id, deleted_at`
 
 ---
@@ -121,13 +114,9 @@
 
 **インデックス**:
 - PRIMARY KEY: `id`
-- FOREIGN KEY: `user_id` REFERENCES `users(id)` ON DELETE CASCADE
+- FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
 - UNIQUE INDEX: `user_id, week_start_date`
 - INDEX: `status`
-
-**備考**:
-- 1週間に1つの計画のみ（Unique制約）
-- `week_start_date`は常に月曜日
 
 ---
 
@@ -137,7 +126,7 @@
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | アイテムID（PK） |
 | meal_plan_id | UUID | NOT NULL | - | 食事計画ID（FK） |
-| dish_id | UUID | NOT NULL | - | 料理ID（FK） |
+| meal_id | UUID | NOT NULL | - | 料理ID（FK - public.meals.id） |
 | day_of_week | INTEGER | NOT NULL | - | 曜日（0=月, 6=日） |
 | meal_type | VARCHAR(20) | NOT NULL | - | 食事タイプ（breakfast/lunch/dinner） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
@@ -145,13 +134,9 @@
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `meal_plan_id` REFERENCES `meal_plans(id)` ON DELETE CASCADE
-- FOREIGN KEY: `dish_id` REFERENCES `dishes(id)` ON DELETE RESTRICT
+- FOREIGN KEY: `meal_id` REFERENCES `meals(id)` ON DELETE RESTRICT
 - UNIQUE INDEX: `meal_plan_id, day_of_week, meal_type`
 - INDEX: `meal_plan_id`
-
-**備考**:
-- 1日1食タイプに1つの料理のみ（Unique制約）
-- 料理削除時はRESTRICT（計画に使われている料理は削除不可）
 
 ---
 
@@ -169,14 +154,10 @@
 
 **インデックス**:
 - PRIMARY KEY: `id`
-- FOREIGN KEY: `user_id` REFERENCES `users(id)` ON DELETE CASCADE
+- FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
 - FOREIGN KEY: `meal_plan_id` REFERENCES `meal_plans(id)` ON DELETE SET NULL
 - INDEX: `user_id, status`
 - INDEX: `week_start_date`
-
-**備考**:
-- 食事計画から自動生成される
-- 完了後も履歴として保持
 
 ---
 
@@ -187,8 +168,8 @@
 | id | UUID | NOT NULL | gen_random_uuid() | アイテムID（PK） |
 | shopping_list_id | UUID | NOT NULL | - | 買い物リストID（FK） |
 | name | VARCHAR(100) | NOT NULL | - | アイテム名 |
-| category | VARCHAR(50) | NOT NULL | - | カテゴリ |
-| source_type | VARCHAR(20) | NOT NULL | - | ソース（dish/miscellaneous/manual） |
+| category | VARCHAR(50) | NOT NULL | - | カテゴi |
+| source_type | VARCHAR(20) | NOT NULL | - | ソース（meal/product/manual） |
 | source_id | UUID | NULL | - | ソースID（料理IDまたは雑貨ID） |
 | is_checked | BOOLEAN | NOT NULL | false | チェック済みフラグ |
 | checked_at | TIMESTAMP | NULL | - | チェック日時 |
@@ -198,7 +179,6 @@
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `shopping_list_id` REFERENCES `shopping_lists(id)` ON DELETE CASCADE
 - INDEX: `shopping_list_id, is_checked`
-- INDEX: `category`
 
 **備考**:
 - `source_type`: 料理由来/雑貨由来/手動追加を区別

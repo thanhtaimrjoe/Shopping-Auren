@@ -653,6 +653,195 @@
 
 ---
 
+### [2026-05-14 09:30] - Điều chỉnh z-index của Modal và Sidebar để tránh lỗi hiển thị
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: -  
+**影響範囲**: Frontend (Layout, Sidebar, Modal)
+
+### 変更内容
+- Điều chỉnh cấu trúc `z-index` để Modal luôn hiển thị trên cùng, không bị Sidebar che khuất:
+    - Giảm `z-index` của Sidebar từ `z-[45]` xuống `z-30`.
+    - Loại bỏ `z-10` khỏi thẻ `main` trong layout để không tạo stacking context hạn chế các thành phần `fixed` bên trong.
+    - Duy trì `z-[100]` cho Modal backdrop để đảm bảo phủ lên toàn bộ giao diện bao gồm cả Sidebar.
+- Đảm bảo tính nhất quán của lớp xếp chồng (stacking order) trên mọi kích thước màn hình.
+
+### 実装詳細
+- ファイル: [Sidebar.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/components/Sidebar.tsx)
+- ファイル: [layout.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/layout.tsx)
+- 変更 lý do: Sửa lỗi Sidebar hiển thị đè lên Modal hoặc Modal bị "kẹp" vào giữa Sidebar và nội dung chính do xung đột stacking context.
+- 技術的な quyết định: Sử dụng giá trị `z-index` thấp hơn cho Sidebar và loại bỏ `z-index` của container chính để các thành phần `fixed` cấp cao (như Modal) có thể so sánh trực tiếp với Sidebar ở root level.
+
+### テスト
+- [x] Kiểm tra Modal hiển thị đè lên Sidebar hoàn toàn.
+- [x] Kiểm tra Sidebar vẫn hiển thị trên nội dung chính khi cuộn trang.
+- [x] Xác nhận không có lỗi layout trên mobile và desktop.
+
+---
+
+### [2026-05-14 10:00] - Triển khai giao diện di động (Responsive) với Hamburger Menu và Bottom-up Modal
+
+**担当**: AI Assistant  
+**タイプ**: Feature/UI  
+**関連US**: -  
+**影響範囲**: Frontend (Sidebar, Layout)
+
+### 変更内容
+- Chuyển đổi Sidebar cố định sang dạng ẩn trên di động (`hidden lg:flex`).
+- Thêm Header di động cố định (`fixed top-0`) với nút Hamburger Menu (kích thước tối ưu 48x48px).
+- Triển khai Modal điều hướng dạng **Bottom-up** cho di động:
+    - Hiệu ứng trượt từ dưới lên mượt mà (`slide-in-from-bottom`).
+    - Lớp phủ mờ (`backdrop-blur-sm`) cho phép đóng khi chạm ngoài.
+    - Nút đóng (X) rõ ràng ở góc trên bên phải Modal.
+- Tối ưu hóa các mục điều hướng trên di động:
+    - Kích thước mục lớn hơn, dễ chạm.
+    - Hiệu ứng phản hồi khi chạm (`active:scale-[0.98]`).
+    - Tự động đóng menu sau khi chọn mục điều hướng.
+- Điều chỉnh Layout:
+    - Loại bỏ margin trái trên di động.
+    - Thêm khoảng trống phía trên (`pt-16`) cho Header di động.
+    - Ngăn cuộn trang (`overflow-hidden`) khi đang mở Menu di động.
+
+### 実装詳細
+- ファイル: [Sidebar.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/components/Sidebar.tsx) - Thêm state quản lý menu và UI mobile.
+- ファイル: [layout.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/layout.tsx) - Điều chỉnh padding và margin responsive.
+
+### テスト
+- [x] Kiểm tra nút Hamburger Menu hiển thị đúng trên mobile.
+- [x] Kiểm tra hiệu ứng trượt Modal từ dưới lên.
+- [x] Xác nhận đóng Modal bằng cả nút X và chạm Overlay.
+- [x] Kiểm tra layout Desktop không bị ảnh hưởng.
+
+---
+
+### [2026-05-14 10:30] - Triển khai bộ chọn tuần và tích hợp DatePicker
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: -  
+**影響範囲**: Frontend (Meal Plan Page)
+
+### 変更内容
+- Triển khai đầy đủ logic điều hướng tuần (Nút Previous/Next):
+    - Cập nhật `currentDate` để chuyển đổi giữa các tuần một cách chính xác.
+    - Thêm hiệu ứng phản hồi (`active:scale-95`) khi nhấn nút.
+- Tích hợp thành phần chọn ngày (DatePicker) mượt mà:
+    - Sử dụng `input[type="date"]` ẩn kết hợp với API `showPicker()` hiện đại để hiển thị bộ chọn ngày gốc của hệ điều hành.
+    - Cho phép người dùng nhấn trực tiếp vào dải ngày để mở bộ chọn ngày.
+    - Đảm bảo vị trí hiển thị chính xác và không bị tràn màn hình (nhờ cơ chế gốc của trình duyệt).
+- Xử lý xác thực và cập nhật giao diện:
+    - Tự động đồng bộ hóa lịch trình tuần ngay sau khi chọn ngày mới.
+    - Cải thiện trải nghiệm người dùng với con trỏ chuột (`cursor-pointer`) và hiệu ứng màu sắc khi hover.
+
+### 実装詳細
+- ファイル: [page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/page.tsx) - Thêm state navigation, date input ref và các hàm xử lý sự kiện.
+- Kỹ thuật: Sử dụng `date-fns` để tính toán khoảng ngày và `useRef` để kích hoạt bộ chọn ngày mà không cần thêm thư viện ngoài nặng nề.
+
+### テスト
+- [x] Kiểm tra chuyển tuần tới/lui hoạt động chính xác.
+- [x] Kiểm tra nhấn vào dải ngày hiển thị DatePicker trên cả Desktop và Mobile.
+- [x] Xác nhận giao diện cập nhật ngay lập tức sau khi chọn ngày.
+
+---
+
+### [2026-05-14 11:00] - Thiết kế cơ sở dữ liệu cho tính năng Meals (Meal Plan)
+
+**担当**: AI Assistant  
+**タイプ**: Feature/Database  
+**関連US**: US-003, US-009, US-010  
+**影響範囲**: Database, Documentation
+
+### 変更内容
+- Hoàn thiện thiết kế cơ sở dữ liệu cho tính năng lập kế hoạch bữa ăn (Meals/Meal Plan):
+    - Xác định thực thể chính: `meals`, `meal_plans`, `meal_plan_items`.
+    - Thiết lập các ràng buộc toàn vẹn: Khóa ngoại, `UNIQUE` (một kế hoạch mỗi tuần), và các ràng buộc kiểm tra (`CHECK`).
+    - Tối ưu hóa truy vấn bằng các chỉ mục (`INDEX`) trên `user_id`, `week_start_date` và `status`.
+- Chuẩn hóa tài liệu thiết kế:
+    - Cập nhật [database_schema.md](file:///Users/taiht/Documents/Shopping-Auren/docs/spec/03_design/database_schema.md) để thống nhất tên bảng `meals` và `products` theo thực tế triển khai.
+    - Tạo tài liệu thiết kế chi tiết [meal_db_design.md](file:///Users/taiht/Documents/Shopping-Auren/docs/spec/03_design/meal_db_design.md) bao gồm ERD và SQL script.
+- Đảm bảo tính mở rộng: Thiết kế hỗ trợ Soft Delete cho món ăn và lưu trữ nguyên liệu dưới dạng JSONB để linh hoạt trong tương lai.
+
+### 実装詳細
+- Tài liệu: `docs/spec/03_design/database_schema.md` (Cập nhật)
+- Tài liệu: `docs/spec/03_design/meal_db_design.md` (Tạo mới)
+- Kỹ thuật: PostgreSQL syntax, Supabase compatibility, Row Level Security (RLS) ready.
+
+### テスト
+- [x] Kiểm tra tính nhất quán giữa Database Schema và API Spec.
+- [x] Xác nhận các ràng buộc UNIQUE ngăn chặn dữ liệu trùng lặp.
+- [x] Kiểm tra hiệu năng dự kiến thông qua thiết kế chỉ mục.
+
+---
+
+### [2026-05-14 11:30] - Hoàn thiện thiết kế UI/UX và triển khai giao diện các trang chính
+
+**担当**: AI Assistant  
+**タイプ**: Feature/UI  
+**関連US**: US-007, US-011  
+**影響範囲**: Frontend (All pages, Components, Layout)
+
+### 変更内容
+- Triển khai trang **Shopping List** (`/shopping`):
+    - Giao diện dạng thẻ editorial với tiến trình hoàn thành (Progress bar).
+    - Phân loại sản phẩm theo danh mục (Produce, Bakery, Dairy, v.v.).
+    - Chức năng tìm kiếm và đánh dấu đã mua mượt mà.
+- Triển khai trang **Settings** (`/settings`):
+    - Bố cục chuyên nghiệp với thẻ hồ sơ người dùng (User Profile Card).
+    - Các mục cài đặt được nhóm theo chủ đề (General, Application).
+    - Hiệu ứng tương tác hiện đại và giao diện sạch sẽ.
+- Tối ưu hóa UI/UX toàn hệ thống:
+    - Đồng bộ hóa bảng màu (Sage, Cream, Bark, Hemp) trên tất cả các trang.
+    - Cải thiện tính đáp ứng (Responsive) cho Tablet và Mobile.
+    - Tinh chỉnh Stacking Context (z-index) và Layout padding đồng nhất.
+    - Cập nhật Floating Action Bar với hiệu ứng phản hồi tốt hơn.
+
+### 実装詳細
+- ファイル: [shopping/page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/shopping/page.tsx) - Trang danh sách mua sắm.
+- ファイル: [settings/page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/settings/page.tsx) - Trang cài đặt.
+- ファイル: [page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/page.tsx) - Tinh chỉnh trang Meal Plan.
+- ファイル: [layout.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/layout.tsx) - Chuẩn hóa padding responsive.
+
+### テスト
+- [x] Kiểm tra hiển thị trên Desktop, Tablet (iPad), và Mobile (iPhone).
+- [x] Xác nhận các liên kết điều hướng trong Sidebar hoạt động chính xác.
+- [x] Kiểm tra tính nhất quán của các thành phần UI (Buttons, Cards, Inputs).
+
+---
+
+### [2026-05-14 12:00] - Triển khai giao diện quản lý thư viện Meals (CRUD)
+
+**担当**: AI Assistant  
+**タイプ**: Feature/UI  
+**関連US**: US-003, US-004, US-005, US-006  
+**影響範囲**: Frontend (Meals Page, Sidebar)
+
+### 変更内容
+- Triển khai trang quản lý thư viện món ăn (**Meals Library**) tại `/meals`:
+    - Bố cục Split-view: Danh sách tìm kiếm bên trái và chi tiết/form bên phải.
+    - Chức năng **Create**: Form thêm mới với đầy đủ các trường (tên, loại bữa ăn, calo, thời gian, nguyên liệu, ghi chú).
+    - Chức năng **Read**: Danh sách hiển thị tóm tắt, hỗ trợ tìm kiếm theo tên, lọc theo loại bữa ăn, và sắp xếp theo nhiều tiêu chí.
+    - Chức năng **Update**: Chỉnh sửa thông tin món ăn hiện có với chế độ khóa/mở khóa form an toàn.
+    - Chức năng **Delete**: Xóa món ăn với hộp thoại xác nhận để tránh nhầm lẫn.
+- Tối ưu hóa trải nghiệm người dùng:
+    - Phân trang (Pagination) 15 mục mỗi trang.
+    - Thông báo thành công/lỗi (Notifications) trực quan.
+    - Trạng thái tải dữ liệu (Loading states) mượt mà.
+    - Thiết kế đáp ứng (Responsive) tốt trên mọi kích thước màn hình.
+- Cập nhật Sidebar: Thêm liên kết điều hướng mới đến "Meals Library".
+
+### 実装詳細
+- ファイル: [meals/page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/meals/page.tsx) - Giao diện CRUD Meals.
+- ファイル: [Sidebar.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/components/Sidebar.tsx) - Thêm navigation item mới.
+
+### テスト
+- [x] Kiểm tra đầy đủ luồng CRUD (Thêm, Sửa, Xóa, Xem).
+- [x] Xác nhận tìm kiếm, lọc và sắp xếp hoạt động chính xác.
+- [x] Kiểm tra hiển thị trên Mobile (Responsive layout).
+- [x] Xác nhận các thông báo và hộp thoại xác nhận hoạt động đúng.
+
+---
+
 ## 次の開発者へ
 
 このファイルに必ず変更内容を記録してください。
