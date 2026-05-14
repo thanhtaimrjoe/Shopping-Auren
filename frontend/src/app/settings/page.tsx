@@ -58,7 +58,7 @@ export default function SettingsPage() {
     <div className="pb-24 animate-page-enter">
       {/* Editorial Header */}
       <header className="mb-12">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block mb-4">
+        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-4">
           Preferences
         </span>
         <h1 className="text-4xl md:text-5xl text-bark font-serif mb-6 leading-tight">

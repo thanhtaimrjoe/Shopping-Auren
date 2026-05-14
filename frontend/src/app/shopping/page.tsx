@@ -49,7 +49,7 @@ export default function ShoppingPage() {
   return (
     <div className="pb-24 animate-page-enter">
       {/* Editorial Header */}
-      <header className="mb-12">
+      <header className="mb-12 pt-8">
         <div className="flex items-center gap-2 text-bark/40 mb-4">
           <Link href="/" className="hover:text-sage-deep transition-colors">
             <ArrowLeft className="h-4 w-4" />

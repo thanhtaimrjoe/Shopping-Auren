@@ -125,7 +125,7 @@ export default function MealPlanPage() {
     <div className="pb-24 animate-page-enter">
       {/* Editorial Header */}
       <header className="mb-20">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block mb-4">
+        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-4">
           Wednesday, May 13
         </span>
         <h3 className="text-3xl md:text-4xl text-bark font-serif mb-6 leading-tight">

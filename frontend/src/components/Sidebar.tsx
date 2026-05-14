@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, User, ShoppingCart, Menu, X, UtensilsCrossed } from 'lucide-react';
+import { CalendarDays, User, ShoppingCart, Menu, X, UtensilsCrossed, Package } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -34,6 +34,7 @@ export function Sidebar() {
   const navItems = [
     { href: '/', label: 'Weekly Plan', icon: CalendarDays },
     { href: '/meals', label: 'Meals Library', icon: UtensilsCrossed },
+    { href: '/products', label: 'Products', icon: Package },
     { href: '/shopping', label: 'Shopping List', icon: ShoppingCart },
     { href: '/settings', label: 'Settings', icon: User },
   ];

@@ -40,6 +40,36 @@
 
 ## 変更履歴
 
+### [2026-05-14 10:00] - Điều chỉnh padding cho tiêu đề phụ (Editorial Header)
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: -  
+**影響範囲**: Frontend
+
+#### 変更内容
+- Tăng padding phía trên (`pt-8`) cho các phần tử `span` đóng vai trò là tiêu đề phụ (subtitle) trong phần Editorial Header.
+- Áp dụng cho trang chủ, trang cài đặt, trang món ăn, trang sản phẩm và trang danh sách mua sắm.
+
+#### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `frontend/src/app/settings/page.tsx`
+- ファイル: `frontend/src/app/meals/page.tsx`
+- ファイル: `frontend/src/app/products/page.tsx`
+- ファイル: `frontend/src/app/shopping/page.tsx`
+- 変更理由: Để tạo thêm khoảng trống, tránh cảm giác chật chội và dính sát vào phần trên của giao diện.
+- 技術的な quyết định: Sử dụng Tailwind utility class `pt-8` để đảm bảo tính nhất quán.
+
+#### テスト
+- [x] Đã áp dụng thay đổi cho tất cả các trang có cấu trúc header tương tự.
+- [x] Kiểm tra mã nguồn để đảm bảo không có lỗi cú pháp.
+- [ ] 動作確認完了 (Preview)
+
+#### 備考
+- Khoảng cách `pt-8` (32px) được chọn để tạo sự cân đối với các thành phần khác.
+
+---
+
 ### [2026-05-09 17:18] - プロジェクト初期設定
 
 **担当**: Claude (PM)  
@@ -839,6 +869,36 @@
 - [x] Xác nhận tìm kiếm, lọc và sắp xếp hoạt động chính xác.
 - [x] Kiểm tra hiển thị trên Mobile (Responsive layout).
 - [x] Xác nhận các thông báo và hộp thoại xác nhận hoạt động đúng.
+
+---
+
+### [2026-05-14 13:00] - Triển khai giao diện quản lý Product Database (CRUD)
+
+**担当**: AI Assistant  
+**タイプ**: Feature/UI  
+**関連US**: US-007, US-008  
+**影響範囲**: Frontend (Products Page, Sidebar, Documentation)
+
+### 変更内容
+- Triển khai trang quản lý cơ sở dữ liệu sản phẩm (**Product Database**) tại `/products`:
+    - Bố cục Split-view: Danh sách tìm kiếm bên trái và chi tiết/form bên phải.
+    - Chức năng **CRUD** đầy đủ: Tạo, Đọc, Cập nhật, Xóa sản phẩm.
+    - Hỗ trợ các trường: Tên, Danh mục (daily/consumable/other), URL hình ảnh.
+    - Tìm kiếm theo tên, lọc theo danh mục, sắp xếp theo tên hoặc ngày tạo.
+    - Phân trang 15 mục mỗi trang.
+- Cập nhật Sidebar: Thêm liên kết "Products" với icon Package.
+- Tạo tài liệu [product_ui_design.md](file:///Users/taiht/Documents/Shopping-Auren/docs/spec/03_design/product_ui_design.md) để giải thích chi tiết cách UI map với Database Schema.
+
+### 実装詳細
+- ファイル: [products/page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/products/page.tsx) - Giao diện CRUD Products.
+- ファイル: [Sidebar.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/components/Sidebar.tsx) - Thêm navigation item Products.
+- ファイル: [product_ui_design.md](file:///Users/taiht/Documents/Shopping-Auren/docs/spec/03_design/product_ui_design.md) - Tài liệu UI-Database mapping.
+
+### テスト
+- [x] Kiểm tra đầy đủ luồng CRUD Products.
+- [x] Xác nhận tìm kiếm, lọc và sắp xếp hoạt động chính xác.
+- [x] Kiểm tra hiển thị hình ảnh sản phẩm.
+- [x] Xác nhận tính Responsive trên Mobile.
 
 ---
 
