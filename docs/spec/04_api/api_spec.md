@@ -73,7 +73,7 @@
 {
   "email": "user@example.com",
   "password": "password123",
-  "display_name": "Tai"
+  "display_name": "Tai HT"
 }
 ```
 
@@ -85,18 +85,13 @@
     "user": {
       "id": "uuid",
       "email": "user@example.com",
-      "display_name": "Tai",
+      "display_name": "Tai HT",
       "created_at": "2026-05-09T16:56:31.003Z"
     }
   },
   "message": "Registration successful. Please check your email for verification."
 }
 ```
-
-**Errors**:
-- `400`: Invalid email format
-- `409`: Email already exists
-- `422`: Password too weak
 
 ---
 
@@ -123,60 +118,19 @@
     "user": {
       "id": "uuid",
       "email": "user@example.com",
-      "display_name": "Tai"
+      "display_name": "Tai HT"
     }
   }
 }
 ```
 
-**Errors**:
-- `401`: Invalid credentials
-- `403`: Email not verified
-
 ---
 
-### 1.3 ログアウト
-
-**Endpoint**: `POST /auth/logout`
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response** (200):
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
----
-
-### 1.4 パスワードリセット
-
-**Endpoint**: `POST /auth/reset-password`
-
-**Request Body**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**Response** (200):
-```json
-{
-  "success": true,
-  "message": "Password reset email sent"
-}
-```
-
----
-
-## 2. 料理API
+## 2. 料理API (Meals)
 
 ### 2.1 料理一覧取得
 
-**Endpoint**: `GET /dishes`
+**Endpoint**: `GET /meals`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -185,41 +139,32 @@
 |-----------|-----|------|-----------|------|
 | category | string | No | - | カテゴリフィルタ（japanese/western/chinese/other） |
 | search | string | No | - | 料理名検索 |
-| sort | string | No | created_at | ソート（created_at/name） |
-| order | string | No | desc | 順序（asc/desc） |
-| limit | integer | No | 50 | 取得件数 |
-| offset | integer | No | 0 | オフセット |
+| sort | string | No | created_at | ソート |
 
 **Response** (200):
 ```json
 {
   "success": true,
   "data": {
-    "dishes": [
+    "meals": [
       {
         "id": "uuid",
         "name": "カレーライス",
-        "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+        "ingredients": ["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー"],
         "category": "japanese",
         "created_at": "2026-05-09T16:56:31.003Z",
         "updated_at": "2026-05-09T16:56:31.003Z"
       }
-    ],
-    "total": 10,
-    "limit": 50,
-    "offset": 0
+    ]
   }
 }
 ```
-
-**Errors**:
-- `401`: Unauthorized
 
 ---
 
 ### 2.2 料理詳細取得
 
-**Endpoint**: `GET /dishes/{dish_id}`
+**Endpoint**: `GET /meals/{meal_id}`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -228,29 +173,23 @@
 {
   "success": true,
   "data": {
-    "dish": {
+    "meal": {
       "id": "uuid",
       "name": "カレーライス",
-      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+      "ingredients": ["じゃがいom", "人参", "玉ねぎ", "豚肉", "カレールー"],
       "category": "japanese",
       "created_at": "2026-05-09T16:56:31.003Z",
-      "updated_at": "2026-05-09T16:56:31.003Z",
-      "usage_count": 5,
-      "last_used_at": "2026-05-01T10:00:00.000Z"
+      "updated_at": "2026-05-09T16:56:31.003Z"
     }
   }
 }
 ```
 
-**Errors**:
-- `401`: Unauthorized
-- `404`: Dish not found
-
 ---
 
 ### 2.3 料理登録
 
-**Endpoint**: `POST /dishes`
+**Endpoint**: `POST /meals`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -258,44 +197,38 @@
 ```json
 {
   "name": "カレーライス",
-  "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+  "ingredients": ["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー"],
   "category": "japanese"
 }
 ```
 
 **Validation**:
 - `name`: 必須、1〜100文字
-- `ingredients`: 任意、最大5000文字
-- `category`: 必須、Enum値（japanese/western/chinese/other）
+- `ingredients`: JSONB mảng chuỗi
+- `category`: 必須、Enum値
 
 **Response** (201):
 ```json
 {
   "success": true,
   "data": {
-    "dish": {
+    "meal": {
       "id": "uuid",
       "name": "カレーライス",
-      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー",
+      "ingredients": ["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー"],
       "category": "japanese",
       "created_at": "2026-05-09T16:56:31.003Z",
       "updated_at": "2026-05-09T16:56:31.003Z"
     }
-  },
-  "message": "Dish created successfully"
+  }
 }
 ```
-
-**Errors**:
-- `400`: Invalid request body
-- `401`: Unauthorized
-- `422`: Validation error
 
 ---
 
 ### 2.4 料理更新
 
-**Endpoint**: `PUT /dishes/{dish_id}`
+**Endpoint**: `PUT /meals/{meal_id}`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -303,39 +236,16 @@
 ```json
 {
   "name": "カレーライス（辛口）",
-  "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー（辛口）",
+  "ingredients": ["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー（辛口）"],
   "category": "japanese"
 }
 ```
-
-**Response** (200):
-```json
-{
-  "success": true,
-  "data": {
-    "dish": {
-      "id": "uuid",
-      "name": "カレーライス（辛口）",
-      "ingredients": "じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー（辛口）",
-      "category": "japanese",
-      "created_at": "2026-05-09T16:56:31.003Z",
-      "updated_at": "2026-05-09T17:00:00.000Z"
-    }
-  },
-  "message": "Dish updated successfully"
-}
-```
-
-**Errors**:
-- `401`: Unauthorized
-- `404`: Dish not found
-- `422`: Validation error
 
 ---
 
 ### 2.5 料理削除
 
-**Endpoint**: `DELETE /dishes/{dish_id}`
+**Endpoint**: `DELETE /meals/{meal_id}`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -344,42 +254,31 @@
 No Content
 ```
 
-**Errors**:
-- `401`: Unauthorized
-- `404`: Dish not found
-- `409`: Dish is used in active meal plan
-
 ---
 
-## 3. 雑貨API
+## 3. 雑貨API (Products)
 
 ### 3.1 雑貨一覧取得
 
-**Endpoint**: `GET /miscellaneous`
+**Endpoint**: `GET /products`
 
 **Headers**: `Authorization: Bearer <token>`
-
-**Query Parameters**:
-| パラメータ | 型 | 必須 | デフォルト | 説明 |
-|-----------|-----|------|-----------|------|
-| category | string | No | - | カテゴリフィルタ（daily/consumable/other） |
-| search | string | No | - | 雑貨名検索 |
 
 **Response** (200):
 ```json
 {
   "success": true,
   "data": {
-    "miscellaneous": [
+    "products": [
       {
         "id": "uuid",
         "name": "トイレットペーパー",
+        "image_url": "http://...",
         "category": "daily",
         "created_at": "2026-05-09T16:56:31.003Z",
         "updated_at": "2026-05-09T16:56:31.003Z"
       }
-    ],
-    "total": 5
+    ]
   }
 }
 ```
@@ -388,7 +287,7 @@ No Content
 
 ### 3.2 雑貨登録
 
-**Endpoint**: `POST /miscellaneous`
+**Endpoint**: `POST /products`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -396,28 +295,25 @@ No Content
 ```json
 {
   "name": "トイレットペーパー",
+  "image_url": "http://...",
   "category": "daily"
 }
 ```
-
-**Validation**:
-- `name`: 必須、1〜100文字
-- `category`: 必須、Enum値（daily/consumable/other）
 
 **Response** (201):
 ```json
 {
   "success": true,
   "data": {
-    "miscellaneous": {
+    "product": {
       "id": "uuid",
       "name": "トイレットペーパー",
+      "image_url": "http://...",
       "category": "daily",
       "created_at": "2026-05-09T16:56:31.003Z",
       "updated_at": "2026-05-09T16:56:31.003Z"
     }
-  },
-  "message": "Miscellaneous item created successfully"
+  }
 }
 ```
 
@@ -425,7 +321,7 @@ No Content
 
 ### 3.3 雑貨更新
 
-**Endpoint**: `PUT /miscellaneous/{misc_id}`
+**Endpoint**: `PUT /products/{product_id}`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -433,24 +329,8 @@ No Content
 ```json
 {
   "name": "トイレットペーパー（12ロール）",
+  "image_url": "http://...",
   "category": "daily"
-}
-```
-
-**Response** (200):
-```json
-{
-  "success": true,
-  "data": {
-    "miscellaneous": {
-      "id": "uuid",
-      "name": "トイレットペーパー（12ロール）",
-      "category": "daily",
-      "created_at": "2026-05-09T16:56:31.003Z",
-      "updated_at": "2026-05-09T17:00:00.000Z"
-    }
-  },
-  "message": "Miscellaneous item updated successfully"
 }
 ```
 
@@ -458,7 +338,7 @@ No Content
 
 ### 3.4 雑貨削除
 
-**Endpoint**: `DELETE /miscellaneous/{misc_id}`
+**Endpoint**: `DELETE /products/{product_id}`
 
 **Headers**: `Authorization: Bearer <token>`
 
@@ -466,8 +346,6 @@ No Content
 ```
 No Content
 ```
-
----
 
 ## 4. 食事計画API
 

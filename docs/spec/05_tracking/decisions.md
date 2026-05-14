@@ -6,6 +6,32 @@
 
 ---
 
+### DEC-011: Thống nhất thuật ngữ và Logic xóa
+**日付**: 2026-05-14  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. **Thuật ngữ**: Thống nhất sử dụng `meals` (thay cho dishes) và `products` (thay cho miscellaneous) trên toàn bộ hệ thống (DB, API, Code, Docs).
+2. **Logic xóa**: Sử dụng **Hard Delete** cho meals và products.
+3. **Hình ảnh**: Giữ lại trường `image_url` cho bảng `products`.
+4. **Lịch sử**: Phần History sẽ lưu dưới dạng **Report Text** (Snapshot), không liên kết trực tiếp với các bảng meals/products để tránh lỗi khi dữ liệu gốc bị xóa.
+5. **Người dùng**: Thêm trường `display_name` vào thông tin người dùng.
+6. **Nguyên liệu**: Sử dụng **JSONB** để lưu danh sách nguyên liệu của `meals`.
+
+#### 理由
+1. Đồng bộ hóa với dữ liệu hiện có và thói quen sử dụng của người dùng.
+2. Hard Delete giúp dọn dẹp DB sạch sẽ, phù hợp với quy mô nhỏ của dự án.
+3. JSONB giúp dữ liệu có cấu trúc, dễ dàng mở rộng tính năng tính toán định lượng sau này.
+4. History dạng Snapshot đảm bảo tính toàn vẹn của dữ liệu lịch sử ngay cả khi món ăn hoặc sản phẩm đó đã bị xóa khỏi hệ thống.
+
+#### 影響範囲
+- Database: `meals`, `products`, `users`, `shopping_lists` (history part)
+- API: Endpoints, Request/Response bodies
+- Frontend: UI components, State management
+
+---
+
 ## 決定事項一覧
 
 ### DEC-001: Tech Stack選定

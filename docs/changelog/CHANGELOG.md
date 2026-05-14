@@ -5,6 +5,33 @@
 
 ---
 
+### [2026-05-14 11:00] - Đồng bộ hóa tài liệu đặc tả (Spec Synchronization)
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: -  
+**影響範囲**: Docs, Database, API
+
+#### 変更内容
+- Thống nhất thuật ngữ: Sử dụng `meals` thay cho `dishes`, `products` thay cho `miscellaneous`.
+- Thay đổi logic xóa: Chuyển từ Soft Delete sang **Hard Delete** cho meals và products.
+- Cấu trúc dữ liệu nguyên liệu: Thống nhất dùng **JSONB** (mảng chuỗi) cho `meals.ingredients`.
+- Tính năng người dùng: Thêm trường `display_name` vào bảng `users` và các API liên quan.
+- Hình ảnh: Giữ lại cột `image_url` cho bảng `products`.
+- Lịch sử: Xác định History sẽ lưu dưới dạng snapshot văn bản (Report Text).
+
+#### 実装詳細
+- ファイル: `docs/spec/02_requirements/user_stories.md`
+- ファイル: `docs/spec/03_design/database_schema.md`
+- ファイル: `docs/spec/03_design/screen_list.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- ファイル: `docs/spec/05_tracking/decisions.md` (DEC-011)
+
+#### 備考
+- Các thay đổi này giúp loại bỏ xung đột giữa các tài liệu đặc tả và chuẩn bị tốt cho việc triển khai code.
+
+---
+
 ## 📝 記録ルール
 
 ### フォーマット

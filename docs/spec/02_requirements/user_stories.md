@@ -31,6 +31,7 @@
 
 #### 受け入れ基準
 - [ ] メールアドレスとパスワードで登録できる
+- [ ] Tên hiển thị (display_name) có thể nhập vào
 - [ ] パスワードは8文字以上必須
 - [ ] 登録後、確認メールが送信される
 - [ ] 確認後、ログインできる
@@ -48,32 +49,28 @@
 
 #### 受け入れ基準
 - [ ] メールアドレスとパスワードでログインできる
+- [ ] Hiển thị display_name sau khi đăng nhập
 - [ ] ログイン状態が保持される（7日間）
 - [ ] ログイン失敗時、エラーメッセージが表示される
 - [ ] パスワードリセット機能がある
 
-#### 技術要件
-- Supabase Auth使用
-- JWT token管理
-
 ---
 
-## Epic 2: 料理管理
+## Epic 2: 料理管理 (Meals)
 
 ### US-003: 料理を登録する
 **As a** ユーザー  
-**I want to** 新しい料理を登録する  
+**I want to** 新しい料理 (Meal) を登録する  
 **So that** 食事計画で使える
 
 #### 受け入れ基準
 - [ ] 料理名を入力できる（必須、最大100文字）
-- [ ] 材料リストを入力できる（複数行、任意）
+- [ ] 材料リストを入力できる（複数行, JSONB mảng chuỗi）
 - [ ] カテゴリを選択できる（和食/洋食/中華/その他）
 - [ ] 登録後、料理リストに表示される
 
 #### 技術要件
-- POST `/api/v1/dishes`
-- 材料は改行区切りのテキスト
+- POST `/api/v1/meals`
 
 ---
 
@@ -89,7 +86,7 @@
 - [ ] 保存後、変更が反映される
 
 #### 技術要件
-- PUT `/api/v1/dishes/{dish_id}`
+- PUT `/api/v1/meals/{meal_id}`
 
 ---
 
@@ -100,13 +97,11 @@
 
 #### 受け入れ基準
 - [ ] 削除確認ダイアログが表示される
-- [ ] 確認後、料理が削除される
+- [ ] 確認後、料理が hoàn toàn bị xóa khỏi DB (Hard Delete)
 - [ ] 削除後、リストから消える
-- [ ] 削除した料理は復元できない（警告表示）
 
 #### 技術要件
-- DELETE `/api/v1/dishes/{dish_id}`
-- Soft delete検討（履歴機能のため）
+- DELETE `/api/v1/meals/{meal_id}`
 
 ---
 
@@ -122,25 +117,25 @@
 - [ ] 登録日順・名前順でソートできる
 
 #### 技術要件
-- GET `/api/v1/dishes`
-- Query params: `category`, `search`, `sort`
+- GET `/api/v1/meals`
 
 ---
 
-## Epic 3: 雑貨管理
+## Epic 3: 雑貨管理 (Products)
 
 ### US-007: 雑貨を登録する
 **As a** ユーザー  
-**I want to** 日用品を登録する  
+**I want to** 日用品 (Product) を登録する  
 **So that** 買い物リストに追加できる
 
 #### 受け入れ基準
 - [ ] 雑貨名を入力できる（必須、最大100文字）
+- [ ] Có thể lưu image_url cho sản phẩm
 - [ ] カテゴリを選択できる（日用品/消耗品/その他）
 - [ ] 登録後、雑貨リストに表示される
 
 #### 技術要件
-- POST `/api/v1/miscellaneous`
+- POST `/api/v1/products`
 
 ---
 
@@ -151,12 +146,13 @@
 
 #### 受け入れ基準
 - [ ] 雑貨名を変更できる
+- [ ] image_url を変更できる
 - [ ] カテゴリを変更できる
-- [ ] 削除確認後、削除できる
+- [ ] 削除確認後、hoàn toàn bị xóa khỏi DB (Hard Delete)
 
 #### 技術要件
-- PUT `/api/v1/miscellaneous/{misc_id}`
-- DELETE `/api/v1/miscellaneous/{misc_id}`
+- PUT `/api/v1/products/{product_id}`
+- DELETE `/api/v1/products/{product_id}`
 
 ---
 

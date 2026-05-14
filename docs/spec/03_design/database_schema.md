@@ -48,15 +48,9 @@
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | ユーザーID（PK） |
 | email | VARCHAR(255) | NOT NULL | - | メールアドレス（Unique） |
+| display_name | VARCHAR(100) | NULL | - | Tên hiển thị |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-
-**インデックス**:
-- PRIMARY KEY: `id`
-- UNIQUE INDEX: `email`
-
-**備考**:
-- Supabase Authを使用するため、実際は`auth.users`テーブルを参照
 
 ---
 
@@ -71,12 +65,11 @@
 | category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（japanese/western/chinese/other） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-| deleted_at | TIMESTAMP | NULL | - | 削除日時（Soft Delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- INDEX: `user_id, deleted_at`
+- INDEX: `user_id`
 - INDEX: `category`
 
 ---
@@ -92,12 +85,11 @@
 | category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（daily/consumable/other） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-| deleted_at | TIMESTAMP | NULL | - | 削除日時（Soft Delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- INDEX: `user_id, deleted_at`
+- INDEX: `user_id`
 
 ---
 
