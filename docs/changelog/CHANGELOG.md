@@ -5,6 +5,115 @@
 
 ---
 
+## [2026-05-16 22:11] - Weekly Plan未作成時404ハンドリング修正
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-006  
+**影響範囲**: Frontend, API
+
+### 変更内容
+- Weekly Alignment で meal plan 未作成週の `404` を正常な空状態として扱うよう修正
+- `Meal plan not found for this week` の console error を抑止
+- 未作成週では `selectedMeals` を空に初期化
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `frontend/src/lib/api.ts`
+- 変更理由: Backend の `404` は異常系ではなく「まだ meal plan がない」状態を表していたため
+- 技術的な決定: `/meal-plans/current` の `404` は interceptor と画面側の両方で期待値として扱う
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- 真の API 異常は引き続き console に表示される
+
+---
+
+## [2026-05-16 22:06] - Meal選択モーダル一覧取得修正
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-006  
+**影響範囲**: Frontend
+
+### 変更内容
+- Weekly Alignment の meal 選択モーダルで meal list が空のままになる問題を修正
+- 初回取得に失敗または未取得の場合、モーダルを開いたタイミングで再取得
+- 読み込み中は既存の spinner 表示を継続
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更理由: 画面初回 effect 時点で meal list が未取得のままでも、モーダル表示時に再取得していなかったため
+- 技術的な決定: `openModal` 内で `mealDatabase.length === 0` かつ未読込中の場合のみ `fetchMeals()` を再実行
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- Backend 認証エラー時は一覧ではなく空表示のままになるため、必要なら通知追加を検討
+
+---
+
+## [2026-05-16 22:00] - Weekly Alignment APIループ修正
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-006  
+**影響範囲**: Frontend, API
+
+### 変更内容
+- Weekly Alignment画面で meal plan API が連続呼び出しされる問題を修正
+- `weekStart` の再生成による effect 再発火を抑止
+- Backend仕様に合わせて meal plan 取得クエリを `week_start` に修正
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更理由: `Date` オブジェクトが毎レンダー新規生成され `useCallback` と `useEffect` の依存が毎回変化していたため
+- 技術的な決定: `useMemo` で `weekStart` と `weekStartKey` を安定化し、 API クエリを backend endpoint 仕様に合わせた
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- `fetchMeals` は初回表示ごとに1回呼ばれる想定
+
+---
+
+## [2026-05-16 21:52] - 食事計画取得エラー修正
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-006  
+**影響範囲**: Frontend
+
+### 変更内容
+- Weekly Plan画面で meal plan 取得時に `data.meals.map` が undefined で落ちる問題を修正
+- Backendの `meal_plan.meals` 配列レスポンスを日付キーの表示状態へ変換
+- 旧形式の日付キー付き meal plan レスポンスにも引き続き対応
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更理由: Backend APIの現在レスポンス形式とFrontend変換ロジックが不一致だったため
+- 技術的な決定: `day_of_week` から週開始日基準の日付キーを生成し、meal名のみ表示状態へ格納
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- 保存処理のAPI形式差分は別途確認が必要
+
+---
+
 ## [2026-05-14T14:30:00Z] - Release v0.2.0
 
 ### **New Features**

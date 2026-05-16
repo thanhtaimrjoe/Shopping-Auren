@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2 } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
@@ -16,6 +16,20 @@ function cn(...inputs: ClassValue[]) {
 interface Meal {
   id: string;
   name: string;
+}
+
+interface MealPlanItem {
+  day_of_week?: number | string;
+  meal?: {
+    name?: string;
+  };
+  name?: string;
+}
+
+interface LegacyMealPlanDay {
+  meals?: Array<{
+    name?: string;
+  }>;
 }
 
 export default function MealPlanPage() {
@@ -35,7 +49,8 @@ export default function MealPlanPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+  const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Redirect if not logged in
@@ -67,24 +82,40 @@ export default function MealPlanPage() {
   const fetchMealPlan = useCallback(async () => {
     if (!user) return;
     try {
-      const startDate = format(weekStart, 'yyyy-MM-dd');
-      const endDate = format(addDays(weekStart, 6), 'yyyy-MM-dd');
-      const response = await mealPlansApi.getCurrent({ start_date: startDate, end_date: endDate });
+      const response = await mealPlansApi.getCurrent({ week_start: weekStartKey });
       if (response.data.success) {
         // Transform backend format to local state format
         const plan = response.data.data.meal_plan || {};
         const transformed: Record<string, string[]> = {};
-        Object.entries(plan).forEach(([date, data]: [string, any]) => {
-          transformed[date] = data.meals.map((m: any) => m.name);
-        });
+        if (Array.isArray(plan.meals)) {
+          plan.meals.forEach((item: MealPlanItem) => {
+            const dayIndex = Number(item.day_of_week);
+            const mealName = item.meal?.name || item.name;
+            if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealName) return;
+
+            const dateKey = format(addDays(weekStart, dayIndex), 'yyyy-MM-dd');
+            transformed[dateKey] = [...(transformed[dateKey] || []), mealName];
+          });
+        } else {
+          Object.entries(plan as Record<string, LegacyMealPlanDay>).forEach(([date, data]) => {
+            const meals = Array.isArray(data?.meals) ? data.meals : [];
+            transformed[date] = meals
+              .map((meal) => meal.name)
+              .filter((mealName): mealName is string => Boolean(mealName));
+          });
+        }
         setSelectedMeals(transformed);
       }
     } catch (error: any) {
+      if (error.response?.status === 404) {
+        setSelectedMeals({});
+        return;
+      }
       if (error.message !== 'Network Error') {
         console.error('Failed to fetch meal plan:', error);
       }
     }
-  }, [user, weekStart]);
+  }, [user, weekStart, weekStartKey]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -138,6 +169,9 @@ export default function MealPlanPage() {
     setActiveDayKey(dayKey);
     setIsModalOpen(true);
     setSearchQuery('');
+    if (mealDatabase.length === 0 && !fetchLoading) {
+      fetchMeals();
+    }
   };
 
   const handleSelectMeal = async (mealName: string) => {

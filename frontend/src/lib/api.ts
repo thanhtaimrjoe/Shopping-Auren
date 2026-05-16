@@ -15,8 +15,11 @@ api.interceptors.response.use(
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx
       
-      // Silence 401 errors as they are handled by redirection or auth state
-      if (error.response.status === 401) {
+      // Silence expected errors handled by callers
+      if (
+        error.response.status === 401 ||
+        (error.response.status === 404 && error.config?.url === '/meal-plans/current')
+      ) {
         return Promise.reject(error);
       }
 
