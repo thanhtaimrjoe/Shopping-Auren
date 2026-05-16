@@ -323,64 +323,20 @@ Shopping-Auren/
 
 **全体**: 100% 完了
 
----
+## 📈 追加進捗 (2026-05-16 更新)
 
-## 🎓 AI開発者へのメッセージ
+**現在のフェーズ**: Development Phase
 
-このプロジェクトで開発を始める場合：
+### 実装済み
+- ✅ Supabase Auth 統合完了
+- ✅ Weekly Alignment (Meal Plan) ページ実装 + API連携
+- ✅ Backend API routers 実装 (meals, products, meal_plans, shopping_lists)
+- ✅ Frontend API client + error handling 改善
+- ✅ 複数バグフィックス (404 handling, APIループ, modal data loading)
 
-1. **必ず `CLAUDE.md` を読んでください**
-   - プロジェクト概要
-   - 開発ルール
-   - Changelog記録方法
+### 次の優先タスク
+- Backend `models/` + `schemas/` + `services/` layer の正規化
+- Database migration scripts の作成・実行
+- Frontend CRUD 画面の完成
 
-2. **Spec を確認してください**
-   - User Stories: 何を作るか
-   - API Spec: どう実装するか
-   - Database Schema: データ構造
-
-3. **Changelog に必ず記録してください**
-   - コード実装 → 記録
-   - バグ修正 → 記録
-   - リファクタリング → 記録
-
-4. **質問があれば**
-   - PM (Claude) または BrSE (Tai) に相談
-
----
-
-## 🎉 成果
-
-### 定量的成果
-- ✅ 12ファイル作成
-- ✅ 7 Epics定義
-- ✅ 15 User Stories作成
-- ✅ 12画面設計
-- ✅ 7テーブル設計
-- ✅ 30+エンドポイント定義
-- ✅ 10設計決定記録
-
-### 定性的成果
-- ✅ プロジェクトスコープ明確化
-- ✅ Tech Stack確定
-- ✅ 既存データ保持方針決定
-- ✅ AI開発者向けガイドライン整備
-- ✅ Changelog管理体制構築
-
----
-
-## 💬 コメント
-
-### PM (Claude) より
-プロジェクト仕様書の作成が完了しました。BrSE面接でのデモに向けて、しっかりとした設計ができたと思います。特に既存データを保持しながら新設計に移行する方針は、実務的で良い判断だと思います。
-
-次のステップは Database Migration と Backend Setup です。頑張りましょう！
-
-### BrSE (Tai) より
-（コメント追加可能）
-
----
-
-**作成日**: 2026-05-09  
-**最終更新**: 2026-05-09 17:31  
-**ステータス**: ✅ Phase 1 完了
+**最終更新**: 2026-05-16
