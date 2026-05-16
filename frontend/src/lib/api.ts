@@ -75,6 +75,7 @@ export const shoppingListsApi = {
 export const mealPlansApi = {
   getCurrent: (params?: any) => api.get('/meal-plans/current', { params }),
   save: (data: any) => api.post('/meal-plans', data),
+  update: (planId: string, data: any) => api.put(`/meal-plans/${planId}`, data),
 };
 
 export default api;

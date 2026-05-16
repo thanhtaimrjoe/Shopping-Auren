@@ -32,11 +32,19 @@ interface LegacyMealPlanDay {
   }>;
 }
 
+interface MealPlanResponse {
+  id?: string;
+  meals?: MealPlanItem[];
+}
+
+const MEAL_TYPES = ['breakfast', 'lunch', 'dinner'] as const;
+
 export default function MealPlanPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
   const [selectedMeals, setSelectedMeals] = useState<Record<string, string[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
@@ -85,7 +93,8 @@ export default function MealPlanPage() {
       const response = await mealPlansApi.getCurrent({ week_start: weekStartKey });
       if (response.data.success) {
         // Transform backend format to local state format
-        const plan = response.data.data.meal_plan || {};
+        const plan = (response.data.data.meal_plan || {}) as MealPlanResponse;
+        setCurrentPlanId(plan.id || null);
         const transformed: Record<string, string[]> = {};
         if (Array.isArray(plan.meals)) {
           plan.meals.forEach((item: MealPlanItem) => {
@@ -108,6 +117,7 @@ export default function MealPlanPage() {
       }
     } catch (error: any) {
       if (error.response?.status === 404) {
+        setCurrentPlanId(null);
         setSelectedMeals({});
         return;
       }
@@ -174,6 +184,47 @@ export default function MealPlanPage() {
     }
   };
 
+  const buildMealPlanPayload = (mealsByDate: Record<string, string[]>) => {
+    const meals = Object.entries(mealsByDate).flatMap(([dateKey, mealNames]) => {
+      const dayIndex = Math.round(
+        (new Date(`${dateKey}T00:00:00`).getTime() - new Date(`${weekStartKey}T00:00:00`).getTime()) /
+        (1000 * 60 * 60 * 24)
+      );
+
+      if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return [];
+
+      return mealNames.slice(0, MEAL_TYPES.length).flatMap((mealName, index) => {
+        const meal = mealDatabase.find((entry) => entry.name === mealName);
+        if (!meal) return [];
+
+        return [{
+          day_of_week: dayIndex,
+          meal_type: MEAL_TYPES[index],
+          meal_id: meal.id,
+        }];
+      });
+    });
+
+    return {
+      week_start_date: weekStartKey,
+      meals,
+    };
+  };
+
+  const persistMealPlan = async (nextSelectedMeals: Record<string, string[]>) => {
+    const payload = buildMealPlanPayload(nextSelectedMeals);
+
+    if (currentPlanId) {
+      await mealPlansApi.update(currentPlanId, { meals: payload.meals });
+      return;
+    }
+
+    const response = await mealPlansApi.save(payload);
+    if (response.data?.success) {
+      setCurrentPlanId(response.data.data.meal_plan?.id || null);
+    }
+  };
+
   const handleSelectMeal = async (mealName: string) => {
     if (!activeDayKey || !user) return;
     
@@ -182,17 +233,15 @@ export default function MealPlanPage() {
       const currentMeals = selectedMeals[activeDayKey] || [];
       if (!currentMeals.includes(mealName)) {
         const updatedMeals = [...currentMeals, mealName];
-        
-        // Save to backend
-        await mealPlansApi.save({
-          date: activeDayKey,
-          meal_names: updatedMeals
-        });
-
-        setSelectedMeals({
+        const nextSelectedMeals = {
           ...selectedMeals,
           [activeDayKey]: updatedMeals
-        });
+        };
+        
+        // Save to backend
+        await persistMealPlan(nextSelectedMeals);
+
+        setSelectedMeals(nextSelectedMeals);
       }
       setIsModalOpen(false);
     } catch (error) {
@@ -206,17 +255,15 @@ export default function MealPlanPage() {
     if (!user) return;
     const currentMeals = selectedMeals[dayKey] || [];
     const updatedMeals = currentMeals.filter((_, i) => i !== mealIndex);
+    const nextSelectedMeals = {
+      ...selectedMeals,
+      [dayKey]: updatedMeals
+    };
     
     try {
-      await mealPlansApi.save({
-        date: dayKey,
-        meal_names: updatedMeals
-      });
+      await persistMealPlan(nextSelectedMeals);
 
-      setSelectedMeals({
-        ...selectedMeals,
-        [dayKey]: updatedMeals
-      });
+      setSelectedMeals(nextSelectedMeals);
     } catch (error) {
       console.error('Failed to update meal plan:', error);
     }

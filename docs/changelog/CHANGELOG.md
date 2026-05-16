@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-16 22:18] - Weekly Plan保存422修正
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-006  
+**影響範囲**: Frontend, API
+
+### 変更内容
+- Weekly Alignment で meal plan 保存時に `422` となる問題を修正
+- Frontend 保存 payload を backend spec の `week_start_date` + `meals[]` 形式へ変更
+- 既存 plan は `PUT /meal-plans/{id}`、未作成週は `POST /meal-plans` を使用
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `frontend/src/lib/api.ts`
+- 変更理由: Frontend が `date` と `meal_names` を送っており、backend の Pydantic schema と不一致だったため
+- 技術的な決定: 画面の meal 名一覧を `mealDatabase` から `meal_id` へ変換し、表示順を `breakfast/lunch/dinner` スロットへマッピング
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- 1日3件を超える meal は backend 制約上保存対象外
+
+---
+
 ## [2026-05-16 22:11] - Weekly Plan未作成時404ハンドリング修正
 
 **担当**: AI Assistant  
