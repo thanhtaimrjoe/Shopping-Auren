@@ -5,6 +5,196 @@
 
 ---
 
+## [2026-05-17 01:25] - Update Product Modal Rendering
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- Removed the `category` tag from products within the Extra Products modal.
+- Added support for displaying the product's `image_url` if available, or a fallback `ShoppingBag` icon.
+- Centered the content of the product grid items for a cleaner visual layout.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: The user requested a simpler view focusing on the product image and name without the extra clutter of category tags in the modal.
+- Technical Decision: Replaced the left-aligned text approach with a flex-column centered layout. Used `lucide-react`'s `ShoppingBag` icon as a placeholder for products without images.
+
+### Testing
+- [x] Verified products render with placeholder icons.
+- [x] Verified category tags are removed.
+
+---
+
+## [2026-05-17 01:15] - Improve Meal Selection Modal UI
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- Applied the same visual feedback logic to the Meal Selection modal as the Product modal.
+- Meals now show a `CheckCircle` icon and a highlighted background when selected for a specific day.
+- Replaced `handleSelectMeal` with `handleToggleMeal`, allowing users to both add and remove meals directly from within the modal grid.
+- Added a "Xong" button to the Meal modal to allow multi-selection before closing.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Consistency in UI design across different modals and improving the user experience for planning multiple meals.
+- Technical Decision: Used a toggle pattern instead of simple add-and-close to reduce the number of clicks required when filling out a week's schedule.
+
+### Testing
+- [x] Verified meals can be toggled on/off within the modal.
+- [x] Verified visual state (checkmarks) updates in real-time.
+- [x] Verified "Xong" button closes the modal correctly.
+
+---
+
+## [2026-05-17 01:05] - Refactor Extra Products to Modal Grid View
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Related US**: US-013
+**Impact**: Frontend
+
+### Changes
+- Replaced the inline product library in the Weekly Plan tab with a dedicated Modal window.
+- Added a "Thêm sản phẩm" button to open the library.
+- Implemented a Grid View for the product library modal for easier browsing and selection.
+- Integrated multi-selection visual feedback (CheckCircle icon) inside the modal.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Showing the entire database of products inline takes up too much vertical space and cluttered the weekly schedule view.
+- Technical Decision: Used a full-screen blurred backdrop modal with a responsive CSS grid (2 to 4 columns) to provide a modern, dashboard-like feel for selecting extra items.
+
+### Testing
+- [x] Verified modal opens/closes correctly.
+- [x] Verified products can be selected from the grid and are immediately added to the shopping list.
+- [x] Verified grid layout is responsive.
+
+---
+
+## [2026-05-17 00:55] - Add Extra Products section to Weekly Plan
+
+**Assignee**: AI Assistant
+**Type**: Feature
+**Related US**: US-013
+**Impact**: Frontend, Backend
+
+### Changes
+- Added a "Mua thêm (Products)" section to the Weekly Plan page (`/`).
+- Users can now select items from their Product library directly while planning their week.
+- Integrated `extraProducts` with the active shopping list using the `addItem` and `deleteItem` endpoints.
+- Added a new `DELETE /api/v1/shopping-lists/{list_id}/items/{item_id}` endpoint to the backend.
+
+### Implementation Details
+- File: `backend/app/api/v1/shopping_lists.py` (Added `delete_item` endpoint)
+- File: `frontend/src/app/page.tsx` (Added "Mua thêm" UI and logic)
+- Reason: Buying groceries involves more than just meal ingredients. Allowing users to pick products from their library while viewing their weekly schedule improves the planning experience.
+- Technical Decision: Instead of creating a new schema for "Extra Plan Items", we leverage the existing active shopping list. Selecting a product in the Weekly Plan tab immediately adds it to the Shopping List in the background. If no list exists, it is automatically generated.
+
+### Testing
+- [x] Verified products can be added to the shopping list from the Weekly Plan tab.
+- [x] Verified products can be removed.
+- [x] Verified integration between the two tabs (added items appear in Shopping List checklist).
+
+---
+
+## [2026-05-17 00:42] - Fix Sync Plan button disappearing
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Related US**: US-012
+**Impact**: Frontend
+
+### Changes
+- Updated etchCurrentList logic in shopping/page.tsx to unconditionally fetch the current meal plan's ID, even if an active shopping list already exists.
+
+### Implementation Details
+- File: rontend/src/app/shopping/page.tsx
+- Reason: The currentMealPlanId was previously only populated if shoppingListsApi.getCurrent() returned a 404. When a shopping list existed, the ID was null, causing the Sync Plan button to be hidden.
+- Technical Decision: Independent execution of both queries ensures the UI has access to all related weekly data (shopping list & meal plan), keeping action buttons consistently visible.
+
+### Testing
+- [x] Verified Sync Plan button is always visible when there is an active meal plan, regardless of shopping list existence.
+
+---
+
+## [2026-05-17 00:35] - Fix Shopping List not loading planned meals
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Related US**: US-012
+**Impact**: Frontend, Backend
+
+### Changes
+- Updated `shoppingListsApi.generate` to allow updating an existing empty/active shopping list instead of failing with 409 Conflict.
+- Added a `Sync Plan` button to the Shopping List UI to allow users to manually pull in the latest meals from their weekly plan.
+- Filtered out soft-deleted meals from the ingredient extraction process during shopping list generation.
+
+### Implementation Details
+- File: `backend/app/api/v1/shopping_lists.py` (Modified `generate_list` endpoint)
+- File: `frontend/src/app/shopping/page.tsx` (Added `Sync Plan` button)
+- Reason: Previously, if a user viewed the shopping list before adding meals to their plan, an empty list was created. Subsequent attempts to generate ingredients were blocked by a 409 error. Additionally, there was no UI to trigger a re-sync if the plan changed.
+- Technical Decision: Allow the `generate` endpoint to gracefully delete old `source_type=meal` items and insert new ones while preserving `source_type=manual` custom items. This makes the shopping list robust and self-healing.
+
+### Testing
+- [x] Verified `Sync Plan` button correctly updates the shopping list items without duplicating.
+- [x] Verified manual custom items are preserved during sync.
+
+---
+
+## [2026-05-17 00:25] - Implement Shopping List UI and Features
+
+**Assignee**: AI Assistant
+**Type**: Feature
+**Related US**: US-012, US-013
+**Impact**: Frontend
+
+### Changes
+- Implemented real integration for the Shopping List tab (frontend/src/app/shopping/page.tsx).
+- Connected the page to shoppingListsApi.getCurrent, generate, updateItem, and addItem.
+- Replaced the hardcoded INITIAL_ITEMS with dynamically fetched data from the user's active shopping list.
+- Added a 'Generate List' fallback state when no active list exists for the current week but a meal plan is available.
+- Added UI for manual item addition (Custom Item) directly from the shopping list view.
+
+### Implementation Details
+- File: frontend/src/app/shopping/page.tsx
+- File: frontend/src/lib/api.ts (Added missing shoppingListsApi endpoints)
+- Reason: Fulfillment of user stories to track checked status of items and allow ad-hoc manual additions.
+- Technical Decision: Used optimistic UI updates for toggling item status to make the checklist feel responsive on mobile devices, falling back to server state on error.
+
+### Testing
+- [x] Verified shopping list generation works using a meal plan.
+- [x] Verified items can be checked/unchecked.
+- [x] Verified manual items can be added with chosen category.
+
+---
+
+## [2026-05-17 00:17] - Fix 422 error on saving meal plan with soft-deleted meals
+
+**Assignee**: AI Assistant  
+**Type**: Bugfix  
+**Related US**: US-004  
+**Impact**: Backend
+
+### Changes
+- Exclude soft-deleted meals (where deleted_at is not null) from GET /api/v1/meals endpoint.
+- Added .is_(\"deleted_at\", \"null\") filter to both the main query and the count query in meals.py.
+
+### Implementation Details
+- File: ackend/app/api/v1/meals.py
+- Reason: Prevents 422 Unprocessable Entity errors when a user tries to save a meal plan containing meals that were soft-deleted but still appeared in the UI.
+- Technical Decision: Filtering deleted meals at the API source ensures UI consistency and data integrity.
+
+### Testing
+- [x] Verified filtering logic in backend.
+- [x] Verified self-healing behavior in frontend (deleted meals are automatically stripped from payloads).
+
+---
+
 ## [2026-05-17 00:08] - Meal slot仕様調整
 
 **担当**: AI Assistant  

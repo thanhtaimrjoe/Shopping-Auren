@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { mealsApi, mealPlansApi } from '@/lib/api';
+import { mealsApi, mealPlansApi, productsApi, shoppingListsApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -50,6 +50,12 @@ export default function MealPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
   const [fetchLoading, setFetchLoading] = useState(false);
+  
+  // Extra products state
+  const [productsDatabase, setProductsDatabase] = useState<any[]>([]);
+  const [extraProducts, setExtraProducts] = useState<any[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +71,25 @@ export default function MealPlanPage() {
       router.push('/login');
     }
   }, [user, authLoading, router]);
+
+  const fetchProductsAndShoppingList = useCallback(async () => {
+    if (!user) return;
+    try {
+      const prodResp = await productsApi.getAll();
+      if (prodResp.data.success) {
+        setProductsDatabase(prodResp.data.data.products);
+      }
+      const listResp = await shoppingListsApi.getCurrent();
+      if (listResp.data.success) {
+        // Filter out items that are products
+        const items = listResp.data.data.shopping_list.items;
+        const products = items.filter((item: any) => item.source_type === 'product' || item.source_type === 'manual');
+        setExtraProducts(products);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch products or shopping list', error);
+    }
+  }, [user]);
 
   // Fetch meals for the modal
   const fetchMeals = useCallback(async () => {
@@ -129,8 +154,9 @@ export default function MealPlanPage() {
     if (!authLoading && user) {
       fetchMeals();
       fetchMealPlan();
+      fetchProductsAndShoppingList();
     }
-  }, [fetchMeals, fetchMealPlan, authLoading, user]);
+  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, authLoading, user]);
 
   // Handle week navigation
   const handlePrevWeek = () => {
@@ -223,30 +249,86 @@ export default function MealPlanPage() {
     }
   };
 
-  const handleSelectMeal = async (mealName: string) => {
+  const handleAddProduct = async (product: any) => {
+    if (!currentPlanId) {
+      alert("Vui lòng thêm ít nhất 1 món ăn vào lịch trước khi thêm sản phẩm mua thêm!");
+      return;
+    }
+    setIsProductsLoading(true);
+    try {
+      // Add product to existing shopping list or generate a new one
+      try {
+        const listResp = await shoppingListsApi.getCurrent();
+        if (listResp.data.success) {
+          const listId = listResp.data.data.shopping_list.id;
+          await shoppingListsApi.addItem(listId, {
+            name: product.name,
+            category: product.category
+          });
+          fetchProductsAndShoppingList();
+        }
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          // generate
+          const genResp = await shoppingListsApi.generate({ 
+            meal_plan_id: currentPlanId,
+            product_ids: [product.id]
+          });
+          if (genResp.data.success) {
+            fetchProductsAndShoppingList();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add product to shopping list:', error);
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
+
+  const handleRemoveProduct = async (itemId: string) => {
+    try {
+      const listResp = await shoppingListsApi.getCurrent();
+      if (listResp.data.success) {
+        const listId = listResp.data.data.shopping_list.id;
+        await shoppingListsApi.deleteItem(listId, itemId);
+        setExtraProducts(prev => prev.filter(p => p.id !== itemId));
+      }
+    } catch (error) {
+      console.error('Failed to remove product:', error);
+    }
+  };
+
+  const handleToggleMeal = async (mealName: string) => {
     if (!activeDayKey || !user) return;
     
     setIsLoading(true);
     try {
       const currentMeals = selectedMeals[activeDayKey] || [];
-      if (currentMeals.length >= 3) {
-        return;
+      let updatedMeals;
+      
+      if (currentMeals.includes(mealName)) {
+        // Remove meal
+        updatedMeals = currentMeals.filter(m => m !== mealName);
+      } else {
+        // Add meal (limit 3)
+        if (currentMeals.length >= 3) {
+          alert("Mỗi ngày chỉ tối đa 3 món ăn.");
+          return;
+        }
+        updatedMeals = [...currentMeals, mealName];
       }
-      if (!currentMeals.includes(mealName)) {
-        const updatedMeals = [...currentMeals, mealName];
-        const nextSelectedMeals = {
-          ...selectedMeals,
-          [activeDayKey]: updatedMeals
-        };
-        
-        // Save to backend
-        await persistMealPlan(nextSelectedMeals);
 
-        setSelectedMeals(nextSelectedMeals);
-      }
-      setIsModalOpen(false);
+      const nextSelectedMeals = {
+        ...selectedMeals,
+        [activeDayKey]: updatedMeals
+      };
+      
+      // Save to backend
+      await persistMealPlan(nextSelectedMeals);
+      setSelectedMeals(nextSelectedMeals);
     } catch (error) {
-      console.error('Failed to save meal plan:', error);
+      console.error('Failed to toggle meal:', error);
     } finally {
       setIsLoading(false);
     }
@@ -407,6 +489,42 @@ export default function MealPlanPage() {
         })}
       </div>
 
+      {/* Extra Products Section */}
+      <div className="mt-16 bg-cream rounded-[2.5rem] p-8 shadow-soft">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Mua thêm (Products)</h3>
+          <button 
+            onClick={() => setIsProductModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-sage text-cream rounded-xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            Thêm sản phẩm
+          </button>
+        </div>
+        
+        <div>
+          {extraProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {extraProducts.map((p, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-cream/50 p-5 rounded-2xl border border-hemp/20 shadow-sm">
+                  <span className="font-medium text-bark">{p.name}</span>
+                  <button 
+                    onClick={() => handleRemoveProduct(p.id)}
+                    className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center bg-cream/30 rounded-2xl border border-hemp/20 border-dashed">
+              <p className="text-bark/40 text-sm italic">Chưa có sản phẩm mua thêm.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Modal Popup */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -446,19 +564,110 @@ export default function MealPlanPage() {
                 filteredMeals.map((meal, i) => (
                   <button
                     key={i}
-                    onClick={() => handleSelectMeal(meal.name)}
+                    onClick={() => handleToggleMeal(meal.name)}
                     disabled={isLoading}
-                    className="w-full text-left px-6 py-4 rounded-2xl hover:bg-sage/10 hover:text-sage-deep transition-all font-medium text-bark flex items-center justify-between group"
-                  >
-                    {meal.name}
-                    <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
-                  </button>
+                    className={cn(
+                        "w-full text-left px-6 py-4 rounded-2xl transition-all font-medium flex items-center justify-between group",
+                        activeDayKey && selectedMeals[activeDayKey]?.includes(meal.name)
+                          ? "bg-sage text-cream shadow-sm"
+                          : "hover:bg-sage/10 hover:text-sage-deep text-bark"
+                      )}
+                    >
+                      {meal.name}
+                      {activeDayKey && selectedMeals[activeDayKey]?.includes(meal.name) ? (
+                        <CheckCircle2 className="h-5 w-5 text-cream" />
+                      ) : (
+                        <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
+                      )}
+                    </button>
                 ))
               ) : (
                 <div className="py-12 text-center text-bark/40 italic">
                   Không tìm thấy món ăn nào trong thư viện
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Modal Popup */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div 
+            className="bg-cream rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[80vh]"
+          >
+            <div className="p-8 border-b border-bark/5 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em] mb-1">Thư viện sản phẩm</h3>
+                  <p className="text-sm text-bark/40">Chọn các sản phẩm bạn muốn mua thêm</p>
+                </div>
+                <button 
+                  onClick={() => setIsProductModalOpen(false)}
+                  className="p-2 hover:bg-hemp/50 rounded-full transition-all"
+                >
+                  <X className="h-5 w-5 text-bark/40" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto p-8 custom-scrollbar">
+              {productsDatabase.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {productsDatabase.map((p, idx) => {
+                    const isSelected = extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase());
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          if (!isSelected) handleAddProduct(p);
+                        }}
+                        disabled={isSelected || isProductsLoading}
+                        className={`p-5 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[100px] ${
+                          isSelected 
+                            ? 'bg-sage text-cream shadow-md scale-100 opacity-90' 
+                            : 'bg-cream hover:bg-sage/10 text-bark border border-hemp/20 shadow-sm hover:shadow hover:scale-[1.02] active:scale-95'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center justify-center text-center h-full w-full py-2">
+                            {p.image_url ? (
+                              <img src={p.image_url} alt={p.name} className="w-12 h-12 object-contain mb-3" />
+                            ) : (
+                              <div className="w-12 h-12 bg-hemp/20 rounded-full mb-3 flex items-center justify-center">
+                                <ShoppingBag className="h-5 w-5 text-bark/20" />
+                              </div>
+                            )}
+                            <span className="block font-medium leading-tight text-sm">{p.name}</span>
+                          </div>
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 text-cream">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                        )}
+                        {isProductsLoading && !isSelected && (
+                          <div className="absolute top-3 right-3 text-sage">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-20 text-center">
+                  <p className="text-bark/40 text-lg italic">Không có sản phẩm nào trong thư viện.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
+              <button 
+                onClick={() => setIsProductModalOpen(false)}
+                className="px-8 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft"
+              >
+                Xong
+              </button>
             </div>
           </div>
         </div>

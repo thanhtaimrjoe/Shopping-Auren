@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { supabase } from './supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -12,13 +12,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      
-      // Silence expected errors handled by callers
       if (
         error.response.status === 401 ||
-        (error.response.status === 404 && error.config?.url === '/meal-plans/current')
+        (error.response.status === 404 && error.config?.url === '/meal-plans/current') ||
+        (error.response.status === 404 && error.config?.url === '/shopping-lists/current')
       ) {
         return Promise.reject(error);
       }
@@ -29,17 +26,14 @@ api.interceptors.response.use(
         headers: error.response.headers,
       });
     } else if (error.request) {
-      // The request was made but no response was received
       console.warn('Backend server is not responding. Please ensure the backend is running.');
     } else {
-      // Something happened in setting up the request that triggered an Error
       console.error('API Request Setup Error:', error.message);
     }
     return Promise.reject(error);
   }
 );
 
-// Add a request interceptor to add the JWT token to headers
 api.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.access_token) {
@@ -66,10 +60,14 @@ export const productsApi = {
 
 export const shoppingListsApi = {
   getCurrent: () => api.get('/shopping-lists/current'),
+  generate: (data: any) => api.post('/shopping-lists/generate', data),
   updateItem: (listId: string, itemId: string, data: any) => 
     api.patch(`/shopping-lists/${listId}/items/${itemId}`, data),
   addItem: (listId: string, data: any) => 
     api.post(`/shopping-lists/${listId}/items`, data),
+  deleteItem: (listId: string, itemId: string) => 
+    api.delete(`/shopping-lists/${listId}/items/${itemId}`),
+  complete: (listId: string) => api.post(`/shopping-lists/${listId}/complete`),
 };
 
 export const mealPlansApi = {

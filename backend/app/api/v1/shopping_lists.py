@@ -156,7 +156,7 @@ async def generate_list(body: GenerateListBody, user: dict = Depends(get_current
     plan = plan_resp.data
     week_start_date = plan["week_start_date"]
 
-    # Block duplicate active list for the same week
+    # Check for existing active list for the same week
     existing = (
         db.table("shopping_lists")
         .select("id")
@@ -165,14 +165,14 @@ async def generate_list(body: GenerateListBody, user: dict = Depends(get_current
         .eq("status", "active")
         .execute()
     )
-    if existing.data:
-        raise HTTPException(status_code=409, detail="Active shopping list already exists for this week")
+    existing_list_id = existing.data[0]["id"] if existing.data else None
 
-    # Fetch meal_plan_items with ingredients
+    # Fetch meal_plan_items with ingredients (only for non-deleted meals)
     items_resp = (
         db.table("meal_plan_items")
-        .select("meals(id, ingredients)")
+        .select("meals!inner(id, ingredients)")
         .eq("meal_plan_id", body.meal_plan_id)
+        .is_("meals.deleted_at", "null")
         .execute()
     )
 
@@ -229,16 +229,22 @@ async def generate_list(body: GenerateListBody, user: dict = Depends(get_current
                 })
 
     try:
-        # Create shopping list
-        sl_resp = db.table("shopping_lists").insert({
-            "user_id": user_id,
-            "meal_plan_id": body.meal_plan_id,
-            "week_start_date": week_start_date,
-            "status": "active",
-        }).execute()
-
-        sl = sl_resp.data[0]
-        list_id = sl["id"]
+        if existing_list_id:
+            list_id = existing_list_id
+            sl_resp = db.table("shopping_lists").select("*").eq("id", list_id).execute()
+            sl = sl_resp.data[0]
+            # Delete old meal items (keep manual items)
+            db.table("shopping_items").delete().eq("shopping_list_id", list_id).eq("source_type", "meal").execute()
+        else:
+            # Create list
+            sl_resp = db.table("shopping_lists").insert({
+                "user_id": user_id,
+                "meal_plan_id": body.meal_plan_id,
+                "week_start_date": week_start_date,
+                "status": "active",
+            }).execute()
+            sl = sl_resp.data[0]
+            list_id = sl["id"]
 
         # Insert items
         if shopping_items_payload:
@@ -390,3 +396,23 @@ async def complete_list(list_id: str, user: dict = Depends(get_current_user)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to complete shopping list: {str(e)}")
+
+@router.delete("/{list_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_item(
+    list_id: str,
+    item_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Remove an item from a shopping list."""
+    user_id = user["id"]
+    sl = verify_list_owner(list_id, user_id)
+
+    if sl["status"] == "completed":
+        raise HTTPException(status_code=409, detail="Cannot remove items from a completed shopping list")
+
+    try:
+        db.table("shopping_items").delete().eq("id", item_id).eq("shopping_list_id", list_id).execute()
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete item: {str(e)}")
+

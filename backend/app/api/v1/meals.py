@@ -106,6 +106,7 @@ async def get_meals(
             db.table("meals")
             .select("id, name, ingredients, category, created_at, updated_at")
             .eq("user_id", user_id)
+            .is_("deleted_at", "null")
         )
         if category:
             query = query.eq("category", category)
@@ -130,6 +131,7 @@ async def get_meals(
             db.table("meals")
             .select("id", count="exact")
             .eq("user_id", user_id)
+            .is_("deleted_at", "null")
         )
         if category:
             count_query = count_query.eq("category", category)
