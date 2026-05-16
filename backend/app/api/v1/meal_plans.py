@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from app.core.auth import get_current_user
 from app.core.supabase import supabase_admin as db
 
@@ -64,8 +64,8 @@ class MealPlanItemInput(BaseModel):
     @field_validator("meal_type")
     @classmethod
     def validate_meal_type(cls, v: str) -> str:
-        if v not in {"breakfast", "lunch", "dinner"}:
-            raise ValueError("meal_type must be one of: breakfast, lunch, dinner")
+        if not v.strip():
+            raise ValueError("meal_type must not be empty")
         return v
 
 
@@ -80,9 +80,27 @@ class MealPlanCreate(BaseModel):
             raise ValueError("week_start_date must be a Monday")
         return v
 
+    @model_validator(mode="after")
+    def validate_daily_limit(self):
+        counts: dict[int, int] = {}
+        for meal in self.meals:
+            counts[meal.day_of_week] = counts.get(meal.day_of_week, 0) + 1
+            if counts[meal.day_of_week] > 3:
+                raise ValueError("Each day can contain at most 3 meals")
+        return self
+
 
 class MealPlanUpdate(BaseModel):
     meals: List[MealPlanItemInput] = Field(...)
+
+    @model_validator(mode="after")
+    def validate_daily_limit(self):
+        counts: dict[int, int] = {}
+        for meal in self.meals:
+            counts[meal.day_of_week] = counts.get(meal.day_of_week, 0) + 1
+            if counts[meal.day_of_week] > 3:
+                raise ValueError("Each day can contain at most 3 meals")
+        return self
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────

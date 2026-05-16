@@ -37,8 +37,6 @@ interface MealPlanResponse {
   meals?: MealPlanItem[];
 }
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner'] as const;
-
 export default function MealPlanPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -193,13 +191,13 @@ export default function MealPlanPage() {
 
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return [];
 
-      return mealNames.slice(0, MEAL_TYPES.length).flatMap((mealName, index) => {
+      return mealNames.flatMap((mealName, index) => {
         const meal = mealDatabase.find((entry) => entry.name === mealName);
         if (!meal) return [];
 
         return [{
           day_of_week: dayIndex,
-          meal_type: MEAL_TYPES[index],
+          meal_type: `slot_${String(index).padStart(3, '0')}`,
           meal_id: meal.id,
         }];
       });
@@ -231,6 +229,9 @@ export default function MealPlanPage() {
     setIsLoading(true);
     try {
       const currentMeals = selectedMeals[activeDayKey] || [];
+      if (currentMeals.length >= 3) {
+        return;
+      }
       if (!currentMeals.includes(mealName)) {
         const updatedMeals = [...currentMeals, mealName];
         const nextSelectedMeals = {

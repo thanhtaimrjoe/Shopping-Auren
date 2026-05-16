@@ -5,6 +5,70 @@
 
 ---
 
+## [2026-05-17 00:08] - Meal slot仕様調整
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: US-006  
+**影響範囲**: Frontend, Backend, Database, API
+
+### 変更内容
+- `breakfast/lunch/dinner` 固定名称は廃止しつつ、1日最大3件の制限は維持
+- Frontend で4件目追加を抑止
+- Backend で1日3件を超える payload を validation error に変更
+- Migration 名と仕様説明を「可変スロットだが最大3件」へ修正
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `backend/app/api/v1/meal_plans.py`
+- ファイル: `backend/migrations/005_replace_meal_type_slots.sql`
+- ファイル: `docs/spec/03_design/database_schema.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- 変更理由: Meal type の意味づけは不要だが、日次登録数の上限は現行運用に必要なため
+- 技術的な決定: `slot_000` / `slot_001` / `slot_002` を使用し、件数上限は backend validator で担保
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- Supabase DB には `backend/migrations/005_replace_meal_type_slots.sql` を適用
+
+---
+
+## [2026-05-16 22:27] - 1日複数Meal登録制限解除
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-006  
+**影響範囲**: Frontend, Backend, Database, API
+
+### 変更内容
+- Weekly Alignment で1日3件までしか meal を追加できない制限を解除
+- `breakfast/lunch/dinner` 固定スロットを廃止し、`slot_000`, `slot_001` 形式の可変スロットへ変更
+- Database migration を追加し、`meal_plan_items_type_check` 制約を削除
+- API仕様書とDB設計書を新しい可変スロット仕様へ更新
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `backend/app/api/v1/meal_plans.py`
+- ファイル: `backend/migrations/005_allow_unlimited_daily_meals.sql`
+- ファイル: `docs/spec/03_design/database_schema.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- 変更理由: 1日に4件以上 meal を登録するユースケースに対応するため
+- 技術的な決定: 既存 `meal_type` カラムを表示順スロットとして再利用し、DB構造変更を最小化
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [x] エラーハンドリング確認
+
+### 備考
+- Supabase DB に `backend/migrations/005_allow_unlimited_daily_meals.sql` の適用が必要
+
+---
+
 ## [2026-05-16 22:18] - Weekly Plan保存422修正
 
 **担当**: AI Assistant  

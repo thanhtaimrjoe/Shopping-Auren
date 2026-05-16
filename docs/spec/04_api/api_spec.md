@@ -373,7 +373,7 @@ No Content
         {
           "id": "uuid",
           "day_of_week": 0,
-          "meal_type": "dinner",
+          "meal_type": "slot_000",
           "dish": {
             "id": "uuid",
             "name": "カレーライス",
@@ -407,12 +407,12 @@ No Content
   "meals": [
     {
       "day_of_week": 0,
-      "meal_type": "dinner",
+      "meal_type": "slot_000",
       "dish_id": "uuid"
     },
     {
       "day_of_week": 1,
-      "meal_type": "dinner",
+      "meal_type": "slot_000",
       "dish_id": "uuid"
     }
   ]
@@ -423,7 +423,7 @@ No Content
 - `week_start_date`: 必須、月曜日の日付
 - `meals`: 配列、各要素は以下を含む
   - `day_of_week`: 0〜6（0=月, 6=日）
-  - `meal_type`: breakfast/lunch/dinner
+  - `meal_type`: 日ごとの表示順スロット（例: `slot_000`, `slot_001`, `slot_002`）。同じ日に最大3件登録可能。
   - `dish_id`: 存在する料理ID
 
 **Response** (201):
@@ -464,7 +464,7 @@ No Content
   "meals": [
     {
       "day_of_week": 0,
-      "meal_type": "dinner",
+      "meal_type": "slot_000",
       "dish_id": "uuid"
     }
   ]
