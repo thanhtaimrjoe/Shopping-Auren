@@ -13,7 +13,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",   # Next.js dev
-        "https://shopping-memo.vercel.app",  # Production
+        "https://shopping-memo.vercel.app",
+        "https://shopping-auren.vercel.app",  # Actual Production URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
