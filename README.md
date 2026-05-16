@@ -11,20 +11,20 @@
 | **プロジェクト名** | Shopping Memo |
 | **目的** | 週の食事計画を立て、買い物リストを自動生成 |
 | **ターゲットユーザー** | 2名（本人 + 彼女） |
-| **開発期間** | MVP: 1週間（2026-05-09 〜 2026-05-16） |
-| **ステータス** | 🟡 設計フェーズ |
+| **開発期間** | MVP: 2026-05-09 〜 現在進行中 |
+| **ステータス** | 🟢 Development Phase (MVP Implementation) |
 
 ---
 
 ## 🎯 主要機能
 
-### MVP機能
+### MVP機能 (In Progress)
 - ✅ ユーザー認証（登録・ログイン）
-- ✅ 料理CRUD（登録・編集・削除・一覧）
-- ✅ 雑貨CRUD（登録・編集・削除・一覧）
-- ✅ 食事計画作成（来週月〜日）
-- ✅ 買い物リスト自動生成
-- ✅ 買い物チェックリスト
+- 🔄 料理CRUD（登録・編集・削除・一覧）
+- 🔄 雑貨CRUD（登録・編集・削除・一覧）
+- ✅ 食事計画作成（週単位・月〜日）
+- 🔄 買い物リスト自動生成
+- 🔄 買い物チェックリスト
 
 ### Nice to Have
 - 🟡 買い物履歴（過去2週間）
@@ -39,16 +39,16 @@
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript
 - **Styling**: TailwindCSS
-- **UI Components**: shadcn/ui (検討中)
-- **State Management**: React Context / Zustand (検討中)
+- **UI Components**: Custom + shadcn/ui (planned)
+- **State Management**: React Context + local state (Zustand planned)
 
 ### Backend
 - **Framework**: FastAPI (Python 3.13)
 - **Database**: PostgreSQL (Supabase)
-- **ORM**: SQLAlchemy
-- **Authentication**: Supabase Auth
+- **Auth**: Supabase Auth
+- **API Client**: Axios + interceptors
 
-### Deployment
+### Deployment (Planned)
 - **Frontend**: Vercel
 - **Backend**: Railway
 - **Database**: Supabase (Free Tier)
@@ -59,38 +59,45 @@
 
 ```
 Shopping-Auren/
-├── frontend/               # Next.js frontend
-│   ├── app/               # App Router
-│   ├── components/        # React components
-│   ├── lib/               # Utilities
-│   └── public/            # Static files
-├── backend/               # FastAPI backend
+├── frontend/               # Next.js frontend (TypeScript + Tailwind)
+│   ├── src/app/           # App Router + pages (login, meals, products, shopping, meal-plan)
+│   ├── src/components/    # Reusable UI components
+│   ├── src/context/       # AuthContext, etc.
+│   ├── src/lib/           # api.ts, supabase.ts
+│   └── public/
+├── backend/                # FastAPI backend
 │   ├── app/
-│   │   ├── api/          # API endpoints
-│   │   ├── models/       # Database models
-│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── api/v1/       # meals, products, meal_plans, shopping_lists
+│   │   ├── core/         # auth, config
+│   │   ├── models/       # (To be strengthened)
+│   │   ├── schemas/      # (To be strengthened)
 │   │   └── services/     # Business logic
-│   ├── migrations/       # Database migrations
-│   └── tests/            # Tests
-└── docs/                 # Documentation
-    └── spec/             # Specifications
+│   ├── migrations/
+│   └── tests/
+└── docs/                   # Documentation
+    ├── spec/               # Full professional specs
+    └── changelog/          # Development history
 ```
 
 ---
 
 ## 📚 ドキュメント
 
-### 設計ドキュメント（Claude Projects）
-プロジェクト仕様は `/Users/taiht/.claude/projects/Shopping-Auren/` に保存されています。
+### 設計ドキュメント (Repo内)
+プロジェクト仕様は `docs/spec/` に置いてあります。
 
 | ドキュメント | パス | 説明 |
 |-------------|------|------|
 | Inception Deck | `01_inception/inception_deck.md` | プロジェクト概要・目的 |
 | User Stories | `02_requirements/user_stories.md` | ユーザーストーリー・受け入れ基準 |
 | Screen List | `03_design/screen_list.md` | 画面一覧・URL・機能 |
-| Database Schema | `03_design/database_schema.md` | データベース設計 |
-| API Spec | `04_api/api_spec.md` | REST API仕様 |
+| Database Schema + Migration | `03_design/` | DB設計 + 既存データ移行計画 |
+| API Specification | `04_api/api_spec.md` | REST API仕様 (30+ endpoints) |
 | Decision Log | `05_tracking/decisions.md` | 設計・実装の意思決定記録 |
+
+### 開発ガイド
+- `CLAUDE.md` / `AGENTS.md` — AI開発者向けルール
+- `docs/changelog/CHANGELOG.md` — 変更履歴詳細
 
 ---
 
@@ -99,81 +106,75 @@ Shopping-Auren/
 ### 前提条件
 - Node.js 20+
 - Python 3.13+
-- PostgreSQL (Supabase)
+- Supabase PostgreSQL
 
-### Frontend Setup
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### Backend Setup
+### Backend
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
 ---
 
-## 📅 開発スケジュール
+## 📅 開発進捗
 
-### Week 1: MVP開発（2026-05-09 〜 2026-05-16）
+### 現在の状況 (2026-05-16)
+- ✅ **Specs**: 全て完了 (Inception Deck, User Stories, DB Schema, API Spec, Decision Log)
+- ✅ **Auth**: Supabase Auth 完了
+- ✅ **Meal Plan (Weekly Alignment)**: メインページ実装完了 + API連携
+- ✅ **Backend APIs**: meals, products, meal_plans, shopping_lists ルーター実装
+- 🔄 Backend models/schemas layer 強化中
+- 🔄 Frontend CRUDページ完成中
 
-| 日 | タスク | ステータス |
-|----|--------|-----------|
-| Day 1-2 | 要件定義・設計 | ✅ 完了 |
-| Day 3-4 | Backend API開発 | 🟡 予定 |
-| Day 5-6 | Frontend開発 | 🟡 予定 |
-| Day 7 | 統合テスト | 🟡 予定 |
-
-### Week 2: リリース準備（2026-05-17 〜 2026-05-20）
-
-| 日 | タスク | ステータス |
-|----|--------|-----------|
-| Day 1-2 | バグ修正 | 🟡 予定 |
-| Day 3 | デプロイ | 🟡 予定 |
-| Day 4 | 本番確認 | 🟡 予定 |
+### 今後の優先事項
+1. Backend models + services layer 正規化
+2. Database migration scripts
+3. Frontend ミール・プロダクツ CRUD 完成
+4. Integration test & deploy
 
 ---
 
 ## 🔗 関連リンク
 
-- **Supabase Project**: [TBD]
-- **Vercel Deployment**: [TBD]
-- **Railway Deployment**: [TBD]
-- **GitHub Repository**: [TBD]
+- GitHub: https://github.com/thanhtaimrjoe/Shopping-Auren
+- Specs: `docs/spec/`
 
 ---
 
 ## 📝 開発メモ
 
+### 2026-05-16
+- ✅ Weekly Alignment ページのバグフィックス (404 handling, API loop, modal data loading)
+- ✅ Auth・API client 改善
+
 ### 2026-05-09
-- ✅ Inception Deck作成完了
-- ✅ User Stories作成完了
-- ✅ Screen List作成完了
-- ✅ Database Schema設計完了
-- ✅ API Spec作成完了
-- ✅ Decision Log作成完了
-- 🟡 次: Project Structure作成、Backend実装開始
+- ✅ Inception Deck・User Stories・Screen List・Database Schema・API Spec・Decision Log 完了
+- ✅ プロジェクト構造・開発ルール構築
 
 ---
 
 ## 🤝 コントリビューター
 
-- **Tai** - Project Owner, Developer
-- **Claude** - AI Assistant, Spec Writer
+- **Tai (Yano)** — Project Owner & Developer
+- **Claude / Grok** — AI Assistant (Spec + Implementation support)
 
 ---
 
 ## 📄 ライセンス
 
-Private Project - Not for public distribution
+Private Project
 
 ---
 
-**最終更新**: 2026-05-09  
-**バージョン**: 0.1.0 (設計フェーズ)
+**最終更新**: 2026-05-16  
+**バージョン**: 0.2.0 (Development Phase)
