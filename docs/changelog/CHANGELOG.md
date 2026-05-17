@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-17 22:00] - Loại bỏ tiêu đề "Week Schedule" trong Meal Plan Page
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Thay đổi chi tiết
+- **Meal Plan Page**:
+    - Xóa bỏ thẻ tiêu đề `<h3>` hiển thị văn bản "Week Schedule".
+    - Giữ lại nút "Generate Shopping List" và bộ điều hướng tuần để đảm bảo chức năng không bị ảnh hưởng.
+
+### Chi tiết triển khai
+- File: `frontend/src/app/page.tsx`
+- Lý do: Tối giản hóa giao diện, loại bỏ các nhãn tiêu đề không cần thiết để tập trung vào các thành phần tương tác.
+
+---
+
 ## [2026-05-17 21:50] - Loại bỏ hoàn toàn thanh tiến trình trực quan trong Shopping Page
 
 **Assignee**: AI Assistant

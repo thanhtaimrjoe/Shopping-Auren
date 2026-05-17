@@ -410,7 +410,6 @@ export default function MealPlanPage() {
       {/* Week Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4">
-          <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Week Schedule</h3>
           <button
             onClick={async () => {
               if (!currentPlanId) return;
