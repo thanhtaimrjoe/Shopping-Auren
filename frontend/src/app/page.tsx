@@ -508,11 +508,25 @@ export default function MealPlanPage() {
                 {dayMeals.length > 0 ? (
                   dayMeals.map((mealName, mIdx) => {
                     const mealDetails = mealDatabase.find(m => m.name === mealName);
-                    const ingredients = mealDetails?.ingredients 
-                      ? (typeof mealDetails.ingredients === 'string' 
-                          ? JSON.parse(mealDetails.ingredients) 
-                          : mealDetails.ingredients)
-                      : [];
+                    
+                    // Robust parsing of ingredients
+                    let ingredients: string[] = [];
+                    const rawIngredients = mealDetails?.ingredients;
+                    
+                    if (rawIngredients) {
+                      if (Array.isArray(rawIngredients)) {
+                        ingredients = rawIngredients;
+                      } else if (typeof rawIngredients === 'string') {
+                        try {
+                          // Try parsing as JSON first
+                          const parsed = JSON.parse(rawIngredients);
+                          ingredients = Array.isArray(parsed) ? parsed : [parsed];
+                        } catch (e) {
+                          // If not JSON, split by newline as fallback
+                          ingredients = rawIngredients.split('\n').map(i => i.trim()).filter(i => i !== '');
+                        }
+                      }
+                    }
 
                     return (
                       <div key={mIdx} className="group/meal flex flex-col bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">

@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-17 21:15] - Fix SyntaxError when parsing ingredients
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Frontend
+
+### Changes
+- **Frontend**:
+    - Cập nhật logic phân tách nguyên liệu (`ingredients`) trong `MealPlanPage` để xử lý cả định dạng JSON và văn bản thuần túy (newline-separated).
+    - Ngăn chặn lỗi `SyntaxError: Unexpected token` khi gặp các chuỗi không phải JSON (ví dụ: "Hộp chả rế").
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Một số món ăn lưu nguyên liệu dưới dạng text thuần thay vì JSON array, gây lỗi khi gọi `JSON.parse`.
+
+---
+
 ## [2026-05-17 21:00] - Triển khai Refactor: Loại bỏ hoàn toàn meal_type và cập nhật Shopping List
 
 **Assignee**: AI Assistant
