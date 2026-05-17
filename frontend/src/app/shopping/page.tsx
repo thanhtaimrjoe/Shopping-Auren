@@ -178,18 +178,6 @@ export default function ShoppingPage() {
         </div>
       ) : (
         <>
-          {/* Progress & Actions */}
-          <div className="grid grid-cols-1 gap-8 mb-12">
-            <div className="bg-cream rounded-[2.5rem] p-8 shadow-soft flex flex-col justify-between relative overflow-hidden">
-              <div className="w-full h-2 bg-hemp rounded-full overflow-hidden relative z-10">
-                <div 
-                  className="h-full bg-sage transition-all duration-1000 ease-out"
-                  style={{ width: `${list.progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Search & Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1">

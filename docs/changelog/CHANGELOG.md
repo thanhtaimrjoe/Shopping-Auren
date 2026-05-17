@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-17 21:50] - Loại bỏ hoàn toàn thanh tiến trình trực quan trong Shopping Page
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Thay đổi chi tiết
+- **Shopping Page**:
+    - Xóa bỏ hoàn toàn container `div` và thanh tiến trình trực quan (Progress Bar).
+    - Trang mua sắm hiện tại tập trung hoàn toàn vào việc tìm kiếm, lọc và quản lý các mặt hàng.
+
+### Chi tiết triển khai
+- File: `frontend/src/app/shopping/page.tsx`
+- Lý do: Tối giản hóa giao diện theo yêu cầu, loại bỏ các chỉ báo tiến trình để có cái nhìn tập trung hơn vào danh sách.
+
+---
+
 ## [2026-05-17 21:40] - Loại bỏ hiển thị phần trăm văn bản trong Shopping Page
 
 **Assignee**: AI Assistant
