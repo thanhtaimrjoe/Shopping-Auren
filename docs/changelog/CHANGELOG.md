@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-17 01:35] - Dọn dẹp các file script tạm thời ở root project
+
+**Assignee**: AI Assistant
+**Type**: Refactor
+**Impact**: Project Structure
+
+### Changes
+- Xóa 28 file `.py` và `.diff` dư thừa ở thư mục gốc của project.
+- Các file này bao gồm các script patch, test và log tạm thời được sử dụng trong quá trình phát triển trước đó.
+
+### Implementation Details
+- Các file đã xóa: `patch.py`, `patch_ui.py`, `test_db_shopping.py`, `add_changelog.py`, `check_data.py`, `patch.diff`, và các biến thể khác của `patch_changelog`.
+- Reason: Giữ cho cấu trúc project sạch sẽ, tránh nhầm lẫn với code chính trong `backend/` và `frontend/`.
+- Technical Decision: Đã kiểm tra và xác nhận không có file nào trong số này được tham chiếu bởi code chính.
+
+### Testing
+- [x] Đã liệt kê và kiểm tra nội dung các file trước khi xóa.
+- [x] Đã tìm kiếm tham chiếu trong toàn bộ codebase.
+- [x] Đã xóa thành công 28 file.
+
+---
+
 ## [2026-05-17 01:25] - Update Product Modal Rendering
 
 **Assignee**: AI Assistant
