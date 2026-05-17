@@ -50,6 +50,7 @@ export default function MealPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   // Extra products state
   const [productsDatabase, setProductsDatabase] = useState<any[]>([]);
@@ -64,6 +65,12 @@ export default function MealPlanPage() {
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Notification helper
+  const showNotification = useCallback((type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -326,8 +333,11 @@ export default function MealPlanPage() {
       // Save to backend
       await persistMealPlan(nextSelectedMeals);
       setSelectedMeals(nextSelectedMeals);
-    } catch (error) {
+      showNotification('success', currentMeals.includes(mealName) ? 'Đã xóa món ăn' : 'Đã thêm món ăn');
+    } catch (error: any) {
       console.error('Failed to toggle meal:', error);
+      const errorMsg = error.response?.data?.detail || error.message || 'Lỗi không xác định';
+      showNotification('error', `Không thể cập nhật món ăn: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -346,8 +356,11 @@ export default function MealPlanPage() {
       await persistMealPlan(nextSelectedMeals);
 
       setSelectedMeals(nextSelectedMeals);
-    } catch (error) {
+      showNotification('success', 'Đã xóa món ăn');
+    } catch (error: any) {
       console.error('Failed to update meal plan:', error);
+      const errorMsg = error.response?.data?.detail || error.message || 'Lỗi không xác định';
+      showNotification('error', `Không thể xóa món ăn: ${errorMsg}`);
     }
   };
 
@@ -364,13 +377,24 @@ export default function MealPlanPage() {
   }
 
   return (
-    <div className="pb-24 animate-page-enter">
+    <div className="pb-12 animate-page-enter">
+      {/* Notifications */}
+      {notification && (
+        <div className={cn(
+          "fixed top-8 right-8 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-warm animate-scale-in",
+          notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-cream"
+        )}>
+          {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <X className="h-5 w-5" />}
+          <span className="font-bold text-xs uppercase tracking-widest">{notification.message}</span>
+        </div>
+      )}
+
       {/* Editorial Header */}
-      <header className="mb-20">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-4">
+      <header className="mb-12">
+        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-4 mb-2">
           {format(currentDate, 'EEEE, MMMM d')}
         </span>
-        <h3 className="text-3xl md:text-4xl text-bark font-serif mb-6 leading-tight">
+        <h3 className="text-3xl md:text-4xl text-bark font-serif mb-4 leading-tight">
           Weekly Alignment
         </h3>
         <div className="flex items-center gap-4 text-bark/60">
@@ -381,7 +405,7 @@ export default function MealPlanPage() {
       </header>
 
       {/* Week Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
         <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Week Schedule</h3>
         <div className="relative flex items-center gap-2 md:gap-4 bg-cream rounded-full p-1 shadow-soft w-fit">
           <input 
@@ -428,10 +452,10 @@ export default function MealPlanPage() {
                 isToday ? "shadow-warm scale-[1.02] z-10" : "shadow-soft hover:shadow-warm hover:scale-[1.01]"
               )}
             >
-              <div className="flex items-end justify-between mb-8">
+              <div className="flex items-end justify-between mb-6">
                 <div>
                   <h4 className={cn(
-                    "text-base font-bold uppercase tracking-[0.2em] mb-1",
+                    "text-base font-bold uppercase tracking-[0.2em] mb-0.5",
                     isToday ? "text-sage-deep" : "text-bark"
                   )}>
                     {format(day, 'EEEE')}
@@ -449,7 +473,7 @@ export default function MealPlanPage() {
               </div>
 
               {/* Selected Meals List */}
-              <div className="flex-1 space-y-3 mb-6">
+              <div className="flex-1 space-y-3 mb-4">
                 {dayMeals.length > 0 ? (
                   dayMeals.map((meal, mIdx) => (
                     <div key={mIdx} className="group/meal flex items-center justify-between bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">
@@ -478,7 +502,7 @@ export default function MealPlanPage() {
                 Thêm món
               </button>
               
-              <div className="mt-8 pt-6 border-t border-bark/5">
+              <div className="mt-6 pt-4 border-t border-bark/5">
                 <p className="text-[10px] text-bark/40 italic leading-relaxed">
                   "Let food be thy medicine and medicine be thy food."
                 </p>
@@ -489,8 +513,8 @@ export default function MealPlanPage() {
       </div>
 
       {/* Extra Products Section */}
-      <div className="mt-16 bg-cream rounded-[2.5rem] p-8 shadow-soft">
-        <div className="flex items-center justify-between mb-8">
+      <div className="mt-10 bg-cream rounded-[2.5rem] p-8 shadow-soft">
+        <div className="flex items-center justify-between mb-6">
           <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Mua thêm (Products)</h3>
           <button 
             onClick={() => setIsProductModalOpen(true)}

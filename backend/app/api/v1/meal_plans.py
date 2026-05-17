@@ -28,7 +28,14 @@ def format_meal_plan(plan: dict, items: list) -> dict:
 
 def format_plan_item(row: dict) -> dict:
     """Format a meal_plan_items row with nested meal info."""
-    meal = row.get("meals") or {}
+    meal_data = row.get("meals")
+    # Postgrest might return a list for joined tables even if 1:1
+    meal = {}
+    if isinstance(meal_data, list) and len(meal_data) > 0:
+        meal = meal_data[0]
+    elif isinstance(meal_data, dict):
+        meal = meal_data
+
     return {
         "id": row["id"],
         "day_of_week": row["day_of_week"],
@@ -198,15 +205,22 @@ async def create_meal_plan(body: MealPlanCreate, user: dict = Depends(get_curren
 
         # Insert items
         if body.meals:
-            items_payload = [
-                {
+            meals_by_day: dict[int, int] = {}
+            items_payload = []
+            
+            for m in body.meals:
+                day = m.day_of_week
+                current_slot_index = meals_by_day.get(day, 0)
+                assigned_type = m.meal_type or f"slot_{current_slot_index:03d}"
+                
+                items_payload.append({
                     "meal_plan_id": plan_id,
                     "meal_id": m.meal_id,
-                    "day_of_week": m.day_of_week,
-                    "meal_type": m.meal_type,
-                }
-                for m in body.meals
-            ]
+                    "day_of_week": day,
+                    "meal_type": assigned_type,
+                })
+                meals_by_day[day] = current_slot_index + 1
+
             db.table("meal_plan_items").insert(items_payload).execute()
 
         items = fetch_plan_items(plan_id)
@@ -268,22 +282,37 @@ async def update_meal_plan(
 
     try:
         # Delete existing items then re-insert (replace strategy)
+        # We need to make sure we only delete items belonging to this plan
         db.table("meal_plan_items").delete().eq("meal_plan_id", plan_id).execute()
 
         if body.meals:
-            items_payload = [
-                {
+            # Group by day to assign slots if meal_type is missing
+            meals_by_day: dict[int, int] = {}
+            items_payload = []
+            
+            for m in body.meals:
+                day = m.day_of_week
+                current_slot_index = meals_by_day.get(day, 0)
+                
+                # If meal_type is null/missing, assign slot_000, slot_001, etc.
+                assigned_type = m.meal_type or f"slot_{current_slot_index:03d}"
+                
+                items_payload.append({
                     "meal_plan_id": plan_id,
                     "meal_id": m.meal_id,
-                    "day_of_week": m.day_of_week,
-                    "meal_type": m.meal_type,
-                }
-                for m in body.meals
-            ]
-            db.table("meal_plan_items").insert(items_payload).execute()
+                    "day_of_week": day,
+                    "meal_type": assigned_type,
+                })
+                
+                meals_by_day[day] = current_slot_index + 1
+
+            # Use insert().execute() and check for data
+            res = db.table("meal_plan_items").insert(items_payload).execute()
+            if not res.data and len(items_payload) > 0:
+                 raise Exception("Failed to insert meal plan items")
 
         # Touch updated_at on plan
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0).isoformat()
         db.table("meal_plans").update({"updated_at": now}).eq("id", plan_id).execute()
         plan["updated_at"] = now
 

@@ -5,6 +5,167 @@
 
 ---
 
+## [2026-05-17] - Cập nhật Spec & Decision sau khi thống nhất requirement Meal Plan + Shopping List
+
+**Assignee**: Grok + Tai  
+**Type**: Documentation + Major Decision Update  
+**Related**: DEC-012, DEC-013, DEC-014  
+**Impact**: Database, Backend, Frontend, Specs
+
+### Tóm tắt
+Cập nhật toàn bộ tài liệu thiết kế sau khi user xác nhận rõ requirement mới về Meal Plan và Shopping List.
+
+### Các thay đổi chính
+
+#### 1. Bỏ hoàn toàn `meal_type`
+- Xóa cột `meal_type` khỏi bảng `meal_plan_items`.
+- Không còn phân biệt Sáng / Trưa / Tối.
+- Chỉ giữ rule **tối đa 3 món/ngày**.
+- Cập nhật `docs/spec/03_design/database_schema.md` và `docs/spec/05_tracking/decisions.md` (DEC-012).
+
+#### 2. Thay đổi cách Generate Shopping List
+- **Chỉ generate khi nhấn nút** (không auto generate).
+- Khi regenerate: **Xóa shopping list cũ + tạo mới**.
+- Mỗi nguyên liệu từ `meals.ingredients` sẽ tạo thành **1 record riêng** trong `shopping_items`.
+- Thêm cột `note` để lưu `"Dùng cho món [Tên món]"`.
+- Cập nhật `DEC-013`.
+
+#### 3. Tính năng mới: Hiển thị Ingredients realtime
+- Khi select món trong modal → hiển thị ngay danh sách ingredients **dưới tên món** trên card ngày.
+- Hiển thị tất cả ingredients, format: bullet points, nhỏ hơn, màu xám.
+- Hiển thị realtime (không cần save).
+- Cập nhật `DEC-014`.
+
+#### 4. Các quyết định khác đã xác nhận
+- Shopping list chỉ được tạo/cập nhật khi nhấn nút Generate.
+- Khi rời trang Meal Plan mà chưa lưu → hiện warning "You're unsaved".
+- Giữ nguyên giao diện hiện tại của Weekly Alignment.
+- Không cần giữ thứ tự món ăn trong ngày.
+
+### Files đã cập nhật
+- `docs/spec/03_design/database_schema.md`
+- `docs/spec/05_tracking/decisions.md` (thêm DEC-012, DEC-013, DEC-014)
+- `docs/changelog/CHANGELOG.md` (entry này)
+
+### Next Action
+- Chạy script SQL refactor trên Supabase (xóa cột `meal_type`, thêm cột `note`).
+- Cập nhật API contract và code tương ứng.
+
+---
+
+## [2026-05-14T15:00:00Z] - Xử lý lỗi Refresh Token và ổn định phiên làm việc
+
+### **Bug Fixes**
+- **Auth Session Stability**: Khắc phục lỗi `AuthApiError: Invalid Refresh Token: Refresh Token Not Found` bằng cách xử lý chủ động các lỗi trong quá trình khởi tạo và làm mới phiên làm việc.
+  - Tự động gọi `signOut()` để xóa dữ liệu cục bộ khi phát hiện refresh token không hợp lệ hoặc không tồn tại.
+  - Thêm khối `try-catch` và kiểm tra lỗi cho `supabase.auth.getSession()` trong `AuthContext.tsx` và `api.ts`.
+- **API Request Interceptor**: Cải thiện tính an toàn cho request interceptor, đảm bảo các yêu cầu API không bị gián đoạn bởi các lỗi xác thực chưa được xử lý.
+
+### **Improvements**
+- **Session Event Handling**: Cập nhật `onAuthStateChange` để phản ứng tốt hơn với các sự kiện thay đổi trạng thái người dùng.
+
+---
+
+## [2026-05-17 20:15] - Sửa lỗi ràng buộc NOT NULL cho meal_type
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Backend
+
+### Changes
+- **Backend**:
+    - Khắc phục lỗi `null value in column "meal_type" violates not-null constraint` bằng cách tự động gán giá trị slot mặc định (`slot_000`, `slot_001`, `slot_002`) nếu `meal_type` gửi từ frontend bị null.
+    - Đảm bảo tính tương thích với cấu trúc Database hiện tại mà không cần thay đổi schema.
+    - Cải thiện độ tin cậy của cả hai hàm `create_meal_plan` và `update_meal_plan`.
+
+### Implementation Details
+- File: `backend/app/api/v1/meal_plans.py`
+- Reason: Mặc dù frontend đã bỏ việc gửi `meal_type` nhưng Database vẫn còn ràng buộc `NOT NULL`, dẫn đến lỗi 500 khi lưu dữ liệu.
+
+### Testing
+- [x] Đã kiểm tra log và xác nhận lỗi vi phạm ràng buộc NOT NULL.
+- [x] Đã triển khai logic gán slot tự động và xác nhận API hoạt động ổn định.
+
+---
+
+## [2026-05-17 20:00] - Khắc phục lỗi 500 khi chọn món và tăng cường Error Handling
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Frontend, Backend, API
+
+### Changes
+- **Backend**:
+    - Thêm `global_exception_handler` vào `main.py` để log chi tiết traceback khi xảy ra lỗi 500, giúp chẩn đoán nguyên nhân nhanh hơn.
+    - Cải thiện logic trong `update_meal_plan` để xử lý định dạng thời gian ISO (`Z` thay vì `+00:00`) đồng bộ với database.
+    - Thêm kiểm tra kết quả sau khi insert vào `meal_plan_items`.
+- **Frontend**:
+    - Triển khai hệ thống **Notification (Toast)** để hiển thị thông báo thành công hoặc lỗi cho người dùng khi tương tác.
+    - Cập nhật `handleToggleMeal` và `removeMeal` để bắt lỗi chi tiết từ backend và hiển thị thông báo lỗi thân thiện thay vì chỉ log console.
+    - Đảm bảo trạng thái loading (`isLoading`) được quản lý đúng cách để tránh click đúp.
+
+### Implementation Details
+- File: `backend/app/main.py` (Exception handling)
+- File: `backend/app/api/v1/meal_plans.py` (Update logic stability)
+- File: `frontend/src/app/page.tsx` (Notification UI & logic)
+- Reason: Lỗi 500 xảy ra khi backend không xử lý tốt các ngoại lệ hoặc dữ liệu không khớp định dạng, trong khi frontend thiếu phản hồi trực quan cho người dùng.
+
+### Testing
+- [x] Kiểm tra log backend: Đã thấy traceback chi tiết khi có lỗi.
+- [x] Kiểm tra Toast Notification: Hiển thị đúng "Đã thêm món ăn" hoặc "Đã xóa món ăn".
+- [x] Kiểm tra Error Toast: Hiển thị đúng nội dung lỗi từ backend khi có sự cố.
+
+---
+
+## [2026-05-17 19:45] - Tối ưu khoảng cách giao diện (UI Spacing)
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- **Giảm khoảng cách dọc**: Điều chỉnh các giá trị margin và padding trong `MealPlanPage` để bố cục gọn gàng hơn.
+    - `pb-24` -> `pb-12` cho container chính.
+    - `mb-20` -> `mb-12` cho phần Header.
+    - `mb-12` -> `mb-8` cho phần điều hướng tuần.
+    - `mt-16` -> `mt-10` cho phần "Mua thêm (Products)".
+- **Tối ưu Card món ăn**: Giảm khoảng cách bên trong các card ngày trong tuần (`mb-8` -> `mb-6`, `mt-8` -> `mt-6`) để hiển thị được nhiều nội dung hơn trên một màn hình.
+- **Cải thiện Header**: Giảm padding top và margin bottom của phần ngày tháng để cân đối với tiêu đề chính.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Khoảng cách dọc quá lớn làm người dùng phải cuộn trang nhiều và cảm giác giao diện bị rời rạc.
+- Technical Decision: Sử dụng các lớp tiện ích của Tailwind CSS để điều chỉnh spacing đồng bộ trên các breakpoint.
+
+### Testing
+- [x] Kiểm tra hiển thị trên Desktop: Bố cục cân đối, hài hòa.
+- [x] Kiểm tra trên Mobile: Giảm bớt việc phải cuộn trang, thông tin hiển thị tập trung hơn.
+
+---
+
+## [2026-05-17 19:30] - Khôi phục dịch vụ Backend và cấu hình môi trường
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Backend, Environment
+
+### Changes
+- **Khôi phục Backend**: Cài đặt các thư viện phụ thuộc còn thiếu (FastAPI, Uvicorn, etc.) và khởi động lại máy chủ Backend trên cổng 8000.
+- **Sửa lỗi kết nối**: Giải quyết triệt để lỗi `ERR_CONNECTION_REFUSED` do Backend không hoạt động, giúp Frontend có thể truy vấn dữ liệu bình thường.
+- **Kiểm tra trạng thái**: Xác nhận các endpoint `/meals`, `/products`, `/meal-plans/current`, và `/shopping-lists/current` hoạt động tốt với phản hồi 200 OK.
+
+### Implementation Details
+- Thao tác: Chạy `python3 -m pip install -r requirements.txt` và khởi động uvicorn.
+- Lý do: Môi trường phát triển thiếu các gói cần thiết và máy chủ backend chưa được chạy, dẫn đến việc frontend không thể kết nối.
+- Quyết định kỹ thuật: Sử dụng `uvicorn` với chế độ `--reload` để hỗ trợ phát triển liên tục.
+
+### Testing
+- [x] Kiểm tra endpoint `/health` trả về status: "ok".
+- [x] Xác nhận Frontend gọi API thành công qua logs của Backend.
+- [x] Kiểm tra giao diện người dùng hiển thị dữ liệu bình thường thay vì lỗi mạng.
+
+---
+
 ## [2026-05-17 03:00] - Refactor Meal Plan: Loại bỏ workaround slot_XXX và làm meal_type optional
 
 **Assignee**: AI Assistant

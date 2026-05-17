@@ -94,14 +94,44 @@ Shopping-Auren/
 | Database Schema + Migration | `03_design/` | DB設計 + 既存データ移行計画 |
 | API Specification | `04_api/api_spec.md` | REST API仕様 (30+ endpoints) |
 | Decision Log | `05_tracking/decisions.md` | 設計・実装の意思決定記録 |
-
 ### 開発ガイド
 - `CLAUDE.md` / `AGENTS.md` — AI開発者向けルール
 - `docs/changelog/CHANGELOG.md` — 変更履歴詳細
 
 ---
 
-## 🚀 セットアップ
+## 🚀 How to Run (Cách chạy dự án)
+
+Để ứng dụng hoạt động đầy đủ, bạn cần chạy song song cả **Frontend** và **Backend**.
+
+### 1. Khởi động Backend (FastAPI)
+Mở một terminal mới và chạy các lệnh sau:
+```bash
+cd backend
+# Cài đặt thư viện (chỉ cần chạy lần đầu)
+python3 -m pip install -r requirements.txt
+
+# Khởi động server
+export PYTHONPATH=$PYTHONPATH:.
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+*Backend sẽ chạy tại: http://localhost:8000*
+
+### 2. Khởi động Frontend (Next.js)
+Mở một terminal khác và chạy:
+```bash
+cd frontend
+# Cài đặt thư viện (chỉ cần chạy lần đầu)
+npm install
+
+# Khởi động chế độ phát triển
+npm run dev
+```
+*Frontend sẽ chạy tại: http://localhost:3000*
+
+---
+
+## 🛠 Tech Stack🚀 セットアップ
 
 ### 前提条件
 - Node.js 20+

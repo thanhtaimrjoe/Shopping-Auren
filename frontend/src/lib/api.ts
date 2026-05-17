@@ -58,16 +58,25 @@ api.interceptors.response.use(
 );
 
 api.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
-  } else {
-    // If no session and trying to call protected API, we might want to cancel
-    // For now, we'll just log a warning if it's not the login page
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      console.warn('Attempted API call without active session:', config.url);
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.warn('API Request Auth Error:', error.message);
+      // If refresh token failed, we don't attach token
+      return config;
     }
+
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    } else {
+      // If no session and trying to call protected API, we might want to cancel
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        console.warn('Attempted API call without active session:', config.url);
+      }
+    }
+  } catch (e) {
+    console.error('Unexpected error in API request interceptor:', e);
   }
   return config;
 });
