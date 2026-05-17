@@ -595,9 +595,9 @@ export default function MealPlanPage() {
       {isProductModalOpen && (
         <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div 
-            className="bg-cream rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[80vh]"
+            className="bg-cream rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[85vh]"
           >
-            <div className="p-8 border-b border-bark/5 flex-shrink-0">
+            <div className="p-6 border-b border-bark/5 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em] mb-1">Thư viện sản phẩm</h3>
@@ -612,9 +612,9 @@ export default function MealPlanPage() {
               </div>
             </div>
             
-            <div className="overflow-y-auto p-8 custom-scrollbar">
+            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar">
               {productsDatabase.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {productsDatabase.map((p, idx) => {
                     const isSelected = extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase());
                     return (
@@ -624,21 +624,21 @@ export default function MealPlanPage() {
                           if (!isSelected) handleAddProduct(p);
                         }}
                         disabled={isSelected || isProductsLoading}
-                        className={`p-5 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[100px] ${
+                        className={`p-3 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[150px] ${
                           isSelected 
                             ? 'bg-sage text-cream shadow-md scale-100 opacity-90' 
                             : 'bg-cream hover:bg-sage/10 text-bark border border-hemp/20 shadow-sm hover:shadow hover:scale-[1.02] active:scale-95'
                         }`}
                       >
-                        <div className="flex flex-col items-center justify-center text-center h-full w-full py-2">
+                        <div className="flex flex-col items-center justify-center text-center h-full w-full">
                             {p.image_url ? (
-                              <img src={p.image_url} alt={p.name} className="w-12 h-12 object-contain mb-3" />
+                              <img src={p.image_url} alt={p.name} className="w-24 h-24 object-contain mb-2" />
                             ) : (
-                              <div className="w-12 h-12 bg-hemp/20 rounded-full mb-3 flex items-center justify-center">
-                                <ShoppingBag className="h-5 w-5 text-bark/20" />
+                              <div className="w-24 h-24 bg-hemp/20 rounded-full mb-2 flex items-center justify-center">
+                                <ShoppingBag className="h-10 w-10 text-bark/20" />
                               </div>
                             )}
-                            <span className="block font-medium leading-tight text-sm">{p.name}</span>
+                            <span className="block font-medium leading-tight text-base">{p.name}</span>
                           </div>
                         {isSelected && (
                           <div className="absolute top-3 right-3 text-cream">
@@ -661,7 +661,7 @@ export default function MealPlanPage() {
               )}
             </div>
 
-            <div className="p-6 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
+            <div className="p-4 md:p-6 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
               <button 
                 onClick={() => setIsProductModalOpen(false)}
                 className="px-8 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft"

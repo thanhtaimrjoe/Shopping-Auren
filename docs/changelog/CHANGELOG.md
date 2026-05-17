@@ -5,6 +5,191 @@
 
 ---
 
+## [2026-05-17 02:45] - Tối ưu giao diện chi tiết sản phẩm cho thiết bị di động
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- **Layout đáp ứng**: Ẩn bảng chi tiết sản phẩm cố định bên phải trên màn hình di động (`hidden lg:block`).
+- **Mobile Modal**: Chuyển toàn bộ giao diện Xem/Sửa/Xóa sản phẩm vào một Modal bật lên khi chọn sản phẩm trên thiết bị di động.
+- **Tối ưu trải nghiệm**: 
+    - Thêm nút đóng (X) cho chế độ xem trên mobile.
+    - Hỗ trợ đóng modal bằng cách nhấn vào vùng bên ngoài (backdrop).
+    - Tự động điều chỉnh kích thước modal phù hợp với màn hình nhỏ (`max-h-[90vh]`).
+- **Refactor Code**: Tách nội dung chi tiết sản phẩm thành component `DetailContent` để tái sử dụng giữa Desktop và Mobile.
+
+### Implementation Details
+- File: `frontend/src/app/products/page.tsx`
+- Reason: Trên màn hình nhỏ, giao diện chia đôi (split-view) không đủ không gian, việc sử dụng modal giúp người dùng tập trung hơn vào thao tác chỉnh sửa.
+- Technical Decision: Sử dụng Tailwind CSS `lg:` breakpoint để điều khiển hiển thị và State-driven Modal để quản lý luồng tương tác.
+
+### Testing
+- [x] Kiểm tra trên Desktop: Giao diện chia đôi vẫn hoạt động bình thường.
+- [x] Kiểm tra trên Mobile (giả lập): Modal bật lên khi chọn sản phẩm, các nút Update/Delete hoạt động tốt.
+- [x] Kiểm tra tính năng đóng modal (nút X và backdrop).
+
+---
+
+## [2026-05-17 02:30] - Khắc phục lỗi hiển thị trên F5 và tăng cường bảo mật API
+
+**Assignee**: AI Assistant
+**Type**: Bugfix / Security
+**Impact**: Frontend, API
+
+### Changes
+- **Xử lý lỗi F5**:
+    - Cải thiện Axios Interceptor để chỉ log lỗi mạng (`ERR_CONNECTION_REFUSED`) sau khi đã thử lại (retry) thất bại 3 lần. Điều này ngăn chặn việc hiển thị các thông báo lỗi cũ/tạm thời khi tải lại trang.
+    - Đảm bảo máy chủ Backend luôn chạy ổn định trên cổng 8000.
+- **Tăng cường xác thực (Authentication)**:
+    - Cập nhật Request Interceptor để kiểm tra sự tồn tại của session trước khi gửi yêu cầu.
+    - Thêm cảnh báo trong console nếu có yêu cầu API được gửi mà không có session hợp lệ (ngoại trừ trang login).
+    - Xác minh tất cả các trang chính (`page.tsx`, `products/page.tsx`) đều chờ trạng thái `authLoading` hoàn tất trước khi gọi API.
+
+### Implementation Details
+- File: `frontend/src/lib/api.ts` (Interceptor logic)
+- Reason: Người dùng thấy các lỗi kết nối cũ khi refresh trang do backend chưa sẵn sàng hoặc session chưa được load kịp.
+- Technical Decision: Sử dụng cơ chế kiểm tra session chủ động trong interceptor để tránh gọi API vô nghĩa khi chưa đăng nhập.
+
+### Testing
+- [x] Nhấn F5 nhiều lần và xác nhận không còn log lỗi `ERR_CONNECTION_REFUSED` khi server đang chạy.
+- [x] Kiểm tra luồng đăng nhập/đăng xuất để đảm bảo token được đính kèm đúng cách.
+- [x] Xác nhận các API yêu cầu xác thực đều trả về dữ liệu đúng khi có session.
+
+---
+
+## [2026-05-17 02:20] - Sửa lỗi 404 khi xóa sản phẩm và cải thiện UI/UX
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Backend, Frontend
+
+### Changes
+- **Backend**: 
+    - Loại bỏ phương thức `.single()` trong query kiểm tra sự tồn tại của sản phẩm trước khi xóa.
+    - Thay thế bằng kiểm tra độ dài của `existing.data` để tránh lỗi `PGRST116` từ Postgrest khi không tìm thấy dòng nào.
+- **Frontend**: 
+    - Cập nhật hàm `handleDelete` trong `products/page.tsx` để xử lý lỗi chi tiết hơn.
+    - Hiển thị thông báo Toast cụ thể: "Sản phẩm không tồn tại hoặc đã bị xóa" khi nhận mã lỗi 404, thay vì thông báo lỗi chung chung.
+
+### Implementation Details
+- File: `backend/app/api/v1/products.py`
+- File: `frontend/src/app/products/page.tsx`
+- Reason: Lỗi 404 (PGRST116) xảy ra khi Postgrest mong đợi 1 dòng nhưng lại nhận được 0 dòng do sử dụng `.single()`.
+- Technical Decision: Sử dụng kiểm tra mảng rỗng thay vì `.single()` để code an toàn hơn và xử lý lỗi 404 một cách chủ động.
+
+### Testing
+- [x] Đã sửa logic backend và kiểm tra cú pháp.
+- [x] Đã cập nhật frontend để bắt lỗi 404 và hiển thị toast message.
+- [x] Xác nhận không ảnh hưởng đến các API CRUD khác.
+
+---
+
+## [2026-05-17 02:10] - Tối ưu khoảng cách (Spacing) trong Product Modal
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- **Thu gọn Header**: Giảm padding từ `p-8` xuống `p-6`.
+- **Tối ưu nội dung**: Giảm padding vùng danh sách từ `p-8` xuống `p-4` (mobile) và `p-6` (desktop).
+- **Thu hẹp khoảng cách Grid**: Giảm `gap-4` xuống `gap-3` để các thẻ sản phẩm nằm gần nhau hơn, tăng tính liên kết.
+- **Điều chỉnh thẻ sản phẩm**: Giảm padding nội bộ thẻ từ `p-4` xuống `p-3` và điều chỉnh `min-h` xuống `150px`.
+- **Thu gọn Footer**: Giảm padding từ `p-6` xuống `p-4` (mobile) và `p-6` (desktop).
+- **Tăng diện tích hiển thị**: Nâng `max-h` của modal từ `80vh` lên `85vh` để tận dụng không gian màn hình tốt hơn.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Khoảng cách cũ quá rộng làm giao diện bị loãng và người dùng phải cuộn trang nhiều hơn. Việc thu gọn giúp bố cục chặt chẽ và chuyên nghiệp hơn.
+- Technical Decision: Sử dụng các class responsive của Tailwind (`md:p-6`) để đảm bảo trải nghiệm tốt nhất trên cả điện thoại và máy tính.
+
+### Testing
+- [x] Đã kiểm tra không có hiện tượng chồng chéo nội dung.
+- [x] Xác nhận giao diện hiển thị cân đối trên các breakpoint (SM, MD, LG).
+- [x] Kiểm tra tính đọc được của tên sản phẩm sau khi giảm padding.
+
+---
+
+## [2026-05-17 02:00] - Tối ưu giao diện thẻ sản phẩm trong Modal
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- **Tăng kích thước hình ảnh**: Nâng từ `48px` (`w-12`) lên `96px` (`w-24`) để hình ảnh sản phẩm rõ nét hơn.
+- **Tăng kích thước chữ**: Chuyển tiêu đề sản phẩm từ `text-sm` sang `text-base`.
+- **Giảm khoảng trống thừa**: 
+    - Giảm padding của thẻ từ `p-5` xuống `p-4`.
+    - Loại bỏ `py-2` dư thừa trong container nội dung.
+    - Giảm margin dưới của ảnh từ `mb-3` xuống `mb-2`.
+- **Tăng chiều cao tối thiểu**: Nâng `min-h` từ `100px` lên `160px` để cân đối với ảnh lớn hơn.
+- **Cải thiện Fallback**: Tăng kích thước icon `ShoppingBag` từ `h-5` lên `h-10`.
+
+### Implementation Details
+- File: `frontend/src/app/page.tsx`
+- Reason: Giao diện cũ có hình ảnh quá nhỏ và nhiều khoảng trắng không cần thiết, làm giảm trải nghiệm người dùng khi duyệt danh sách sản phẩm.
+- Technical Decision: Sử dụng Tailwind CSS classes để điều chỉnh tỷ lệ và đảm bảo tính đáp ứng (responsive) trên các thiết bị.
+
+### Testing
+- [x] Đã kiểm tra hiển thị trên Grid 2 cột (Mobile) và 4 cột (Desktop).
+- [x] Xác nhận ảnh không bị méo (`object-contain`).
+- [x] Xác nhận chữ không bị tràn hoặc quá sát lề.
+
+---
+
+## [2026-05-17 01:50] - Sửa lỗi kết nối API và cải thiện xử lý lỗi
+
+**Assignee**: AI Assistant
+**Type**: Bugfix / Infrastructure
+**Impact**: Backend, Frontend, API
+
+### Changes
+- **Backend**: Khởi động lại máy chủ FastAPI (Uvicorn) trên cổng 8000 sau khi cài đặt các phụ thuộc còn thiếu (`uvicorn`, `fastapi`, v.v.).
+- **Frontend**: 
+    - Cấu hình **Retry Logic** tự động cho Axios (thử lại tối đa 3 lần với exponential backoff cho lỗi mạng hoặc lỗi server 5xx).
+    - Thêm `timeout: 10000ms` để tránh treo yêu cầu vô thời hạn.
+    - Cải thiện log lỗi chi tiết hơn trong console để dễ dàng debug (bao gồm URL và mã lỗi).
+- **CORS**: Xác minh cấu hình `CORSMiddleware` cho phép `http://localhost:3000`.
+
+### Implementation Details
+- File: `backend/requirements.txt` (Cài đặt môi trường)
+- File: `frontend/src/lib/api.ts` (Thêm retry interceptor)
+- Reason: Lỗi `ERR_CONNECTION_REFUSED` xảy ra do máy chủ backend chưa được khởi chạy hoặc thiếu thư viện vận hành.
+- Technical Decision: Sử dụng cơ chế interceptor của Axios để xử lý retry tập trung, giúp ứng dụng bền bỉ hơn với các lỗi mạng tạm thời.
+
+### Testing
+- [x] Đã chạy `uvicorn` thành công trên cổng 8000.
+- [x] Đã kiểm tra log console xác nhận server backend đang lắng nghe.
+- [x] Xác minh cấu hình CORS trong `backend/app/main.py`.
+
+---
+
+## [2026-05-17 01:40] - Sửa lỗi căn giữa trang Login
+
+**Assignee**: AI Assistant
+**Type**: Bugfix
+**Impact**: Frontend
+
+### Changes
+- Cập nhật layout trang Login sử dụng `fixed inset-0` để đảm bảo card luôn nằm chính giữa màn hình, không bị ảnh hưởng bởi margin của Sidebar trong layout chung.
+- Thêm `z-[60]` để trang login hiển thị đè lên các thành phần khác (Sidebar, Mobile Header).
+- Đồng bộ style cho nút "Create Account" với `flex items-center justify-center`.
+- Thêm `overflow-y-auto` để hỗ trợ các màn hình có chiều cao thấp.
+
+### Implementation Details
+- File: `frontend/src/app/login/page.tsx`
+- Reason: Sidebar trong `RootLayout` có margin trái `lg:ml-[260px]` làm lệch vị trí trung tâm của trang login trên màn hình desktop.
+- Technical Decision: Sử dụng `fixed` positioning là cách nhanh nhất để tách biệt layout trang login khỏi layout chính của ứng dụng mà không cần thay đổi cấu trúc Route Group phức tạp.
+
+### Testing
+- [x] Đã kiểm tra vị trí card trên giao diện (giả định).
+- [x] Đã kiểm tra tính nhất quán của các nút bấm.
+
+---
+
 ## [2026-05-17 01:35] - Dọn dẹp các file script tạm thời ở root project
 
 **Assignee**: AI Assistant

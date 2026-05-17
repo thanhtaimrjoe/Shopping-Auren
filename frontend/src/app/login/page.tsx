@@ -50,8 +50,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-cream p-4">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-warm p-8 md:p-12">
+    <div className="fixed inset-0 flex items-center justify-center bg-cream p-4 z-[60] overflow-y-auto">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-warm p-8 md:p-12 my-auto">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-serif text-bark mb-2">Welcome</h1>
           <p className="text-bark/60">Sign in to manage your culinary rhythm</p>
@@ -105,7 +105,7 @@ export default function LoginPage() {
             <button
               onClick={handleRegister}
               disabled={loading}
-              className="w-full py-4 bg-cream text-bark border border-bark/10 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-hemp/10 transition-all"
+              className="w-full py-4 bg-cream text-bark border border-bark/10 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-hemp/10 transition-all flex items-center justify-center"
             >
               Create Account
             </button>

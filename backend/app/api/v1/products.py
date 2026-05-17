@@ -226,20 +226,23 @@ async def delete_product(product_id: str, user: dict = Depends(get_current_user)
     user_id = user["id"]
 
     try:
+        # Check if product exists and belongs to the user
         existing = (
             db.table("products")
             .select("id")
             .eq("id", product_id)
             .eq("user_id", user_id)
             .is_("deleted_at", "null")
-            .single()
             .execute()
         )
-    except Exception as e:
-        error_msg = str(e)
-        if "PGRST116" in error_msg or "Results contain 0 rows" in error_msg:
+        
+        if not existing.data:
             raise HTTPException(status_code=404, detail="Product not found")
-        raise HTTPException(status_code=500, detail=f"Failed to find product: {error_msg}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to find product: {str(e)}")
 
     try:
         from datetime import datetime, timezone

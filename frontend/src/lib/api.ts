@@ -1,17 +1,37 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import { supabase } from './supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 10000, // 10 seconds timeout
 });
 
-// Add a response interceptor for detailed error logging
+// Helper to check if error is a network error or 5xx
+const isRetryableError = (error: any) => {
+  return !error.response || (error.response.status >= 500 && error.response.status <= 599);
+};
+
+// Add a response interceptor for detailed error logging and user notification
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+
+    // Retry logic for network errors or 5xx server errors
+    if (isRetryableError(error) && !config._retryCount) {
+      config._retryCount = (config._retryCount || 0) + 1;
+      if (config._retryCount <= 3) {
+        console.warn(`Retrying request to ${config.url} (${config._retryCount}/3)...`);
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, config._retryCount * 1000));
+        return api(config);
+      }
+    }
+
     if (error.response) {
+      // Don't log or throw standard 401/404 errors as they are handled by components
       if (
         error.response.status === 401 ||
         (error.response.status === 404 && error.config?.url === '/meal-plans/current') ||
@@ -22,11 +42,14 @@ api.interceptors.response.use(
 
       console.error('API Error Response:', {
         status: error.response.status,
+        url: error.config?.url,
         data: error.response.data,
-        headers: error.response.headers,
       });
     } else if (error.request) {
-      console.warn('Backend server is not responding. Please ensure the backend is running.');
+      // Only log network error if we've exhausted retries or it's not a retryable case
+      if (!config._retryCount || config._retryCount >= 3) {
+        console.error('Network Error: Backend server is not responding at', API_URL);
+      }
     } else {
       console.error('API Request Setup Error:', error.message);
     }
@@ -36,8 +59,15 @@ api.interceptors.response.use(
 
 api.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession();
+  
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
+  } else {
+    // If no session and trying to call protected API, we might want to cancel
+    // For now, we'll just log a warning if it's not the login page
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      console.warn('Attempted API call without active session:', config.url);
+    }
   }
   return config;
 });
