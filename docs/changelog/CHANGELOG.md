@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-17 21:00] - Triển khai Refactor: Loại bỏ hoàn toàn meal_type và cập nhật Shopping List
+
+**Assignee**: AI Assistant
+**Type**: Refactor / Feature
+**Related US**: US-005, US-006
+**Impact**: Backend, Frontend, Database
+
+### Thay đổi chi tiết
+
+#### 1. Database & Migration
+- Cập nhật [006_refactor_meal_plan_and_shopping.sql](file:///Users/taiht/Documents/Shopping-Auren/backend/migrations/006_refactor_meal_plan_and_shopping.sql):
+    - **Xóa bỏ (DROP COLUMN)** cột `meal_type` khỏi bảng `meal_plan_items`.
+    - Thêm cột `note` vào bảng `shopping_items`.
+
+#### 2. Backend ([meal_plans.py](file:///Users/taiht/Documents/Shopping-Auren/backend/app/api/v1/meal_plans.py))
+- Loại bỏ `meal_type` khỏi Pydantic schemas (`MealPlanItemInput`).
+- Xóa bỏ logic xử lý slot và `meal_type` trong các hàm `create_meal_plan`, `update_meal_plan`, và `format_plan_item`.
+- Cập nhật `fetch_plan_items` để query đúng cấu trúc mới.
+
+#### 3. Frontend ([page.tsx](file:///Users/taiht/Documents/Shopping-Auren/frontend/src/app/page.tsx))
+- **Payload**: Loại bỏ việc gửi `meal_type` lên server trong `buildMealPlanPayload`.
+- **UI**: Hiển thị danh sách nguyên liệu (`ingredients`) ngay dưới tên món ăn trên card ngày.
+- **Generate**: Thêm nút "Generate Shopping List" thủ công. Khi nhấn, hệ thống sẽ xóa list cũ và tạo list mới với đầy đủ ghi chú cho từng nguyên liệu.
+
+### Thử nghiệm
+- [x] Đã kiểm tra logic insert/update meal plan không còn phụ thuộc `meal_type`.
+- [x] Xác nhận hiển thị ingredients realtime trên giao diện.
+- [x] Kiểm tra nút Generate Shopping List hoạt động đúng requirement (tạo record riêng cho từng nguyên liệu kèm ghi chú).
+
+---
+
 ## [2026-05-17] - Cập nhật Spec & Decision sau khi thống nhất requirement Meal Plan + Shopping List
 
 **Assignee**: Grok + Tai  

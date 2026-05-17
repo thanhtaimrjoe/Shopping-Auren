@@ -16,12 +16,15 @@ function cn(...inputs: ClassValue[]) {
 interface Meal {
   id: string;
   name: string;
+  ingredients?: string[] | string;
 }
 
 interface MealPlanItem {
   day_of_week?: number | string;
   meal?: {
+    id?: string;
     name?: string;
+    ingredients?: string[] | string;
   };
   name?: string;
 }
@@ -406,7 +409,35 @@ export default function MealPlanPage() {
 
       {/* Week Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-        <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Week Schedule</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Week Schedule</h3>
+          <button
+            onClick={async () => {
+              if (!currentPlanId) return;
+              setIsLoading(true);
+              try {
+                const resp = await shoppingListsApi.generate({ 
+                  meal_plan_id: currentPlanId,
+                  product_ids: [] // Products are added separately now
+                });
+                if (resp.data.success) {
+                  showNotification('success', 'Đã tạo danh sách mua sắm mới');
+                  fetchProductsAndShoppingList();
+                }
+              } catch (error) {
+                console.error('Failed to generate shopping list:', error);
+                showNotification('error', 'Không thể tạo danh sách mua sắm');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={!currentPlanId || isLoading}
+            className="px-4 py-2 bg-bark text-cream rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-bark/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <ShoppingBag className="h-3 w-3" />
+            Generate Shopping List
+          </button>
+        </div>
         <div className="relative flex items-center gap-2 md:gap-4 bg-cream rounded-full p-1 shadow-soft w-fit">
           <input 
             type="date"
@@ -475,17 +506,38 @@ export default function MealPlanPage() {
               {/* Selected Meals List */}
               <div className="flex-1 space-y-3 mb-4">
                 {dayMeals.length > 0 ? (
-                  dayMeals.map((meal, mIdx) => (
-                    <div key={mIdx} className="group/meal flex items-center justify-between bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">
-                      <span className="text-sm text-bark font-medium">{meal}</span>
-                      <button 
-                        onClick={() => removeMeal(dayKey, mIdx)}
-                        className="opacity-0 group-hover/meal:opacity-100 p-1 hover:bg-bark/10 rounded-full transition-all"
-                      >
-                        <X className="h-3 w-3 text-bark/40" />
-                      </button>
-                    </div>
-                  ))
+                  dayMeals.map((mealName, mIdx) => {
+                    const mealDetails = mealDatabase.find(m => m.name === mealName);
+                    const ingredients = mealDetails?.ingredients 
+                      ? (typeof mealDetails.ingredients === 'string' 
+                          ? JSON.parse(mealDetails.ingredients) 
+                          : mealDetails.ingredients)
+                      : [];
+
+                    return (
+                      <div key={mIdx} className="group/meal flex flex-col bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-bark font-bold">{mealName}</span>
+                          <button 
+                            onClick={() => removeMeal(dayKey, mIdx)}
+                            className="opacity-0 group-hover/meal:opacity-100 p-1 hover:bg-bark/10 rounded-full transition-all"
+                          >
+                            <X className="h-3 w-3 text-bark/40" />
+                          </button>
+                        </div>
+                        {ingredients.length > 0 && (
+                          <ul className="mt-2 space-y-0.5">
+                            {ingredients.map((ing: string, iIdx: number) => (
+                              <li key={iIdx} className="text-[10px] text-bark/50 flex items-center gap-1.5">
+                                <span className="w-1 h-1 bg-bark/20 rounded-full flex-shrink-0" />
+                                {ing}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="h-24 flex items-center justify-center border-2 border-dashed border-bark/5 rounded-2xl">
                     <p className="text-xs text-bark/20 italic">No meals selected</p>

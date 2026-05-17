@@ -39,43 +39,32 @@ def format_plan_item(row: dict) -> dict:
     return {
         "id": row["id"],
         "day_of_week": row["day_of_week"],
-        "meal_type": row["meal_type"],
         "meal": {
             "id": meal.get("id"),
             "name": meal.get("name"),
             "category": meal.get("category"),
+            "ingredients": meal.get("ingredients"),
         } if meal else None,
     }
 
 
 def fetch_plan_items(plan_id: str) -> list:
     """Fetch all items for a meal plan with joined meal info."""
-    response = (
+    resp = (
         db.table("meal_plan_items")
-        .select("id, day_of_week, meal_type, meals(id, name, category)")
+        .select("id, day_of_week, meals(id, name, category, ingredients)")
         .eq("meal_plan_id", plan_id)
         .order("day_of_week")
-        .order("meal_type")
-        .order("created_at")
         .execute()
     )
-    return [format_plan_item(r) for r in response.data]
+    return [format_plan_item(r) for r in resp.data]
 
 
 # ─── Pydantic schemas ─────────────────────────────────────────────────────────
 
 class MealPlanItemInput(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)
-    meal_type: Optional[str] = Field(None)
     meal_id: str = Field(...)
-
-    @field_validator("meal_type")
-    @classmethod
-    def validate_meal_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and not v.strip():
-            raise ValueError("meal_type must not be empty if provided")
-        return v
-
 
 class MealPlanCreate(BaseModel):
     week_start_date: date = Field(...)
@@ -205,22 +194,14 @@ async def create_meal_plan(body: MealPlanCreate, user: dict = Depends(get_curren
 
         # Insert items
         if body.meals:
-            meals_by_day: dict[int, int] = {}
-            items_payload = []
-            
-            for m in body.meals:
-                day = m.day_of_week
-                current_slot_index = meals_by_day.get(day, 0)
-                assigned_type = m.meal_type or f"slot_{current_slot_index:03d}"
-                
-                items_payload.append({
+            items_payload = [
+                {
                     "meal_plan_id": plan_id,
                     "meal_id": m.meal_id,
-                    "day_of_week": day,
-                    "meal_type": assigned_type,
-                })
-                meals_by_day[day] = current_slot_index + 1
-
+                    "day_of_week": m.day_of_week,
+                }
+                for m in body.meals
+            ]
             db.table("meal_plan_items").insert(items_payload).execute()
 
         items = fetch_plan_items(plan_id)
@@ -286,26 +267,14 @@ async def update_meal_plan(
         db.table("meal_plan_items").delete().eq("meal_plan_id", plan_id).execute()
 
         if body.meals:
-            # Group by day to assign slots if meal_type is missing
-            meals_by_day: dict[int, int] = {}
-            items_payload = []
-            
-            for m in body.meals:
-                day = m.day_of_week
-                current_slot_index = meals_by_day.get(day, 0)
-                
-                # If meal_type is null/missing, assign slot_000, slot_001, etc.
-                assigned_type = m.meal_type or f"slot_{current_slot_index:03d}"
-                
-                items_payload.append({
+            items_payload = [
+                {
                     "meal_plan_id": plan_id,
                     "meal_id": m.meal_id,
-                    "day_of_week": day,
-                    "meal_type": assigned_type,
-                })
-                
-                meals_by_day[day] = current_slot_index + 1
-
+                    "day_of_week": m.day_of_week,
+                }
+                for m in body.meals
+            ]
             # Use insert().execute() and check for data
             res = db.table("meal_plan_items").insert(items_payload).execute()
             if not res.data and len(items_payload) > 0:
