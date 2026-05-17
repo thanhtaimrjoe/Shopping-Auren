@@ -49,6 +49,7 @@ def fetch_plan_items(plan_id: str) -> list:
         .eq("meal_plan_id", plan_id)
         .order("day_of_week")
         .order("meal_type")
+        .order("created_at")
         .execute()
     )
     return [format_plan_item(r) for r in response.data]
@@ -58,14 +59,14 @@ def fetch_plan_items(plan_id: str) -> list:
 
 class MealPlanItemInput(BaseModel):
     day_of_week: int = Field(..., ge=0, le=6)
-    meal_type: str = Field(...)
+    meal_type: Optional[str] = Field(None)
     meal_id: str = Field(...)
 
     @field_validator("meal_type")
     @classmethod
-    def validate_meal_type(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("meal_type must not be empty")
+    def validate_meal_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("meal_type must not be empty if provided")
         return v
 
 

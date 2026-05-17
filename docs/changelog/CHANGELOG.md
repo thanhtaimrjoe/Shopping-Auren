@@ -5,6 +5,42 @@
 
 ---
 
+## [2026-05-17 03:00] - Refactor Meal Plan: Loại bỏ workaround slot_XXX và làm meal_type optional
+
+**Assignee**: AI Assistant
+**Type**: Refactor
+**Related US**: US-003
+**Impact**: Frontend, Backend, API, Database
+
+### Changes
+- **Backend**:
+    - Làm `meal_type` trong `MealPlanItemInput` thành optional (có thể null).
+    - Cập nhật validator để cho phép `meal_type` rỗng hoặc null.
+    - Cập nhật logic truy vấn `fetch_plan_items` để sắp xếp ổn định hơn bằng cách thêm `created_at`.
+    - Giữ nguyên giới hạn tối đa 3 món ăn mỗi ngày thông qua model validator.
+- **Frontend**:
+    - Loại bỏ logic sinh `slot_XXX` tự động trong hàm `buildMealPlanPayload`.
+    - Cập nhật logic gửi dữ liệu lên backend không còn đính kèm `meal_type` mặc định.
+    - Giữ nguyên logic chặn thêm món khi đã đủ 3 món trong ngày tại `handleToggleMeal`.
+- **Documentation**:
+    - Cập nhật `API Spec` để phản ánh `meal_type` là trường tùy chọn và loại bỏ các ví dụ về `slot_XXX`.
+    - Cập nhật `Database Schema` để đánh dấu `meal_type` là NULLABLE.
+
+### Implementation Details
+- File: `backend/app/api/v1/meal_plans.py`
+- File: `frontend/src/app/page.tsx`
+- File: `docs/spec/04_api/api_spec.md`
+- File: `docs/spec/03_design/database_schema.md`
+- Reason: Loại bỏ kỹ thuật workaround "slot_XXX" không sạch, làm cho API trở nên linh hoạt hơn trong khi vẫn đảm bảo quy tắc nghiệp vụ quan trọng.
+- Technical Decision: Cho phép `meal_type` là NULL trong database để hỗ trợ các bữa ăn không định danh loại (như snack hoặc bữa ăn phụ), đồng thời sử dụng `created_at` để duy trì thứ tự hiển thị.
+
+### Testing
+- [x] Đã cập nhật logic backend và kiểm tra Pydantic validation.
+- [x] Đã cập nhật frontend payload.
+- [x] Xác nhận giới hạn 3 món/ngày vẫn được thực thi ở cả 2 phía.
+
+---
+
 ## [2026-05-17 02:45] - Tối ưu giao diện chi tiết sản phẩm cho thiết bị di động
 
 **Assignee**: AI Assistant

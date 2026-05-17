@@ -120,7 +120,7 @@
 | meal_plan_id | UUID | NOT NULL | - | 食事計画ID（FK） |
 | meal_id | UUID | NOT NULL | - | 料理ID（FK - public.meals.id） |
 | day_of_week | INTEGER | NOT NULL | - | 曜日（0=月, 6=日） |
-| meal_type | VARCHAR(20) | NOT NULL | - | 日ごとの表示順スロット（例: slot_000, slot_001, slot_002 / 最大3件） |
+| meal_type | VARCHAR(20) | NULL | - | 日ごとの表示順スロット（例: breakfast, lunch, dinner / 最大3件） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 
 **インデックス**:

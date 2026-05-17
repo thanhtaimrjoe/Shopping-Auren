@@ -217,13 +217,12 @@ export default function MealPlanPage() {
 
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return [];
 
-      return mealNames.flatMap((mealName, index) => {
+      return mealNames.flatMap((mealName) => {
         const meal = mealDatabase.find((entry) => entry.name === mealName);
         if (!meal) return [];
 
         return [{
           day_of_week: dayIndex,
-          meal_type: `slot_${String(index).padStart(3, '0')}`,
           meal_id: meal.id,
         }];
       });
