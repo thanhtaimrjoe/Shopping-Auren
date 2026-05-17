@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, CheckCircle2, MoreHorizontal, ShoppingBag, ArrowLeft, Filter, Loader2, ListPlus } from 'lucide-react';
+import { Search, CheckCircle2, MoreHorizontal, ShoppingBag, ArrowLeft, Filter, Loader2, ListPlus } from 'lucide-react';
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -37,9 +37,6 @@ export default function ShoppingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isAddingItem, setIsAddingItem] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState('other');
 
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
@@ -116,28 +113,6 @@ export default function ShoppingPage() {
     }
   };
 
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!list || !newItemName.trim()) return;
-
-    setIsAddingItem(true);
-    try {
-      const response = await shoppingListsApi.addItem(list.id, {
-        name: newItemName.trim(),
-        category: newItemCategory
-      });
-      if (response.data.success) {
-        setNewItemName('');
-        setNewItemCategory('other');
-        fetchCurrentList();
-      }
-    } catch (error) {
-      console.error('Failed to add item:', error);
-    } finally {
-      setIsAddingItem(false);
-    }
-  };
-
   const filteredItems = list?.items.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
@@ -204,77 +179,14 @@ export default function ShoppingPage() {
       ) : (
         <>
           {/* Progress & Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-            <div className="lg:col-span-2 bg-cream rounded-[2.5rem] p-8 shadow-soft flex flex-col justify-between relative overflow-hidden">
-              <div className="flex items-center justify-between mb-8 relative z-10">
-                <div>
-                  <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em] mb-2">Completion</h3>
-                  <p className="text-3xl font-serif text-bark">
-                    {list.checked_items} <span className="text-bark/20">/</span> {list.total_items}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  {currentMealPlanId && (
-                    <button 
-                      onClick={handleGenerateList}
-                      disabled={isGenerating}
-                      className="h-12 px-6 rounded-full bg-sage text-cream text-sm font-bold uppercase tracking-widest shadow-soft hover:scale-105 transition-transform disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
-                      Sync Plan
-                    </button>
-                  )}
-                  <div className="h-16 w-16 rounded-full bg-sage/10 flex items-center justify-center">
-                    <ShoppingBag className="h-6 w-6 text-sage-deep" />
-                  </div>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 gap-8 mb-12">
+            <div className="bg-cream rounded-[2.5rem] p-8 shadow-soft flex flex-col justify-between relative overflow-hidden">
               <div className="w-full h-2 bg-hemp rounded-full overflow-hidden relative z-10">
                 <div 
                   className="h-full bg-sage transition-all duration-1000 ease-out"
                   style={{ width: `${list.progress}%` }}
                 />
               </div>
-            </div>
-
-            <div className="bg-sage text-cream rounded-[2.5rem] p-8 shadow-warm">
-              <h3 className="text-xs font-bold uppercase tracking-[0.3em] opacity-80 mb-6">Quick Add</h3>
-              <form onSubmit={handleAddItem} className="space-y-4">
-                <input 
-                  type="text" 
-                  placeholder="Item name..."
-                  className="w-full bg-cream/10 border-0 rounded-xl py-3 px-4 text-cream placeholder:text-cream/40 focus:ring-2 focus:ring-cream/20 transition-all text-sm"
-                  value={newItemName}
-                  onChange={e => setNewItemName(e.target.value)}
-                  disabled={isAddingItem}
-                />
-                <div className="flex gap-2">
-                  <select
-                    className="flex-1 bg-cream/10 border-0 rounded-xl py-3 px-3 text-cream text-xs focus:ring-2 focus:ring-cream/20 transition-all appearance-none"
-                    value={newItemCategory}
-                    onChange={e => setNewItemCategory(e.target.value)}
-                    disabled={isAddingItem}
-                  >
-                    <option value="vegetables" className="text-bark">Vegetables</option>
-                    <option value="meat" className="text-bark">Meat</option>
-                    <option value="seafood" className="text-bark">Seafood</option>
-                    <option value="dairy" className="text-bark">Dairy</option>
-                    <option value="grains" className="text-bark">Grains</option>
-                    <option value="condiments" className="text-bark">Condiments</option>
-                    <option value="frozen" className="text-bark">Frozen</option>
-                    <option value="daily" className="text-bark">Daily</option>
-                    <option value="consumable" className="text-bark">Consumable</option>
-                    <option value="other" className="text-bark">Other</option>
-                  </select>
-                  <button 
-                    type="submit"
-                    disabled={isAddingItem || !newItemName.trim()}
-                    className="h-11 w-11 bg-cream text-sage-deep rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {isAddingItem ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
 

@@ -5,6 +5,47 @@
 
 ---
 
+## [2026-05-17 21:40] - Loại bỏ hiển thị phần trăm văn bản trong Shopping Page
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Thay đổi chi tiết
+- **Shopping Page**:
+    - Xóa bỏ hoàn toàn phần tử văn bản `<p>` hiển thị phần trăm (ví dụ: `75%`) trong khu vực tiến trình.
+    - Chỉ giữ lại thanh tiến trình trực quan (Progress Bar) để theo dõi trạng thái hoàn thành danh sách mua sắm.
+
+### Chi tiết triển khai
+- File: `frontend/src/app/shopping/page.tsx`
+- Lý do: Đơn giản hóa tối đa giao diện theo yêu cầu, chỉ giữ lại các chỉ báo trực quan cần thiết.
+
+---
+
+## [2026-05-17 21:30] - Refactor Shopping Page UI
+
+**Assignee**: AI Assistant
+**Type**: UI/UX Refactor
+**Impact**: Frontend
+
+### Changes
+- **Shopping Page**:
+    - Xóa phần tử "Sync Plan" và icon Shopping Bag trong Header của trang Shopping.
+    - Đơn giản hóa thanh tiến trình (Progress Bar):
+        - Xóa tiêu đề "Completion".
+        - Xóa hiển thị số lượng item hoàn thành (ví dụ: 0 / 9).
+        - Thay thế bằng hiển thị phần trăm hoàn thành (ví dụ: 75%).
+    - Xóa bỏ hoàn toàn tính năng "Quick Add":
+        - Xóa component form Quick Add trên giao diện.
+        - Xóa toàn bộ logic xử lý liên quan (`handleAddItem`, các trạng thái `newItemName`, `newItemCategory`, `isAddingItem`).
+    - Cập nhật layout grid để tối ưu không gian sau khi xóa các thành phần.
+
+### Implementation Details
+- File: `frontend/src/app/shopping/page.tsx`
+- Reason: Tinh giản giao diện theo yêu cầu mới, tập trung vào trải nghiệm quản lý danh sách mua sắm cốt lõi.
+
+---
+
 ## [2026-05-17 21:15] - Fix SyntaxError when parsing ingredients
 
 **Assignee**: AI Assistant
