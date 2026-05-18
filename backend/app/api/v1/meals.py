@@ -31,12 +31,12 @@ def jsonb_to_text(ingredients_jsonb) -> Optional[str]:
     return str(ingredients_jsonb)
 
 
-def text_to_jsonb(ingredients_text: Optional[str]) -> Optional[list]:
+def text_to_jsonb(ingredients_text: Optional[str]) -> list:
     """Convert newline-separated TEXT from frontend to JSON array for DB storage."""
     if not ingredients_text:
-        return None
+        return []
     lines = [line.strip() for line in ingredients_text.split("\n") if line.strip()]
-    return lines if lines else None
+    return lines if lines else []
 
 
 def format_meal(row: dict) -> dict:

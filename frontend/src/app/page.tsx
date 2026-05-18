@@ -415,9 +415,14 @@ export default function MealPlanPage() {
               if (!currentPlanId) return;
               setIsLoading(true);
               try {
+                // Get product IDs from products that are already in the shopping list
+                const productIds = productsDatabase
+                  .filter(p => extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase()))
+                  .map(p => p.id);
+                
                 const resp = await shoppingListsApi.generate({ 
                   meal_plan_id: currentPlanId,
-                  product_ids: [] // Products are added separately now
+                  product_ids: productIds
                 });
                 if (resp.data.success) {
                   showNotification('success', 'Đã tạo danh sách mua sắm mới');
