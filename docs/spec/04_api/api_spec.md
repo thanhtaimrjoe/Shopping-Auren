@@ -462,8 +462,7 @@ No Content
   "meals": [
     {
       "day_of_week": 0,
-      "meal_type": "slot_000",
-      "dish_id": "uuid"
+      "meal_id": "uuid"
     }
   ]
 }
@@ -504,17 +503,19 @@ No Content
 
 ## 5. 買い物リストAPI
 
-### 5.1 買い物リスト生成
+### 5.1 買い物リスト生成 (Generate)
 
 **Endpoint**: `POST /shopping-lists/generate`
 
 **Headers**: `Authorization: Bearer <token>`
 
+**Description**: Xóa danh sách mua sắm cũ của tuần (nếu có) và tạo mới dựa trên Meal Plan hiện tại. Mỗi nguyên liệu của món ăn sẽ là một bản ghi `shopping_item` riêng biệt.
+
 **Request Body**:
 ```json
 {
   "meal_plan_id": "uuid",
-  "miscellaneous_ids": ["uuid1", "uuid2"]
+  "product_ids": ["uuid1", "uuid2"]
 }
 ```
 
@@ -532,8 +533,9 @@ No Content
           "id": "uuid",
           "name": "じゃがいも",
           "category": "vegetables",
-          "source_type": "dish",
-          "source_id": "dish-uuid",
+          "source_type": "meal",
+          "source_id": "meal-uuid",
+          "note": "Dùng cho món Thịt kho tàu",
           "is_checked": false,
           "created_at": "2026-05-09T16:56:31.003Z"
         }

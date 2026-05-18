@@ -377,6 +377,68 @@ def deduplicate_items(items):
 
 ---
 
+### DEC-012: Bỏ hoàn toàn meal_type và giới hạn 3 món/ngày
+**日付**: 2026-05-17  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. Xóa cột `meal_type` khỏi bảng `meal_plan_items`.
+2. Không phân biệt loại bữa ăn (Sáng/Trưa/Tối).
+3. Áp dụng quy tắc tối đa 3 món mỗi ngày trong tuần.
+
+#### 理由
+1. Đơn giản hóa quá trình lập kế hoạch.
+2. Người dùng chỉ quan tâm đến việc ăn gì trong ngày, không nhất thiết phải phân loại bữa ăn cụ thể.
+3. Giới hạn 3 món giúp bố cục UI gọn gàng và phù hợp với thực tế sử dụng.
+
+#### 影響範囲
+- Database: `meal_plan_items`
+- Frontend: `MealPlanPage` logic và UI card ngày.
+- API: Payload lưu meal plan.
+
+---
+
+### DEC-013: Thay đổi cơ chế Generate Shopping List
+**日付**: 2026-05-17  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. **Chỉ generate khi nhấn nút**: Không tự động tạo danh sách mua sắm khi lưu Meal Plan.
+2. **Cơ chế Replace**: Khi nhấn nút "Generate Shopping List", hệ thống sẽ xóa danh sách mua sắm cũ của tuần đó và tạo mới hoàn toàn.
+3. **Chi tiết nguyên liệu**: Mỗi nguyên liệu từ `meals.ingredients` sẽ tạo thành 1 bản ghi riêng trong `shopping_items`.
+4. **Thêm cột note**: Lưu trữ thông tin `"Dùng cho món [Tên món]"` để người dùng dễ theo dõi nguồn gốc nguyên liệu.
+
+#### 理由
+1. Tránh việc danh sách mua sắm bị cập nhật liên tục ngoài ý muốn khi người dùng đang điều chỉnh Meal Plan.
+2. Việc tạo bản ghi riêng cho từng nguyên liệu giúp người dùng biết chính xác nguyên liệu đó dùng cho món nào, thay vì gộp chung (Deduplication) như trước.
+
+#### 影響範囲
+- Database: Thêm cột `note` vào `shopping_items`.
+- API: Endpoint `/shopping-lists/generate`.
+- Frontend: Nút "Generate Shopping List" trên trang Meal Plan.
+
+---
+
+### DEC-014: Hiển thị Ingredients Realtime trên Meal Plan
+**日付**: 2026-05-17  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. Hiển thị danh sách nguyên liệu ngay bên dưới tên món ăn trên các card ngày trong tuần.
+2. Cập nhật realtime ngay khi người dùng chọn món trong modal, không cần đợi nhấn Save.
+
+#### 理由
+1. Giúp người dùng có cái nhìn tổng quan về các nguyên liệu cần thiết ngay khi đang lập kế hoạch.
+2. Tăng trải nghiệm người dùng, làm giao diện sống động và trực quan hơn.
+
+#### 影響範囲
+- Frontend: `MealPlanPage` (Day Card component).
+
+---
+
 ## 未決定事項
 
 ### PENDING-001: UI Component Library

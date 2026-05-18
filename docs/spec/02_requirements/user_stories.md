@@ -193,20 +193,22 @@
 
 ## Epic 5: 買い物リスト
 
-### US-011: 買い物リストを自動生成する
+### US-011: Tạo danh sách mua sắm thủ công (Generate)
 **As a** ユーザー  
-**I want to** 食事計画から買い物リストを自動生成する  
-**So that** 必要な材料が分かる
+**I want to** Nhấn nút để tạo danh sách mua sắm từ Meal Plan  
+**So that** Kiểm soát được thời điểm tạo danh sách và biết rõ nguyên liệu dùng cho món nào
 
 #### 受け入れ基準
-- [ ] 食事計画から材料が抽出される
-- [ ] 雑貨リストも含まれる
-- [ ] 重複する材料はまとめられる
-- [ ] カテゴリ別に表示される
+- [ ] Có nút "Generate Shopping List" trên trang Meal Plan.
+- [ ] Khi nhấn nút, hệ thống xóa danh sách cũ (nếu có) và tạo danh sách mới hoàn toàn.
+- [ ] Mỗi nguyên liệu từ các món ăn trong kế hoạch sẽ trở thành một dòng riêng biệt trong danh sách.
+- [ ] Mỗi dòng nguyên liệu có ghi chú "Dùng cho món [Tên món]".
+- [ ] Danh sách bao gồm cả các sản phẩm mua thêm (Products) đã chọn.
+- [ ] Hiển thị thông báo sau khi tạo thành công.
 
 #### 技術要件
 - POST `/api/v1/shopping-lists/generate`
-- 材料の重複排除ロジック
+- Logic: Delete existing list for the week -> Create new list -> Map each ingredient to a separate shopping item with notes.
 
 ---
 

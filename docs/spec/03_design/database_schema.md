@@ -120,15 +120,14 @@
 | meal_plan_id | UUID | NOT NULL | - | 食事計画ID（FK） |
 | meal_id | UUID | NOT NULL | - | 料理ID（FK - public.meals.id） |
 | day_of_week | INTEGER | NOT NULL | - | 曜日（0=月, 6=日） |
-| meal_type | VARCHAR(20) | NULL | - | 日ごとの表示順スロット（例: breakfast, lunch, dinner / 最大3件） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `meal_plan_id` REFERENCES `meal_plans(id)` ON DELETE CASCADE
 - FOREIGN KEY: `meal_id` REFERENCES `meals(id)` ON DELETE RESTRICT
-- UNIQUE INDEX: `meal_plan_id, day_of_week, meal_type`
 - INDEX: `meal_plan_id`
+- INDEX: `meal_plan_id, day_of_week`
 
 ---
 
@@ -163,6 +162,7 @@
 | category | VARCHAR(50) | NOT NULL | - | カテゴi |
 | source_type | VARCHAR(20) | NOT NULL | - | ソース（meal/product/manual） |
 | source_id | UUID | NULL | - | ソースID（料理IDまたは雑貨ID） |
+| note | TEXT | NULL | - | Ghi chú (Ví dụ: "Dùng cho món [Tên món]") |
 | is_checked | BOOLEAN | NOT NULL | false | チェック済みフラグ |
 | checked_at | TIMESTAMP | NULL | - | チェック日時 |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
@@ -182,9 +182,9 @@
 
 ### カテゴリマスター（Enum型で定義）
 
-#### dish_category（料理カテゴリ）
+#### meal_category（料理カテゴリ）
 ```sql
-CREATE TYPE dish_category AS ENUM (
+CREATE TYPE meal_category AS ENUM (
     'japanese',   -- 和食
     'western',    -- 洋食
     'chinese',    -- 中華
@@ -192,29 +192,20 @@ CREATE TYPE dish_category AS ENUM (
 );
 ```
 
-#### misc_category（雑貨カテゴリ）
+#### product_category（雑貨カテゴリ）
 ```sql
-CREATE TYPE misc_category AS ENUM (
+CREATE TYPE product_category AS ENUM (
     'daily',      -- 日用品
     'consumable', -- 消耗品
     'other'       -- その他
 );
 ```
 
-#### meal_type（食事タイプ）
-```sql
-CREATE TYPE meal_type AS ENUM (
-    'breakfast',  -- 朝食
-    'lunch',      -- 昼食
-    'dinner'      -- 夕食
-);
-```
-
 #### item_source_type（アイテムソース）
 ```sql
 CREATE TYPE item_source_type AS ENUM (
-    'dish',           -- 料理由来
-    'miscellaneous',  -- 雑貨由来
+    'meal',           -- 料理由来
+    'product',        -- 雑貨由来
     'manual'          -- 手動追加
 );
 ```
@@ -225,8 +216,8 @@ CREATE TYPE item_source_type AS ENUM (
 
 ### サンプル料理
 ```sql
-INSERT INTO dishes (user_id, name, ingredients, category) VALUES
-('user-uuid', 'カレーライス', 'じゃがいも\n人参\n玉ねぎ\n豚肉\nカレールー', 'japanese'),
+INSERT INTO meals (user_id, name, ingredients, category) VALUES
+('user-uuid', 'カレーライス', '["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー"]', 'japanese'),
 ('user-uuid', 'パスタカルボナーラ', 'パスタ\nベーコン\n卵\n粉チーズ\n黒胡椒', 'western'),
 ('user-uuid', '麻婆豆腐', '豆腐\n豚ひき肉\n長ネギ\n豆板醤\n甜麺醤', 'chinese');
 ```

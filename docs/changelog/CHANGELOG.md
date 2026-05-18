@@ -5,6 +5,30 @@
 
 ---
 
+## [2026-05-18 10:45] - Kiểm tra và Xác nhận hoàn tất các tính năng Meal Plan & Shopping List
+
+**Assignee**: AI Assistant
+**Type**: Docs / Test
+**Related US**: US-005, US-006, US-007
+**Impact**: Backend, Frontend, Database, Specs
+
+### Nội dung thực hiện
+- **Kiểm tra DEC-012**: Xác nhận đã loại bỏ hoàn toàn `meal_type` trong database, backend schema và frontend logic. Đã kiểm tra giới hạn 3 món/ngày.
+- **Kiểm tra DEC-013**: Xác nhận cơ chế Generate Shopping List hoạt động đúng (manual trigger, replace strategy, separate item records, and note column).
+- **Kiểm tra DEC-014**: Xác nhận hiển thị nguyên liệu (ingredients) thời gian thực trên Meal Plan Page.
+- **Đối chiếu mã nguồn**: Đã rà soát toàn bộ code Backend (FastAPI) và Frontend (Next.js) so với tài liệu thiết kế từ dòng 380 của `decisions.md`.
+
+### Kết quả kiểm tra
+- Toàn bộ các yêu cầu từ DEC-012 đến DEC-014 đã được triển khai đầy đủ và hoạt động ổn định.
+- Không phát hiện thiếu sót trong logic nghiệp vụ so với thiết kế.
+
+### Test
+- [x] Đã kiểm tra logic database (migration 006).
+- [x] Đã kiểm tra API endpoints (`/meal-plans`, `/shopping-lists/generate`).
+- [x] Đã kiểm tra giao diện người dùng (Meal Plan Page, Shopping List generation).
+
+---
+
 ## [2026-05-17 22:00] - Loại bỏ tiêu đề "Week Schedule" trong Meal Plan Page
 
 **Assignee**: AI Assistant

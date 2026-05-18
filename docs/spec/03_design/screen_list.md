@@ -161,15 +161,15 @@
 
 ### 5. 食事計画
 
-#### SC-010: 食事計画画面
+#### SC-010: 食事計画画面 (Weekly Alignment)
 | 項目 | 内容 |
 |------|------|
-| **URL** | `/meal-plan` |
-| **目的** | 来週の食事計画作成・編集 |
+| **URL** | `/` (hoặc `/meal-plan`) |
+| **目的** | Lập kế hoạch ăn uống hàng tuần |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - 週カレンダー表示（月〜日）<br>- 各日の朝/昼/夜スロット<br>- 料理選択ドロップダウン<br>- ドラッグ&ドロップ（Nice to Have）<br>- 保存ボタン<br>- 買い物リスト生成ボタン |
-| **遷移先** | - 買い物リスト生成: `/shopping-list` |
-| **API** | GET `/api/v1/meal-plans/current`<br>POST `/api/v1/meal-plans`<br>PUT `/api/v1/meal-plans/{plan_id}` |
+| **主要機能** | - 週カレンダー表示（月〜日）<br>- Hiển thị tối đa 3 món ăn mỗi ngày (không phân biệt bữa)<br>- Hiển thị nguyên liệu của từng món ăn ngay trên card ngày (Realtime)<br>- Nút "Thêm món" mở modal chọn từ danh sách món ăn<br>- Nút "Generate Shopping List": Xóa danh sách cũ và tạo danh sách mua sắm mới cho tuần hiện tại<br>- Nút "Thêm sản phẩm": Mở modal chọn các sản phẩm mua thêm (Products) |
+| **遷移先** | - Generate Shopping List: Hiển thị thông báo thành công và chuyển hướng (hoặc cập nhật) sang trang Shopping List |
+| **API** | GET `/api/v1/meal-plans/current`<br>POST `/api/v1/meal-plans`<br>PUT `/api/v1/meal-plans/{plan_id}`<br>POST `/api/v1/shopping-lists/generate` |
 
 ---
 

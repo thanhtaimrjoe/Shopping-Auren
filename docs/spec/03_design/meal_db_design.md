@@ -8,7 +8,7 @@ The Meals feature is centered around three primary entities:
 
 - **Meals**: Master list of dishes available for planning.
 - **Meal Plans**: Weekly containers for a user's meal schedule.
-- **Meal Plan Items**: The mapping of a specific meal to a day and time slot (Breakfast, Lunch, Dinner).
+- **Meal Plan Items**: The mapping of a specific meal to a day (max 3 per day).
 
 ```mermaid
 erDiagram
@@ -32,7 +32,6 @@ Stores the master data for dishes.
 | category | TEXT | NOT NULL, DEFAULT 'other' | Category (japanese, western, chinese, other) |
 | created_at | TIMESTAMPTZ | DEFAULT now() | Creation timestamp |
 | updated_at | TIMESTAMPTZ | DEFAULT now() | Last update timestamp |
-| deleted_at | TIMESTAMPTZ | NULL | Soft delete support |
 
 ### 2.2. meal_plans
 Represents a weekly meal schedule.
@@ -57,10 +56,9 @@ Individual meal assignments within a plan.
 | meal_plan_id | UUID | FK -> meal_plans(id), NOT NULL | Parent plan |
 | meal_id | UUID | FK -> meals(id), NOT NULL | Assigned dish |
 | day_of_week | INTEGER | NOT NULL (0-6) | 0=Monday, 6=Sunday |
-| meal_type | TEXT | NOT NULL | breakfast, lunch, dinner |
 | created_at | TIMESTAMPTZ | DEFAULT now() | Creation timestamp |
 
-**Unique Constraint**: `(meal_plan_id, day_of_week, meal_type)` - One dish per slot.
+**Rule**: Maximum 3 meals per day.
 
 ## 3. SQL Implementation Script
 
@@ -73,8 +71,7 @@ CREATE TABLE IF NOT EXISTS public.meals (
     ingredients jsonb NOT NULL DEFAULT '[]'::jsonb,
     category text NOT NULL DEFAULT 'other' CHECK (category IN ('japanese', 'western', 'chinese', 'other')),
     created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    deleted_at timestamptz
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Create meal_plans table
@@ -95,9 +92,7 @@ CREATE TABLE IF NOT EXISTS public.meal_plan_items (
     meal_plan_id uuid NOT NULL REFERENCES public.meal_plans(id) ON DELETE CASCADE,
     meal_id uuid NOT NULL REFERENCES public.meals(id) ON DELETE RESTRICT,
     day_of_week integer NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
-    meal_type text NOT NULL CHECK (meal_type IN ('breakfast', 'lunch', 'dinner')),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT meal_plan_items_unique UNIQUE (meal_plan_id, day_of_week, meal_type)
+    created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Optimization Indexes

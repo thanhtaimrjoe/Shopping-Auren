@@ -11,12 +11,12 @@
 | フェーズ | 進捗 | ステータス | 完了予定 |
 |---------|------|-----------|----------|
 | 要件定義・設計 | 100% | ✅ 完了 | 2026-05-09 |
-| Backend開発 | 80% | 🟡 進行中 | 2026-05-13 |
-| Frontend開発 | 0% | 🟡 予定 | 2026-05-15 |
-| 統合テスト | 0% | 🟡 予定 | 2026-05-16 |
+| Backend開発 | 100% | ✅ 完了 | 2026-05-17 |
+| Frontend開発 | 100% | ✅ 完了 | 2026-05-17 |
+| 統合テスト | 100% | ✅ 完了 | 2026-05-18 |
 | デプロイ | 0% | 🟡 予定 | 2026-05-20 |
 
-**全体進捗**: 60% (設計 + Backend実装進行中)
+**全体進捗**: 90% (Hầu hết các tính năng cốt lõi đã hoàn thành và kiểm thử)
 
 ---
 
@@ -74,6 +74,14 @@
 - ✅ Meals, Products, Meal Plans, Shopping Lists API 実装
 - ✅ Database migration scripts 用意
 - 🟡 次: Backend unit test 作成と frontend 実装開始
+
+### 2026-05-18
+
+#### Kiểm tra & Hoàn tất MVP
+- ✅ Xác nhận triển khai DEC-012 (Meal Plan không meal_type, giới hạn 3 món)
+- ✅ Xác nhận triển khai DEC-013 (Generate Shopping List manual, separate records, notes)
+- ✅ Xác nhận triển khai DEC-014 (Hiển thị Ingredients realtime)
+- ✅ Cập nhật CHANGELOG.md và Progress Tracking
 
 ---
 
