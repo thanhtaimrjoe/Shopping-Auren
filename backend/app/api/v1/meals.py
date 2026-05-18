@@ -204,7 +204,20 @@ async def create_meal(body: MealCreate, user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create meal: {str(e)}")
+        error_str = str(e)
+        # Check for duplicate meal name error (unique constraint violation)
+        if "duplicate key value violates unique constraint" in error_str and "meals_name_unique_idx" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A meal with the name '{body.name}' already exists. Please use a different name."
+            )
+        
+        # Log unexpected errors for debugging
+        print(f"ERROR creating meal: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create meal: {error_str}")
 
 
 @router.put("/{meal_id}", status_code=status.HTTP_200_OK)
@@ -262,7 +275,20 @@ async def update_meal(meal_id: str, body: MealUpdate, user: dict = Depends(get_c
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update meal: {str(e)}")
+        error_str = str(e)
+        # Check for duplicate meal name error (unique constraint violation)
+        if "duplicate key value violates unique constraint" in error_str and "meals_name_unique_idx" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A meal with the name '{body.name}' already exists. Please use a different name."
+            )
+        
+        # Log unexpected errors for debugging
+        print(f"ERROR updating meal {meal_id}: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update meal: {error_str}")
 
 
 @router.delete("/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -315,4 +341,10 @@ async def delete_meal(meal_id: str, user: dict = Depends(get_current_user)):
         return None  # 204 No Content
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete meal: {str(e)}")
+        error_str = str(e)
+        # Log unexpected errors for debugging
+        print(f"ERROR deleting meal {meal_id}: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to delete meal: {error_str}")

@@ -5,6 +5,43 @@
 
 ---
 
+## [2026-05-18 17:02] - Sửa lỗi 500 khi tạo món ăn trùng tên
+
+**Assignee**: AI Assistant  
+**Type**: Bugfix  
+**Related US**: US-003  
+**Impact**: Backend, Frontend, API
+
+### Nội dung thay đổi
+- **Backend**: Thêm xử lý riêng cho lỗi duplicate key constraint violation khi tạo món ăn trùng tên
+- **Backend**: Trả về HTTP 409 Conflict thay vì 500 Internal Server Error khi phát hiện tên món ăn đã tồn tại
+- **Backend**: Thêm logging chi tiết để debug các lỗi không mong đợi khác
+- **Frontend**: Cải thiện error handling để hiển thị thông báo lỗi cụ thể từ backend thay vì thông báo chung chung
+
+### Chi tiết triển khai
+- File: `backend/app/api/v1/meals.py`
+  - Thêm kiểm tra chuỗi lỗi để phát hiện `duplicate key value violates unique constraint "meals_name_unique_idx"`
+  - Raise HTTPException với status 409 và message rõ ràng: "A meal with the name 'X' already exists. Please use a different name."
+  - Giữ lại logging chi tiết cho các lỗi khác (traceback, exception type)
+- File: `frontend/src/app/meals/page.tsx`
+  - Cập nhật `handleSave` để extract error message từ `error.response.data.detail`
+  - Thêm xử lý đặc biệt cho status code 409
+  - Hiển thị thông báo lỗi cụ thể thay vì "Lỗi khi lưu món ăn"
+- Lý do: Database có unique constraint (case-insensitive) trên tên món ăn nhưng backend trả về lỗi 500 chung chung, gây khó hiểu cho người dùng
+- Quyết định kỹ thuật: Sử dụng HTTP 409 Conflict cho duplicate resource thay vì 500, tuân thủ REST API best practices
+
+### Test
+- [x] Đã thêm logging và tái hiện lỗi để xác định nguyên nhân
+- [x] Đã kiểm tra backend trả về 409 với message rõ ràng khi tạo món trùng tên
+- [x] Đã kiểm tra frontend hiển thị thông báo lỗi cụ thể từ backend
+- [x] Xác nhận các lỗi khác vẫn được log đầy đủ với traceback
+
+### Ghi chú
+- Database constraint `meals_name_unique_idx` sử dụng `lower(name)` nên việc so sánh là case-insensitive
+- Người dùng cần đặt tên khác hoặc tìm và chỉnh sửa món ăn đã tồn tại thay vì tạo mới
+
+---
+
 ## [2026-05-18 10:45] - Kiểm tra và Xác nhận hoàn tất các tính năng Meal Plan & Shopping List
 
 **Assignee**: AI Assistant

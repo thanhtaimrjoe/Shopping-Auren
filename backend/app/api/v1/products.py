@@ -156,7 +156,20 @@ async def create_product(body: ProductCreate, user: dict = Depends(get_current_u
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create product: {str(e)}")
+        error_str = str(e)
+        # Check for duplicate product name error (unique constraint violation)
+        if "duplicate key value violates unique constraint" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A product with the name '{body.name}' already exists. Please use a different name."
+            )
+        
+        # Log unexpected errors for debugging
+        print(f"ERROR creating product: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create product: {error_str}")
 
 
 @router.put("/{product_id}", status_code=status.HTTP_200_OK)
@@ -217,7 +230,20 @@ async def update_product(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update product: {str(e)}")
+        error_str = str(e)
+        # Check for duplicate product name error (unique constraint violation)
+        if "duplicate key value violates unique constraint" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A product with the name '{body.name}' already exists. Please use a different name."
+            )
+        
+        # Log unexpected errors for debugging
+        print(f"ERROR updating product {product_id}: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update product: {error_str}")
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -251,4 +277,10 @@ async def delete_product(product_id: str, user: dict = Depends(get_current_user)
         return None
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete product: {str(e)}")
+        error_str = str(e)
+        # Log unexpected errors for debugging
+        print(f"ERROR deleting product {product_id}: {error_str}")
+        print(f"Exception type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to delete product: {error_str}")
