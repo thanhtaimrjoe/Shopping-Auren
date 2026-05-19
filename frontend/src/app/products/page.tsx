@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Plus, Search, ArrowUpDown, MoreVertical, Edit2, Trash2, 
   X, Save, Loader2, Package, AlertCircle, CheckCircle2, Image as ImageIcon, ChevronLeft, ChevronRight
@@ -37,6 +37,152 @@ const CATEGORY_LABELS = {
   consumable: 'Consumable',
   other: 'Other'
 };
+
+// Separate DetailContent component to prevent re-creation on every render
+interface DetailContentProps {
+  isAdding: boolean;
+  isEditing: boolean;
+  selectedProduct: Product | null;
+  formState: Partial<Product>;
+  isLoading: boolean;
+  setIsEditing: (value: boolean) => void;
+  setShowDeleteConfirm: (id: string | null) => void;
+  setSelectedProduct: (product: Product | null) => void;
+  setFormState: (state: Partial<Product>) => void;
+  handleCancel: () => void;
+  handleSave: () => void;
+}
+
+const DetailContent: React.FC<DetailContentProps> = React.memo(({
+  isAdding,
+  isEditing,
+  selectedProduct,
+  formState,
+  isLoading,
+  setIsEditing,
+  setShowDeleteConfirm,
+  setSelectedProduct,
+  setFormState,
+  handleCancel,
+  handleSave,
+}) => (
+  <div className="bg-cream rounded-[2.5rem] p-8 md:p-10 shadow-soft animate-page-enter">
+    <div className="flex items-center justify-between mb-8">
+      <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">
+        {isAdding ? 'Thêm sản phẩm mới' : isEditing ? 'Chỉnh sửa sản phẩm' : 'Chi tiết sản phẩm'}
+      </h3>
+      <div className="flex items-center gap-2">
+        {!isEditing ? (
+          <>
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
+            >
+              <Edit2 className="h-4 w-4" />
+            </button>
+            <button 
+              onClick={() => setShowDeleteConfirm(selectedProduct!.id)}
+              className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            {/* Mobile Close Button */}
+            <button 
+              onClick={() => setSelectedProduct(null)}
+              className="lg:hidden p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all ml-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <button 
+            onClick={handleCancel}
+            className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    </div>
+
+    {isEditing ? (
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Tên sản phẩm</label>
+          <input 
+            type="text" 
+            className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-serif text-xl focus:ring-2 focus:ring-sage/20 transition-all"
+            value={formState.name || ''}
+            onChange={e => setFormState({...formState, name: e.target.value})}
+            placeholder="Nhập tên sản phẩm..."
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Phân loại</label>
+            <select 
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all appearance-none"
+              value={formState.category || 'other'}
+              onChange={e => setFormState({...formState, category: e.target.value as any})}
+            >
+              <option value="daily">Daily</option>
+              <option value="consumable">Consumable</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Link ảnh sản phẩm</label>
+          <div className="relative">
+            <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
+            <input 
+              type="text" 
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all"
+              value={formState.image_url || ''}
+              onChange={e => setFormState({...formState, image_url: e.target.value})}
+              placeholder="https://images.unsplash.com/..."
+            />
+          </div>
+        </div>
+
+        <button 
+          onClick={handleSave}
+          disabled={isLoading}
+          className="w-full py-5 bg-sage text-cream rounded-[1.5rem] font-bold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
+        >
+          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu sản phẩm</>}
+        </button>
+      </div>
+    ) : (
+      <div className="space-y-10 animate-page-enter">
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="h-48 w-48 rounded-[2rem] bg-hemp/10 overflow-hidden shadow-soft shrink-0">
+            {selectedProduct!.image_url ? (
+              <img src={selectedProduct!.image_url} alt={selectedProduct!.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Package className="h-12 w-12 text-bark/20" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <span className={cn(
+              "inline-block px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4",
+              CATEGORY_COLORS[selectedProduct!.category]
+            )}>
+              {CATEGORY_LABELS[selectedProduct!.category]}
+            </span>
+            <h2 className="text-4xl md:text-5xl text-bark font-serif leading-tight">{selectedProduct!.name}</h2>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+));
+
+DetailContent.displayName = 'DetailContent';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -205,122 +351,7 @@ export default function ProductsPage() {
     }
   };
 
-  const DetailContent = () => (
-    <div className="bg-cream rounded-[2.5rem] p-8 md:p-10 shadow-soft animate-page-enter">
-      <div className="flex items-center justify-between mb-8">
-        <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">
-          {isAdding ? 'Thêm sản phẩm mới' : isEditing ? 'Chỉnh sửa sản phẩm' : 'Chi tiết sản phẩm'}
-        </h3>
-        <div className="flex items-center gap-2">
-          {!isEditing ? (
-            <>
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
-              >
-                <Edit2 className="h-4 w-4" />
-              </button>
-              <button 
-                onClick={() => setShowDeleteConfirm(selectedProduct!.id)}
-                className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-              {/* Mobile Close Button */}
-              <button 
-                onClick={() => setSelectedProduct(null)}
-                className="lg:hidden p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all ml-2"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={handleCancel}
-              className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
 
-      {isEditing ? (
-        <div className="space-y-8">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Tên sản phẩm</label>
-            <input 
-              type="text" 
-              className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-serif text-xl focus:ring-2 focus:ring-sage/20 transition-all"
-              value={formState.name || ''}
-              onChange={e => setFormState({...formState, name: e.target.value})}
-              placeholder="Nhập tên sản phẩm..."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Phân loại</label>
-              <select 
-                className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all appearance-none"
-                value={formState.category || 'other'}
-                onChange={e => setFormState({...formState, category: e.target.value as any})}
-              >
-                <option value="daily">Daily</option>
-                <option value="consumable">Consumable</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Link ảnh sản phẩm</label>
-            <div className="relative">
-              <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
-              <input 
-                type="text" 
-                className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all"
-                value={formState.image_url || ''}
-                onChange={e => setFormState({...formState, image_url: e.target.value})}
-                placeholder="https://images.unsplash.com/..."
-              />
-            </div>
-          </div>
-
-          <button 
-            onClick={handleSave}
-            disabled={isLoading}
-            className="w-full py-5 bg-sage text-cream rounded-[1.5rem] font-bold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
-          >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu sản phẩm</>}
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-10 animate-page-enter">
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="h-48 w-48 rounded-[2rem] bg-hemp/10 overflow-hidden shadow-soft shrink-0">
-              {selectedProduct!.image_url ? (
-                <img src={selectedProduct!.image_url} alt={selectedProduct!.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-12 w-12 text-bark/20" />
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <span className={cn(
-                "inline-block px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4",
-                CATEGORY_COLORS[selectedProduct!.category]
-              )}>
-                {CATEGORY_LABELS[selectedProduct!.category]}
-              </span>
-              <h2 className="text-4xl md:text-5xl text-bark font-serif leading-tight">{selectedProduct!.name}</h2>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   if (authLoading || (fetchLoading && products.length === 0)) {
     return (
@@ -469,7 +500,19 @@ export default function ProductsPage() {
         {/* Right Side: Detail & Form (Desktop Only) */}
         <div className="hidden lg:block lg:col-span-7 sticky top-8">
           {selectedProduct || isAdding ? (
-            <DetailContent />
+            <DetailContent 
+              isAdding={isAdding}
+              isEditing={isEditing}
+              selectedProduct={selectedProduct}
+              formState={formState}
+              isLoading={isLoading}
+              setIsEditing={setIsEditing}
+              setShowDeleteConfirm={setShowDeleteConfirm}
+              setSelectedProduct={setSelectedProduct}
+              setFormState={setFormState}
+              handleCancel={handleCancel}
+              handleSave={handleSave}
+            />
           ) : (
             <div className="h-[600px] border-2 border-dashed border-bark/5 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center bg-cream/30">
               <div className="h-24 w-24 bg-hemp/10 rounded-full flex items-center justify-center mb-6">
@@ -496,7 +539,19 @@ export default function ProductsPage() {
             className="w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar shadow-warm"
             onClick={e => e.stopPropagation()}
           >
-            <DetailContent />
+            <DetailContent 
+              isAdding={isAdding}
+              isEditing={isEditing}
+              selectedProduct={selectedProduct}
+              formState={formState}
+              isLoading={isLoading}
+              setIsEditing={setIsEditing}
+              setShowDeleteConfirm={setShowDeleteConfirm}
+              setSelectedProduct={setSelectedProduct}
+              setFormState={setFormState}
+              handleCancel={handleCancel}
+              handleSave={handleSave}
+            />
           </div>
         </div>
       )}
