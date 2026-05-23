@@ -18,17 +18,16 @@
 
 ## 🎯 主要機能
 
-### MVP機能 (In Progress)
-- ✅ ユーザー認証（登録・ログイン）
-- 🔄 料理CRUD（登録・編集・削除・一覧）
-- 🔄 雑貨CRUD（登録・編集・削除・一覧）
+### MVP機能
+- ✅ ユーザー認証（登録・ログイン・パスワードリセット・表示名）
+- ✅ 料理CRUD（登録・編集・削除・一覧）
+- ✅ 雑貨CRUD（登録・編集・削除・一覧）
 - ✅ 食事計画作成（週単位・月〜日）
-- 🔄 買い物リスト自動生成
-- 🔄 買い物チェックリスト
+- ✅ 買い物リスト自動生成・手動追加・チェックリスト
 
 ### Nice to Have
-- 🟡 買い物履歴（過去2週間）
-- 🟡 料理提案（履歴ベース）
+- ✅ 買い物履歴（過去2週間）
+- ✅ 料理提案（履歴ベース）
 - 🟡 リスト共有
 
 ---
@@ -120,6 +119,13 @@ supabase db reset
 
 Studio: http://127.0.0.1:54323 · API: http://127.0.0.1:54321
 
+**Verify local stack**
+
+```bash
+curl http://localhost:8000/health   # {"status":"ok",...}
+# Sign in at http://localhost:3000 with a user from supabase/seed.sql
+```
+
 Để ứng dụng hoạt động đầy đủ, bạn cần chạy song song cả **Frontend** và **Backend**.
 
 ### 1. Khởi động Backend (FastAPI)
@@ -176,19 +182,16 @@ uvicorn app.main:app --reload
 
 ## 📅 開発進捗
 
-### 現在の状況 (2026-05-16)
-- ✅ **Specs**: 全て完了 (Inception Deck, User Stories, DB Schema, API Spec, Decision Log)
-- ✅ **Auth**: Supabase Auth 完了
-- ✅ **Meal Plan (Weekly Alignment)**: メインページ実装完了 + API連携
-- ✅ **Backend APIs**: meals, products, meal_plans, shopping_lists ルーター実装
-- 🔄 Backend models/schemas layer 強化中
-- 🔄 Frontend CRUDページ完成中
+### 現在の状況 (2026-05-23)
+- ✅ **Specs** + **Local Supabase Docker** (`MIGRATION-PLAN.md`)
+- ✅ **MVP + Nice-to-have**: history, meal suggestions, manual shopping items, auth polish
+- ✅ **Backend tests**: meals, products, auth, shopping_lists, meal_plans, suggestions
+- 🟡 **Deploy**: Vercel + Railway + hosted Supabase (planned)
 
 ### 今後の優先事項
-1. Backend models + services layer 正規化
-2. Database migration scripts
-3. Frontend ミール・プロダクツ CRUD 完成
-4. Integration test & deploy
+1. Production deploy + smoke test
+2. E2E tests (optional)
+3. Dashboard summary API (optional)
 
 ---
 
@@ -224,5 +227,5 @@ Private Project
 
 ---
 
-**最終更新**: 2026-05-16  
-**バージョン**: 0.2.0 (Development Phase)
+**最終更新**: 2026-05-23  
+**バージョン**: 0.3.0 (Development Phase)

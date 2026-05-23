@@ -48,13 +48,15 @@ export default function MealPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
   const [fetchLoading, setFetchLoading] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   
   // Extra products state
   const [productsDatabase, setProductsDatabase] = useState<any[]>([]);
   const [extraProducts, setExtraProducts] = useState<any[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; never_used?: boolean }>>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +67,7 @@ export default function MealPlanPage() {
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Notification helper
-  const showNotification = useCallback((type: 'success' | 'error', message: string) => {
+  const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 3000);
   }, []);
@@ -95,6 +97,21 @@ export default function MealPlanPage() {
       console.error('Failed to fetch products or shopping list', error);
     }
   }, [user]);
+
+  const fetchSuggestions = useCallback(async () => {
+    if (!user) return;
+    setSuggestionsLoading(true);
+    try {
+      const response = await mealsApi.getSuggestions({ week_start: weekStartKey, limit: 5 });
+      if (response.data.success) {
+        setSuggestions(response.data.data.suggestions || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch meal suggestions:', error);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [user, weekStartKey]);
 
   // Fetch meals for the modal
   const fetchMeals = useCallback(async () => {
@@ -160,8 +177,9 @@ export default function MealPlanPage() {
       fetchMeals();
       fetchMealPlan();
       fetchProductsAndShoppingList();
+      fetchSuggestions();
     }
-  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, authLoading, user]);
+  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, fetchSuggestions, authLoading, user]);
 
   // Handle week navigation
   const handlePrevWeek = () => {
@@ -362,6 +380,40 @@ export default function MealPlanPage() {
     }
   };
 
+  const handleAddSuggestion = async (mealName: string) => {
+    if (!user) return;
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const inCurrentWeek = daysOfWeek.some((day) => format(day, 'yyyy-MM-dd') === todayKey);
+    const targetDayKey = inCurrentWeek ? todayKey : format(daysOfWeek[0], 'yyyy-MM-dd');
+    const currentMeals = selectedMeals[targetDayKey] || [];
+
+    if (currentMeals.length >= 3) {
+      showNotification('error', 'Mỗi ngày chỉ tối đa 3 món ăn.');
+      return;
+    }
+    if (currentMeals.includes(mealName)) {
+      showNotification('info', 'Món này đã có trong ngày.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const nextSelectedMeals = {
+        ...selectedMeals,
+        [targetDayKey]: [...currentMeals, mealName],
+      };
+      await persistMealPlan(nextSelectedMeals);
+      setSelectedMeals(nextSelectedMeals);
+      showNotification('success', `Đã thêm ${mealName}`);
+      fetchSuggestions();
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
+      showNotification('error', err.response?.data?.detail || err.message || 'Không thể thêm món');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredMeals = mealDatabase.filter(meal => 
     meal.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -380,7 +432,11 @@ export default function MealPlanPage() {
       {notification && (
         <div className={cn(
           "fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto",
-          notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-cream"
+          notification.type === 'success'
+            ? 'bg-sage text-cream'
+            : notification.type === 'info'
+              ? 'bg-bark text-cream'
+              : 'bg-red-500 text-cream'
         )}>
           {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <X className="h-5 w-5" />}
           <span className="font-bold text-xs uppercase tracking-widest">{notification.message}</span>
@@ -464,6 +520,37 @@ export default function MealPlanPage() {
           </button>
         </div>
       </div>
+
+      {(suggestionsLoading || suggestions.length > 0) && (
+        <section className="mb-8 sm:mb-10">
+          <h4 className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] mb-4">
+            Gợi ý món (chưa dùng gần đây)
+          </h4>
+          {suggestionsLoading ? (
+            <div className="flex items-center gap-2 text-bark/40 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading suggestions…
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((meal) => (
+                <button
+                  key={meal.id}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleAddSuggestion(meal.name)}
+                  className="px-4 py-2.5 bg-hemp/30 hover:bg-sage/15 text-bark rounded-full text-sm font-medium transition-colors touch-manipulation min-h-[44px] disabled:opacity-50"
+                >
+                  {meal.name}
+                  {meal.never_used && (
+                    <span className="ml-2 text-[10px] uppercase tracking-widest text-sage-deep">new</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Days Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">

@@ -5,6 +5,62 @@
 
 ---
 
+## [2026-05-23 24:30] - Meals/Products grid + modal CRUD (no category UI)
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: US-003, US-006, US-007  
+**影響範囲**: Frontend
+
+### 変更内容
+- Bỏ panel chi tiết cố định (desktop split view); dùng grid + modal thống nhất mọi breakpoint
+- Meals: grid card (tên + preview nguyên liệu); Products: grid ảnh vuông
+- Modal: xem chi tiết, Edit, Delete, thêm mới
+- Ẩn toàn bộ filter/select/badge category trên UI (API vẫn gửi `category: other` mặc định)
+
+### 実装詳細
+- `frontend/src/app/meals/page.tsx`
+- `frontend/src/app/products/page.tsx`
+
+### テスト
+- [x] `npm run build`
+- [ ] Manual QA `/meals`, `/products`
+
+---
+
+## [2026-05-23 23:45] - Local Docker feature roadmap (MVP gaps + Nice-to-have)
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-001, US-002, US-012, US-013, US-014, US-015  
+**影響範囲**: Frontend, Backend, Database, API
+
+### 変更内容
+- **US-013**: Manual add/delete items on `/shopping` (bottom sheet)
+- **US-012**: Toast when all items are checked
+- **US-001/002**: `display_name` on signup/settings; `/reset-password` via Supabase
+- **US-014**: `snapshot_json` migration; `GET /shopping-lists/history`; `/history` UI
+- **US-015**: `GET /meals/suggestions`; suggestion chips on weekly plan
+- Docs: `README.md`, `progress.md`, DEC-011 implementation note
+- Tests: `test_shopping_lists.py`, `test_meal_plans.py`, `test_meals_suggestions.py`
+
+### 実装詳細
+- `supabase/migrations/20260524120000_add_shopping_list_snapshot.sql`
+- `backend/app/services/shopping_list_service.py`, `meal_suggestion_service.py`
+- `backend/app/api/v1/shopping_lists.py`, `meals.py`
+- `frontend/src/app/shopping/page.tsx`, `history/page.tsx`, `reset-password/page.tsx`
+- `frontend/src/components/Toast.tsx`
+
+### テスト
+- [x] `pytest` backend
+- [x] `npm run build` frontend
+- [ ] Manual E2E on local Supabase Docker
+
+### 備考
+- Meals/products remain soft-deleted per DEC-011 implementation note
+
+---
+
 ## [2026-05-23 21:30] - Mobile responsive UI (Galaxy S24)
 
 **担当**: AI Assistant  

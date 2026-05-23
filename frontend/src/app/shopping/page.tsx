@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, CheckCircle2, MoreHorizontal, ShoppingBag, ArrowLeft, Filter, Loader2, ListPlus } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import {
+  Search, CheckCircle2, MoreHorizontal, ShoppingBag, ArrowLeft, Filter,
+  Loader2, ListPlus, Plus, Trash2, X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { shoppingListsApi, mealPlansApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { format, startOfWeek } from 'date-fns';
+import { Toast, type ToastMessage } from '@/components/Toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,6 +22,7 @@ interface ShoppingItem {
   name: string;
   category: string;
   is_checked: boolean;
+  source_type?: string;
 }
 
 interface ShoppingList {
@@ -30,6 +35,12 @@ interface ShoppingList {
   progress: number;
 }
 
+const MANUAL_CATEGORIES = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'consumable', label: 'Consumable' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 export default function ShoppingPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const [list, setList] = useState<ShoppingList | null>(null);
@@ -38,21 +49,28 @@ export default function ShoppingPage() {
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState<string>('other');
+  const [isAddingItem, setIsAddingItem] = useState(false);
+  const allCheckedNotifiedRef = useRef(false);
 
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
 
+  const isListActive = list?.status === 'active';
+
   const fetchCurrentList = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
-    
-    // Always fetch the current meal plan to allow syncing
+
     try {
       const planResp = await mealPlansApi.getCurrent({ week_start: weekStartKey });
       if (planResp.data.success) {
         setCurrentMealPlanId(planResp.data.data.meal_plan?.id || null);
       }
-    } catch (planError) {
+    } catch {
       setCurrentMealPlanId(null);
     }
 
@@ -61,8 +79,9 @@ export default function ShoppingPage() {
       if (response.data.success) {
         setList(response.data.data.shopping_list);
       }
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
         setList(null);
       }
     } finally {
@@ -76,25 +95,38 @@ export default function ShoppingPage() {
     }
   }, [authLoading, user, fetchCurrentList]);
 
+  useEffect(() => {
+    allCheckedNotifiedRef.current = false;
+  }, [list?.id]);
+
   const toggleItem = async (itemId: string, currentStatus: boolean) => {
-    if (!list) return;
-    
-    // Optimistic update
-    const updatedItems = list.items.map(item => 
+    if (!list || list.status === 'completed') return;
+
+    const updatedItems = list.items.map((item) =>
       item.id === itemId ? { ...item, is_checked: !currentStatus } : item
     );
-    const checkedCount = updatedItems.filter(i => i.is_checked).length;
+    const checkedCount = updatedItems.filter((i) => i.is_checked).length;
+    const total = updatedItems.length;
+
     setList({
       ...list,
       items: updatedItems,
       checked_items: checkedCount,
-      progress: Math.round((checkedCount / updatedItems.length) * 100)
+      progress: total ? Math.round((checkedCount / total) * 100) : 0,
     });
+
+    if (
+      total > 0 &&
+      checkedCount === total &&
+      !allCheckedNotifiedRef.current
+    ) {
+      allCheckedNotifiedRef.current = true;
+      setToast({ type: 'success', message: 'すべてチェックしました！買い物完了ボタンを押してください。' });
+    }
 
     try {
       await shoppingListsApi.updateItem(list.id, itemId, { is_checked: !currentStatus });
-    } catch (error) {
-      // Revert if failed
+    } catch {
       fetchCurrentList();
     }
   };
@@ -106,9 +138,11 @@ export default function ShoppingPage() {
       const response = await shoppingListsApi.complete(list.id);
       if (response.data.success) {
         setList(response.data.data.shopping_list);
+        setToast({ type: 'success', message: '買い物リストを完了しました。' });
       }
     } catch (error) {
       console.error('Failed to complete list:', error);
+      setToast({ type: 'error', message: 'リストを完了できませんでした。' });
     } finally {
       setIsCompleting(false);
     }
@@ -129,11 +163,65 @@ export default function ShoppingPage() {
     }
   };
 
-  const filteredItems = list?.items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const handleAddItem = async () => {
+    if (!list || !newItemName.trim()) return;
+    setIsAddingItem(true);
+    try {
+      const response = await shoppingListsApi.addItem(list.id, {
+        name: newItemName.trim(),
+        category: newItemCategory,
+      });
+      if (response.data.success) {
+        const item = response.data.data.item;
+        const items = [...list.items, item];
+        const checkedCount = items.filter((i) => i.is_checked).length;
+        setList({
+          ...list,
+          items,
+          total_items: items.length,
+          checked_items: checkedCount,
+          progress: items.length
+            ? Math.round((checkedCount / items.length) * 100)
+            : 0,
+        });
+        setNewItemName('');
+        setNewItemCategory('other');
+        setIsAddSheetOpen(false);
+        setToast({ type: 'success', message: 'アイテムを追加しました。' });
+      }
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      setToast({ type: 'error', message: 'アイテムを追加できませんでした。' });
+    } finally {
+      setIsAddingItem(false);
+    }
+  };
 
-  const categories = Array.from(new Set(filteredItems.map(item => item.category)));
+  const handleDeleteItem = async (itemId: string) => {
+    if (!list || list.status === 'completed') return;
+    try {
+      await shoppingListsApi.deleteItem(list.id, itemId);
+      const items = list.items.filter((i) => i.id !== itemId);
+      const checkedCount = items.filter((i) => i.is_checked).length;
+      setList({
+        ...list,
+        items,
+        total_items: items.length,
+        checked_items: checkedCount,
+        progress: items.length ? Math.round((checkedCount / items.length) * 100) : 0,
+      });
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+      setToast({ type: 'error', message: 'アイテムを削除できませんでした。' });
+    }
+  };
+
+  const filteredItems =
+    list?.items.filter((item) =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
+
+  const categories = Array.from(new Set(filteredItems.map((item) => item.category)));
 
   if (authLoading || !user || (isLoading && !list)) {
     return (
@@ -145,14 +233,24 @@ export default function ShoppingPage() {
 
   return (
     <div className="page-shell animate-page-enter min-w-0">
+      {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
+
       <header className="mb-6 sm:mb-10">
-        <div className="flex items-center gap-2 text-bark/40 mb-3 sm:mb-4">
-          <Link href="/" className="hover:text-sage-deep transition-colors p-1 -m-1 touch-manipulation">
-            <ArrowLeft className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-2 text-bark/40 mb-3 sm:mb-4">
+          <div className="flex items-center gap-2">
+            <Link href="/" className="hover:text-sage-deep transition-colors p-1 -m-1 touch-manipulation">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] sm:tracking-[0.4em]">
+              Back to Schedule
+            </span>
+          </div>
+          <Link
+            href="/history"
+            className="text-[10px] font-bold uppercase tracking-widest text-sage-deep hover:underline touch-manipulation"
+          >
+            History
           </Link>
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] sm:tracking-[0.4em]">
-            Back to Schedule
-          </span>
         </div>
         <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping List
@@ -169,12 +267,13 @@ export default function ShoppingPage() {
           </div>
           <h2 className="text-3xl font-serif text-bark mb-4">No active list found</h2>
           <p className="text-bark/60 mb-10 text-lg">
-            {currentMealPlanId 
-              ? "You have a meal plan for this week. Generate a shopping list to get started."
-              : "Plan your meals first to automatically generate a shopping list."}
+            {currentMealPlanId
+              ? 'You have a meal plan for this week. Generate a shopping list to get started.'
+              : 'Plan your meals first to automatically generate a shopping list.'}
           </p>
           {currentMealPlanId ? (
-            <button 
+            <button
+              type="button"
               onClick={handleGenerateList}
               disabled={isGenerating}
               className="bg-sage text-cream px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-warm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 mx-auto disabled:opacity-50"
@@ -183,7 +282,7 @@ export default function ShoppingPage() {
               Generate List
             </button>
           ) : (
-            <Link 
+            <Link
               href="/"
               className="inline-flex bg-bark text-cream px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-warm hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
@@ -202,46 +301,60 @@ export default function ShoppingPage() {
                 </span>
               )}
             </div>
-            {list.status === 'active' && list.total_items > 0 && (
-              <button
-                type="button"
-                onClick={handleCompleteList}
-                disabled={isCompleting}
-                className="w-full sm:w-auto justify-center bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm disabled:opacity-50 flex items-center gap-2 touch-manipulation min-h-[48px]"
-              >
-                {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Finish shopping
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {isListActive && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddSheetOpen(true)}
+                  className="w-full sm:w-auto justify-center bg-cream text-bark border border-bark/10 px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center gap-2 touch-manipulation min-h-[48px]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add item
+                </button>
+              )}
+              {isListActive && list.total_items > 0 && (
+                <button
+                  type="button"
+                  onClick={handleCompleteList}
+                  disabled={isCompleting}
+                  className="w-full sm:w-auto justify-center bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm disabled:opacity-50 flex items-center gap-2 touch-manipulation min-h-[48px]"
+                >
+                  {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Finish shopping
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Search & Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/30" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Search items..."
                 className="w-full bg-cream border-0 rounded-2xl py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 shadow-soft focus:ring-2 focus:ring-sage/20 transition-all"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button className="h-[56px] px-6 bg-cream rounded-2xl shadow-soft flex items-center gap-3 text-bark/60 hover:text-bark transition-colors">
+            <button
+              type="button"
+              className="h-[56px] px-6 bg-cream rounded-2xl shadow-soft flex items-center gap-3 text-bark/60"
+              aria-hidden
+            >
               <Filter className="h-5 w-5" />
               <span className="text-sm font-medium">Categories</span>
             </button>
           </div>
 
-          {/* Items List */}
           <div className="space-y-12">
             {categories.length === 0 ? (
               <div className="py-20 text-center">
                 <p className="text-bark/40 font-serif text-xl">No items found matching your search.</p>
               </div>
             ) : (
-              categories.sort().map(category => {
-                const categoryItems = filteredItems.filter(item => item.category === category);
+              categories.sort().map((category) => {
+                const categoryItems = filteredItems.filter((item) => item.category === category);
                 if (categoryItems.length === 0) return null;
 
                 return (
@@ -251,34 +364,53 @@ export default function ShoppingPage() {
                       <div className="h-px flex-1 bg-bark/5" />
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                      {categoryItems.map(item => (
-                        <button
+                      {categoryItems.map((item) => (
+                        <div
                           key={item.id}
-                          type="button"
-                          onClick={() => toggleItem(item.id, item.is_checked)}
                           className={cn(
-                            "group flex items-center justify-between p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] transition-all duration-300 text-left touch-manipulation min-h-[56px]",
-                            item.is_checked 
-                              ? "bg-hemp/20 opacity-60" 
-                              : "bg-cream shadow-soft active:shadow-warm"
+                            'group flex items-center justify-between p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] transition-all duration-300 min-h-[56px]',
+                            item.is_checked ? 'bg-hemp/20 opacity-60' : 'bg-cream shadow-soft'
                           )}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "h-6 w-6 rounded-full flex items-center justify-center transition-colors",
-                              item.is_checked ? "bg-sage text-cream" : "border-2 border-bark/10 group-hover:border-sage/40"
-                            )}>
+                          <button
+                            type="button"
+                            onClick={() => toggleItem(item.id, item.is_checked)}
+                            disabled={list.status === 'completed'}
+                            className="flex items-center gap-4 flex-1 text-left touch-manipulation min-h-[44px]"
+                          >
+                            <div
+                              className={cn(
+                                'h-6 w-6 rounded-full flex items-center justify-center transition-colors shrink-0',
+                                item.is_checked
+                                  ? 'bg-sage text-cream'
+                                  : 'border-2 border-bark/10 group-hover:border-sage/40'
+                              )}
+                            >
                               {item.is_checked ? <CheckCircle2 className="h-4 w-4" /> : null}
                             </div>
-                            <span className={cn(
-                              "font-medium transition-all",
-                              item.is_checked ? "text-bark/40 line-through" : "text-bark"
-                            )}>
+                            <span
+                              className={cn(
+                                'font-medium transition-all',
+                                item.is_checked ? 'text-bark/40 line-through' : 'text-bark'
+                              )}
+                            >
                               {item.name}
                             </span>
-                          </div>
-                          <MoreHorizontal className="h-5 w-5 text-bark/10 group-hover:text-bark/40 transition-colors" />
-                        </button>
+                          </button>
+                          {isListActive && item.source_type === 'manual' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="p-2 text-bark/20 hover:text-red-500 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              aria-label={`Remove ${item.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          {(!isListActive || item.source_type !== 'manual') && (
+                            <MoreHorizontal className="h-5 w-5 text-bark/10 shrink-0" />
+                          )}
+                        </div>
                       ))}
                     </div>
                   </section>
@@ -287,6 +419,67 @@ export default function ShoppingPage() {
             )}
           </div>
         </>
+      )}
+
+      {isAddSheetOpen && list && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-bark/40 backdrop-blur-sm"
+            aria-label="Close"
+            onClick={() => setIsAddSheetOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-warm animate-page-enter">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-bold text-bark uppercase tracking-[0.2em]">Add item</h2>
+              <button
+                type="button"
+                onClick={() => setIsAddSheetOpen(false)}
+                className="p-3 bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
+                  Item name
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="Milk, eggs..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
+                  Category
+                </label>
+                <select
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 appearance-none"
+                  value={newItemCategory}
+                  onChange={(e) => setNewItemCategory(e.target.value)}
+                >
+                  {MANUAL_CATEGORIES.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                disabled={isAddingItem || !newItemName.trim()}
+                className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px]"
+              >
+                {isAddingItem ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Add to list'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

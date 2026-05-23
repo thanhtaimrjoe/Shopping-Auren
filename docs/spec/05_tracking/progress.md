@@ -1,252 +1,63 @@
 # Progress Tracking — Shopping Memo
 
 **作成日**: 2026-05-09  
+**最終更新**: 2026-05-23  
 **プロジェクト**: Shopping Memo  
-**目的**: 開発進捗の追跡
 
 ---
 
-## 📊 全体進捗
+## 全体進捗
 
-| フェーズ | 進捗 | ステータス | 完了予定 |
-|---------|------|-----------|----------|
-| 要件定義・設計 | 100% | ✅ 完了 | 2026-05-09 |
-| Backend開発 | 100% | ✅ 完了 | 2026-05-17 |
-| Frontend開発 | 100% | ✅ 完了 | 2026-05-17 |
-| 統合テスト | 100% | ✅ 完了 | 2026-05-18 |
-| デプロイ | 0% | 🟡 予定 | 2026-05-20 |
+| フェーズ | 進捗 | ステータス |
+|---------|------|-----------|
+| 要件定義・設計 | 100% | 完了 |
+| Backend開発 | 100% | 完了 |
+| Frontend開発 | 100% | 完了 |
+| 統合テスト (手動 + pytest) | 90% | 進行中 |
+| デプロイ | 0% | 予定 |
 
-**全体進捗**: 90% (Hầu hết các tính năng cốt lõi đã hoàn thành và kiểm thử)
-
----
-
-## ✅ 完了タスク
-
-### 2026-05-09（Day 1）
-
-#### 設計ドキュメント作成
-- ✅ Inception Deck作成
-  - 5つの質問に回答
-  - Tech Stack決定
-  - スコープ定義
-  - リスク洗い出し
-  
-- ✅ User Stories作成
-  - 7つのEpic定義
-  - 15のUser Story作成
-  - 受け入れ基準定義
-  - 優先順位マトリクス作成
-
-- ✅ Screen List作成
-  - 12画面定義
-  - URL・機能・遷移定義
-  - レスポンシブ対応方針
-  - UI/UXガイドライン
-
-- ✅ Database Schema設計
-  - 7テーブル設計
-  - ER図作成
-  - インデックス戦略
-  - RLS（Row Level Security）設計
-
-- ✅ API Spec作成
-  - 6カテゴリ、30+エンドポイント定義
-  - Request/Response定義
-  - エラーハンドリング定義
-  - レート制限定義
-
-- ✅ Decision Log作成
-  - 9つの設計決定記録
-  - 2つの未決定事項記録
-  - 変更履歴管理
-
-- ✅ README作成
-  - プロジェクト概要
-  - Tech Stack
-  - セットアップ手順
-  - 開発スケジュール
-
-### 2026-05-13
-
-#### Backend実装進捗
-- ✅ FastAPI backend core routes 実装
-- ✅ Supabase client + auth middleware 実装
-- ✅ Meals, Products, Meal Plans, Shopping Lists API 実装
-- ✅ Database migration scripts 用意
-- 🟡 次: Backend unit test 作成と frontend 実装開始
-
-### 2026-05-18
-
-#### Kiểm tra & Hoàn tất MVP
-- ✅ Xác nhận triển khai DEC-012 (Meal Plan không meal_type, giới hạn 3 món)
-- ✅ Xác nhận triển khai DEC-013 (Generate Shopping List manual, separate records, notes)
-- ✅ Xác nhận triển khai DEC-014 (Hiển thị Ingredients realtime)
-- ✅ Cập nhật CHANGELOG.md và Progress Tracking
+**全体進捗**: ~95% (MVP + Nice-to-have 機能実装済み)
 
 ---
 
-## 🟡 進行中タスク
+## 完了した User Stories
 
-- Backend unit test の準備
-- Frontend project scaffold の開始
-
----
-
-## 📋 次のタスク
-
-### Day 2-3: Backend開発準備（2026-05-10 〜 2026-05-11）
-
-#### プロジェクトセットアップ
-- [x] Backend project structure作成
-- [x] FastAPI初期設定
-- [x] Supabase接続設定
-- [x] Database migration setup
-- [x] 環境変数設定（.env）
-
-#### Database Migration
-- [ ] Alembic setup
-- [ ] 初期マイグレーションファイル作成
-- [ ] テーブル作成マイグレーション
-- [ ] Seed data作成
-
-#### 認証API実装
-- [ ] Supabase Auth統合
-- [x] JWT検証ミドルウェア
-- [ ] `/auth/register` エンドポイント
-- [ ] `/auth/login` エンドポイント
-- [ ] `/auth/logout` エンドポイント
+| ID | 内容 | ステータス |
+|----|------|-----------|
+| US-001 | 登録 + display_name | 完了 |
+| US-002 | ログイン + パスワードリセット | 完了 |
+| US-003〜008 | Meals / Products CRUD | 完了 |
+| US-009〜011 | 食事計画 + 買い物リスト生成 | 完了 |
+| US-012 | チェックリスト + 全件チェック通知 | 完了 |
+| US-013 | 買い物リスト手動追加 (shopping UI) | 完了 |
+| US-014 | 買い物履歴 (2週間) | 完了 |
+| US-015 | 料理提案 | 完了 |
 
 ---
 
-### Day 4: Backend API実装（2026-05-12）
+## Local dev (Supabase Docker)
 
-#### 料理API
-- [x] `/api/v1/meals` GET（一覧）
-- [x] `/api/v1/meals/{id}` GET（詳細）
-- [x] `/api/v1/meals` POST（登録）
-- [x] `/api/v1/meals/{id}` PUT（更新）
-- [x] `/api/v1/meals/{id}` DELETE（削除）
+1. `supabase start` → `supabase db reset`
+2. `backend/.env.local` + `frontend/.env.local` from examples
+3. `uvicorn` on :8000, `npm run dev` on :3000
 
-#### 雑貨API
-- [x] `/api/v1/products` GET（一覧）
-- [x] `/api/v1/products` POST（登録）
-- [x] `/api/v1/products/{id}` PUT（更新）
-- [x] `/api/v1/products/{id}` DELETE（削除）
+詳細: [MIGRATION-PLAN.md](../../../MIGRATION-PLAN.md), [README.md](../../../README.md)
 
 ---
 
-### Day 5: Backend API実装（続き）（2026-05-13）
+## 残タスク
 
-#### 食事計画API
-- [x] `/api/v1/meal-plans/current` GET
-- [x] `/api/v1/meal-plans` POST
-- [x] `/api/v1/meal-plans/{id}` PUT
-- [x] `/api/v1/meal-plans/{id}` DELETE
-
-#### 買い物リストAPI
-- [x] `/api/v1/shopping-lists/generate` POST
-- [x] `/api/v1/shopping-lists/current` GET
-- [x] `/api/v1/shopping-lists/{id}/items/{item_id}` PATCH
-- [x] `/api/v1/shopping-lists/{id}/items` POST
-- [x] `/api/v1/shopping-lists/{id}/complete` POST
-
-#### ダッシュボードAPI
-- [ ] `/dashboard/summary` GET
+- [ ] Production deploy (Vercel / Railway / Supabase Cloud)
+- [ ] E2E tests (Playwright 等)
+- [ ] `/dashboard/summary` API (optional)
+- [ ] DEC-011 hard delete vs soft delete — **実装は soft delete** (Decision Log 参照)
 
 ---
 
-### Day 6-7: Frontend開発（2026-05-14 〜 2026-05-15）
-
-#### プロジェクトセットアップ
-- [ ] Next.js project作成
-- [ ] TailwindCSS setup
-- [ ] shadcn/ui setup（検討中）
-- [ ] Supabase Client setup
-- [ ] 環境変数設定
-
-#### 認証画面
-- [ ] Login画面
-- [ ] Register画面
-- [ ] Password Reset画面
-
-#### メイン画面
-- [ ] Dashboard画面
-- [ ] 料理一覧・詳細・登録・編集画面
-- [ ] 雑貨一覧・登録・編集モーダル
-- [ ] 食事計画画面
-- [ ] 買い物リスト画面
-
----
-
-### Day 8: 統合テスト（2026-05-16）
-
-#### テスト
-- [ ] Backend Unit Test（主要API）
-- [ ] Frontend Component Test（主要画面）
-- [ ] E2E Test（主要フロー）
-
-#### バグ修正
-- [ ] テストで見つかったバグ修正
-- [ ] UI/UX調整
-
----
-
-### Day 9-11: デプロイ準備（2026-05-17 〜 2026-05-19）
-
-#### デプロイ設定
-- [ ] Vercel設定（Frontend）
-- [ ] Railway設定（Backend）
-- [ ] Supabase本番環境設定
-- [ ] 環境変数設定（本番）
-
-#### デプロイ
-- [ ] Backend デプロイ
-- [ ] Frontend デプロイ
-- [ ] 本番環境動作確認
-
----
-
-## 🚧 ブロッカー
+## ブロッカー
 
 なし
 
 ---
 
-## 📝 メモ・気づき
-
-### 2026-05-09
-- 設計フェーズは予定通り1日で完了
-- Tech Stack決定により開発方針が明確化
-- 材料管理はテキスト保存でMVP優先（将来正規化検討）
-- Soft Delete採用で履歴機能に対応
-- 次は Backend project structure作成から開始
-
----
-
-## 📈 ベロシティ
-
-| Week | 計画タスク | 完了タスク | 達成率 |
-|------|-----------|-----------|--------|
-| Week 1 | 7 | 7 | 100% |
-
----
-
-## 🎯 今週の目標
-
-### Week 1（2026-05-09 〜 2026-05-16）
-- [x] 要件定義・設計完了
-- [ ] Backend API実装完了
-- [ ] Frontend実装完了
-- [ ] 統合テスト完了
-
----
-
-## 🔄 次回レビュー
-
-**日時**: 2026-05-10（Day 2開始時）  
-**内容**: Backend project structure確認、開発開始
-
----
-
-**最終更新**: 2026-05-09 16:59  
-**更新者**: Claude + Tai
+**更新者**: AI Assistant + Tai

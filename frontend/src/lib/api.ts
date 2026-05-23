@@ -76,7 +76,11 @@ api.interceptors.response.use(
       if (error.response.status === 401) {
         cachedAccessToken = null;
         tokenExpiresAt = 0;
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.includes('/login') &&
+          !window.location.pathname.includes('/reset-password')
+        ) {
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -120,6 +124,8 @@ api.interceptors.request.use(async (config) => {
 
 export const mealsApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/meals', { params }),
+  getSuggestions: (params?: Record<string, unknown>) =>
+    api.get('/meals/suggestions', { params }),
   getById: (id: string) => api.get(`/meals/${id}`),
   create: (data: unknown) => api.post('/meals', data),
   update: (id: string, data: unknown) => api.put(`/meals/${id}`, data),
@@ -136,6 +142,9 @@ export const productsApi = {
 
 export const shoppingListsApi = {
   getCurrent: () => api.get('/shopping-lists/current'),
+  getHistory: (params?: Record<string, unknown>) =>
+    api.get('/shopping-lists/history', { params }),
+  getById: (listId: string) => api.get(`/shopping-lists/${listId}`),
   generate: (data: unknown) => api.post('/shopping-lists/generate', data),
   updateItem: (listId: string, itemId: string, data: unknown) =>
     api.patch(`/shopping-lists/${listId}/items/${itemId}`, data),

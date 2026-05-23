@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.auth import get_current_user
 from app.schemas.shopping_list import AddItemBody, CheckItemBody, GenerateListBody
@@ -10,6 +10,22 @@ router = APIRouter()
 @router.get("/current", status_code=status.HTTP_200_OK)
 async def get_current_list(user: dict = Depends(get_current_user)):
     return shopping_list_service.get_current_list(user["id"])
+
+
+@router.get("/history", status_code=status.HTTP_200_OK)
+async def get_shopping_history(
+    weeks: int = Query(2, ge=1, le=12),
+    user: dict = Depends(get_current_user),
+):
+    return shopping_list_service.get_history(user["id"], weeks)
+
+
+@router.get("/{list_id}", status_code=status.HTTP_200_OK)
+async def get_shopping_list(
+    list_id: str,
+    user: dict = Depends(get_current_user),
+):
+    return shopping_list_service.get_list_detail(user["id"], list_id)
 
 
 @router.post("/generate", status_code=status.HTTP_201_CREATED)

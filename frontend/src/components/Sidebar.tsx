@@ -17,7 +17,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/reset-password') return null;
 
   const navItems = [
     { href: '/', label: 'Weekly Plan', icon: CalendarDays },

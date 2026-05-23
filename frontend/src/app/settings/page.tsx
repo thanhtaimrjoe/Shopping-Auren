@@ -1,11 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Bell, Shield, Palette, Globe, HelpCircle, LogOut, ChevronRight, Camera } from 'lucide-react';
+import Link from 'next/link';
+import {
+  User, Bell, Shield, Palette, Globe, HelpCircle, LogOut, ChevronRight, Camera, History, Loader2, X,
+} from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { supabase } from '@/lib/supabase';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,43 +39,63 @@ interface SettingItemProps {
   isLast?: boolean;
   danger?: boolean;
   onClick?: () => void;
+  href?: string;
 }
 
-const SettingItem = ({ icon: Icon, label, value, isLast, danger, onClick }: SettingItemProps) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cn(
-      'w-full flex items-center justify-between p-4 sm:p-6 hover:bg-hemp/20 transition-colors group touch-manipulation min-h-[56px]',
-      !isLast && 'border-b border-bark/5'
-    )}
-  >
-    <div className="flex items-center gap-4">
-      <div
-        className={cn(
-          'h-10 w-10 rounded-xl flex items-center justify-center transition-colors',
-          danger
-            ? 'bg-red-50 text-red-500'
-            : 'bg-hemp/30 text-bark/60 group-hover:bg-sage/10 group-hover:text-sage-deep'
-        )}
-      >
-        <Icon className="h-5 w-5" />
+const SettingItem = ({ icon: Icon, label, value, isLast, danger, onClick, href }: SettingItemProps) => {
+  const className = cn(
+    'w-full flex items-center justify-between p-4 sm:p-6 hover:bg-hemp/20 transition-colors group touch-manipulation min-h-[56px]',
+    !isLast && 'border-b border-bark/5'
+  );
+  const inner = (
+    <>
+      <div className="flex items-center gap-4">
+        <div
+          className={cn(
+            'h-10 w-10 rounded-xl flex items-center justify-center transition-colors',
+            danger
+              ? 'bg-red-50 text-red-500'
+              : 'bg-hemp/30 text-bark/60 group-hover:bg-sage/10 group-hover:text-sage-deep'
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className={cn('font-medium', danger ? 'text-red-500' : 'text-bark')}>{label}</span>
       </div>
-      <span className={cn('font-medium', danger ? 'text-red-500' : 'text-bark')}>{label}</span>
-    </div>
-    <div className="flex items-center gap-3">
-      {value && <span className="text-sm text-bark/40">{value}</span>}
-      <ChevronRight className="h-4 w-4 text-bark/20 group-hover:text-bark/40 transition-colors" />
-    </div>
-  </button>
-);
+      <div className="flex items-center gap-3">
+        {value && <span className="text-sm text-bark/40 max-w-[10rem] truncate">{value}</span>}
+        <ChevronRight className="h-4 w-4 text-bark/20 group-hover:text-bark/40 transition-colors" />
+      </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {inner}
+    </button>
+  );
+};
 
 export default function SettingsPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   useRequireAuth();
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const displayName =
+    (user?.user_metadata?.display_name as string | undefined) ||
     (user?.user_metadata?.full_name as string | undefined) ||
     user?.email?.split('@')[0] ||
     'Account';
@@ -78,6 +103,31 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     await signOut();
     router.replace('/login');
+  };
+
+  const openEditName = () => {
+    setEditName(displayName);
+    setSaveError(null);
+    setIsEditOpen(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setSaveError('Display name cannot be empty.');
+      return;
+    }
+    setIsSaving(true);
+    setSaveError(null);
+    const { error } = await supabase.auth.updateUser({
+      data: { display_name: trimmed, full_name: trimmed },
+    });
+    if (error) {
+      setSaveError(error.message);
+    } else {
+      setIsEditOpen(false);
+    }
+    setIsSaving(false);
   };
 
   if (loading || !user) {
@@ -94,7 +144,9 @@ export default function SettingsPage() {
         <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2 sm:mb-4">
           Preferences
         </span>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">Settings</h1>
+        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
+          Settings
+        </h1>
         <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
           Tailor your culinary planning experience to your personal rhythm.
         </p>
@@ -114,16 +166,22 @@ export default function SettingsPage() {
           <div className="text-center md:text-left flex-1">
             <h2 className="text-3xl font-serif mb-2">{displayName}</h2>
             <p className="text-cream/60 mb-6">{user.email}</p>
-            <span className="px-4 py-1.5 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest">
-              Shopping Memo
-            </span>
+            <button
+              type="button"
+              onClick={openEditName}
+              className="px-4 py-1.5 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-white/20 transition-colors touch-manipulation"
+            >
+              Edit display name
+            </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto">
         <SettingSection title="General">
-          <SettingItem icon={User} label="Account Information" value={user.email ?? ''} />
+          <SettingItem icon={User} label="Display name" value={displayName} onClick={openEditName} />
+          <SettingItem icon={User} label="Account email" value={user.email ?? ''} />
+          <SettingItem icon={History} label="Shopping history" href="/history" />
           <SettingItem icon={Bell} label="Notifications" value="Enabled" />
           <SettingItem icon={Shield} label="Privacy & Security" />
           <SettingItem icon={Palette} label="Appearance" value="Serene (Light)" isLast />
@@ -139,16 +197,57 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-3 p-6 bg-red-50 text-red-500 rounded-[2rem] font-bold uppercase tracking-[0.2em] text-xs hover:bg-red-100 transition-colors"
+            className="w-full flex items-center justify-center gap-3 p-6 bg-red-50 text-red-500 rounded-[2rem] font-bold uppercase tracking-[0.2em] text-xs hover:bg-red-100 transition-colors touch-manipulation min-h-[48px]"
           >
             <LogOut className="h-5 w-5" />
             Sign Out of Account
           </button>
           <p className="text-center text-[10px] text-bark/20 uppercase tracking-[0.4em] mt-8">
-            Shopping Memo v0.2.0 • Built with Intention
+            Shopping Memo v0.3.0 • Built with Intention
           </p>
         </section>
       </div>
+
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-bark/40 backdrop-blur-sm"
+            aria-label="Close"
+            onClick={() => setIsEditOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-warm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-bold text-bark uppercase tracking-[0.2em]">Display name</h2>
+              <button
+                type="button"
+                onClick={() => setIsEditOpen(false)}
+                className="p-3 bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              type="text"
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark mb-4 focus:ring-2 focus:ring-sage/20"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              maxLength={100}
+            />
+            {saveError && (
+              <p className="text-sm text-red-500 mb-4 text-center">{saveError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleSaveName}
+              disabled={isSaving}
+              className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px]"
+            >
+              {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

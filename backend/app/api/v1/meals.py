@@ -1,10 +1,11 @@
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.auth import get_current_user
 from app.schemas.meal import MealCreate, MealUpdate
-from app.services import meal_service
+from app.services import meal_service, meal_suggestion_service
 
 router = APIRouter()
 
@@ -28,6 +29,15 @@ async def get_meals(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/suggestions", status_code=status.HTTP_200_OK)
+async def get_meal_suggestions(
+    week_start: Optional[date] = Query(None),
+    limit: int = Query(5, ge=1, le=20),
+    user: dict = Depends(get_current_user),
+):
+    return meal_suggestion_service.get_suggestions(user["id"], week_start, limit)
 
 
 @router.get("/{meal_id}", status_code=status.HTTP_200_OK)

@@ -30,6 +30,10 @@
 - API: Endpoints, Request/Response bodies
 - Frontend: UI components, State management
 
+#### 実装メモ (2026-05-23)
+- **削除**: MVP では `deleted_at` による **Soft Delete** を継続（meal plan 参照ガード付き）。Hard Delete への移行は将来タスク。
+- **履歴**: `shopping_lists.snapshot_json` に完了時スナップショットを保存（US-014）。
+
 ---
 
 ## 決定事項一覧

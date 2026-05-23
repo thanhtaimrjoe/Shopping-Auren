@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 
@@ -53,11 +53,46 @@ def fetch_items(list_id: str) -> list:
     return [format_item(row) for row in resp.data]
 
 
-def verify_list_owner(list_id: str, user_id: str) -> dict:
+def build_snapshot(items: list) -> list:
+    return [
+        {
+            "name": item["name"],
+            "category": item["category"],
+            "is_checked": item["is_checked"],
+            "note": item.get("note"),
+            "source_type": item.get("source_type"),
+        }
+        for item in items
+    ]
+
+
+def items_from_snapshot(snapshot: list | None) -> list:
+    if not snapshot:
+        return []
+    return [
+        {
+            "id": f"snapshot-{index}",
+            "name": row.get("name", ""),
+            "category": row.get("category", "other"),
+            "source_type": row.get("source_type", "manual"),
+            "source_id": None,
+            "note": row.get("note"),
+            "is_checked": bool(row.get("is_checked")),
+            "checked_at": None,
+            "created_at": None,
+        }
+        for index, row in enumerate(snapshot)
+    ]
+
+
+def verify_list_owner(list_id: str, user_id: str, include_snapshot: bool = False) -> dict:
+    columns = "id, week_start_date, status, meal_plan_id, created_at, completed_at"
+    if include_snapshot:
+        columns += ", snapshot_json"
     try:
         resp = (
             db.table(SHOPPING_LISTS)
-            .select("id, week_start_date, status, meal_plan_id, created_at, completed_at")
+            .select(columns)
             .eq("id", list_id)
             .eq("user_id", user_id)
             .single()
@@ -65,6 +100,8 @@ def verify_list_owner(list_id: str, user_id: str) -> dict:
         )
         return resp.data
     except Exception as exc:
+        if include_snapshot and "snapshot_json" in str(exc):
+            return verify_list_owner(list_id, user_id, include_snapshot=False)
         raise_from_supabase(
             exc,
             not_found_detail="Shopping list not found",
@@ -228,22 +265,71 @@ def complete_list(user_id: str, list_id: str) -> dict:
     if shopping_list["status"] == "completed":
         raise HTTPException(status_code=409, detail="Shopping list is already completed")
 
+    items = fetch_items(list_id)
+    snapshot = build_snapshot(items)
     now = datetime.now(timezone.utc).isoformat()
-    resp = (
-        db.table(SHOPPING_LISTS)
-        .update({"status": "completed", "completed_at": now})
-        .eq("id", list_id)
-        .execute()
-    )
+    update_payload = {"status": "completed", "completed_at": now, "snapshot_json": snapshot}
+    try:
+        resp = db.table(SHOPPING_LISTS).update(update_payload).eq("id", list_id).execute()
+    except Exception:
+        resp = (
+            db.table(SHOPPING_LISTS)
+            .update({"status": "completed", "completed_at": now})
+            .eq("id", list_id)
+            .execute()
+        )
     if not resp.data:
         raise HTTPException(status_code=500, detail="Failed to complete shopping list")
 
     updated = resp.data[0]
-    items = fetch_items(list_id)
     return {
         "success": True,
         "data": {"shopping_list": format_list(updated, items)},
         "message": "Shopping list completed successfully",
+    }
+
+
+def get_history(user_id: str, weeks: int) -> dict:
+    cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    resp = (
+        db.table(SHOPPING_LISTS)
+        .select("id, week_start_date, status, completed_at, shopping_items(is_checked)")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .gte("completed_at", cutoff.isoformat())
+        .order("completed_at", desc=True)
+        .execute()
+    )
+
+    history: list[dict] = []
+    for row in resp.data or []:
+        items_raw = row.pop("shopping_items", None) or []
+        total_items = len(items_raw)
+        checked_items = sum(1 for item in items_raw if item.get("is_checked"))
+
+        history.append({
+            "id": row["id"],
+            "week_start_date": row["week_start_date"],
+            "status": row["status"],
+            "total_items": total_items,
+            "checked_items": checked_items,
+            "completed_at": row.get("completed_at"),
+        })
+
+    return {"success": True, "data": {"history": history, "total": len(history)}}
+
+
+def get_list_detail(user_id: str, list_id: str) -> dict:
+    shopping_list = verify_list_owner(list_id, user_id, include_snapshot=True)
+    snapshot = shopping_list.get("snapshot_json")
+    if snapshot:
+        items = items_from_snapshot(snapshot)
+    else:
+        items = fetch_items(list_id)
+
+    return {
+        "success": True,
+        "data": {"shopping_list": format_list(shopping_list, items)},
     }
 
 

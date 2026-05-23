@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 export function MobileBottomNav() {
   const pathname = usePathname();
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/reset-password') return null;
 
   return (
     <nav
