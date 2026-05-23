@@ -73,8 +73,15 @@ api.interceptors.response.use(
     }
 
     if (error.response) {
+      if (error.response.status === 401) {
+        cachedAccessToken = null;
+        tokenExpiresAt = 0;
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
       if (
-        error.response.status === 401 ||
         (error.response.status === 404 && error.config?.url === '/meal-plans/current') ||
         (error.response.status === 404 && error.config?.url === '/shopping-lists/current')
       ) {
@@ -143,6 +150,7 @@ export const mealPlansApi = {
   getCurrent: (params?: Record<string, unknown>) => api.get('/meal-plans/current', { params }),
   save: (data: unknown) => api.post('/meal-plans', data),
   update: (planId: string, data: unknown) => api.put(`/meal-plans/${planId}`, data),
+  delete: (planId: string) => api.delete(`/meal-plans/${planId}`),
 };
 
 export default api;

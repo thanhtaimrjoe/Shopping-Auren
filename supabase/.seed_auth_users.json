@@ -1,0 +1,27 @@
+[
+  {
+    "id": "2e962ef9-d902-46db-ba2b-1f339b12a4f3",
+    "email": "thanhtaimrjoe@gmail.com",
+    "encrypted_password": "$2a$10$wbrVqRAiJnlUjICyvHO6cOJ7fLixNI/ryNeTPzom9SVTOfleWtIfG",
+    "email_confirmed_at": "2026-05-09T17:52:55.581462+00:00",
+    "created_at": "2026-05-09T17:52:55.550295+00:00",
+    "updated_at": "2026-05-23T08:18:01.740463+00:00",
+    "raw_app_meta_data": { "provider": "email", "providers": ["email"] },
+    "raw_user_meta_data": { "email_verified": true }
+  },
+  {
+    "id": "25a3c25f-1576-4d83-b875-3dc3cadd874d",
+    "email": "hue.yurina@gmail.com",
+    "encrypted_password": "$2a$10$ur655s/x6C9osPUFh814dOomk1jvw9Bocq325WhZkFECQkUv7nlZm",
+    "email_confirmed_at": "2026-05-14T14:39:25.224018+00:00",
+    "created_at": "2026-05-14T14:39:13.369609+00:00",
+    "updated_at": "2026-05-14T14:39:25.243509+00:00",
+    "raw_app_meta_data": { "provider": "email", "providers": ["email"] },
+    "raw_user_meta_data": {
+      "sub": "25a3c25f-1576-4d83-b875-3dc3cadd874d",
+      "email": "hue.yurina@gmail.com",
+      "email_verified": true,
+      "phone_verified": false
+    }
+  }
+]

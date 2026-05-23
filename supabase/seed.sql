@@ -14,8 +14,8 @@ INSERT INTO auth.users (
   email_change_confirm_status, banned_until, reauthentication_token,
   reauthentication_sent_at, is_sso_user, deleted_at, is_anonymous
 ) VALUES
-('00000000-0000-0000-0000-000000000000'::uuid, '25a3c25f-1576-4d83-b875-3dc3cadd874d', 'authenticated', 'authenticated', 'hue.yurina@gmail.com', NULL, '2026-05-14T14:39:25.224018Z', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"provider": "email", "providers": ["email"]}'::jsonb, '{}'::jsonb, NULL, '2026-05-14T14:39:13.369609Z', '2026-05-14T14:39:25.243509Z', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, false),
-('00000000-0000-0000-0000-000000000000'::uuid, '2e962ef9-d902-46db-ba2b-1f339b12a4f3', 'authenticated', 'authenticated', 'thanhtaimrjoe@gmail.com', NULL, '2026-05-09T17:52:55.581462Z', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '{"provider": "email", "providers": ["email"]}'::jsonb, '{}'::jsonb, NULL, '2026-05-09T17:52:55.550295Z', '2026-05-23T08:18:01.740463Z', NULL, NULL, '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, false)
+('00000000-0000-0000-0000-000000000000'::uuid, '2e962ef9-d902-46db-ba2b-1f339b12a4f3', 'authenticated', 'authenticated', 'thanhtaimrjoe@gmail.com', '$2a$10$wbrVqRAiJnlUjICyvHO6cOJ7fLixNI/ryNeTPzom9SVTOfleWtIfG', '2026-05-09T17:52:55.581462+00:00', NULL, '', NULL, '', NULL, '', '', NULL, NULL, '{"provider": "email", "providers": ["email"]}'::jsonb, '{"email_verified": true}'::jsonb, NULL, '2026-05-09T17:52:55.550295+00:00', '2026-05-23T08:18:01.740463+00:00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false),
+('00000000-0000-0000-0000-000000000000'::uuid, '25a3c25f-1576-4d83-b875-3dc3cadd874d', 'authenticated', 'authenticated', 'hue.yurina@gmail.com', '$2a$10$ur655s/x6C9osPUFh814dOomk1jvw9Bocq325WhZkFECQkUv7nlZm', '2026-05-14T14:39:25.224018+00:00', NULL, '', NULL, '', NULL, '', '', NULL, NULL, '{"provider": "email", "providers": ["email"]}'::jsonb, '{"sub": "25a3c25f-1576-4d83-b875-3dc3cadd874d", "email": "hue.yurina@gmail.com", "email_verified": true, "phone_verified": false}'::jsonb, NULL, '2026-05-14T14:39:13.369609+00:00', '2026-05-14T14:39:25.243509+00:00', NULL, NULL, '', '', NULL, '', 0, NULL, '', NULL, false, NULL, false)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -220,5 +220,16 @@ VALUES
   ('c1ccd303-7c3b-4634-915d-4035d516618a', 'e4392b4f-f50b-40ab-bfe5-2639f0acf6bc', 'Sữa đặc', 'other', 'product', 'a9c0c42f-635c-4177-b519-0ff0b1f76403', false, NULL, '2026-05-23T08:18:31.358801+00:00', 'Mua thêm'),
   ('738604b7-3e33-4057-b6ea-e4f59d2aa89b', 'e4392b4f-f50b-40ab-bfe5-2639f0acf6bc', 'Yakurt', 'other', 'product', 'a9c0c42f-635c-4177-b519-0ff0b1f76402', false, NULL, '2026-05-23T08:18:31.358801+00:00', 'Mua thêm')
 ON CONFLICT DO NOTHING;
+
+-- GoTrue cannot scan NULL into string token columns
+UPDATE auth.users SET
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change = COALESCE(email_change, ''),
+  phone_change = COALESCE(phone_change, ''),
+  phone_change_token = COALESCE(phone_change_token, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  reauthentication_token = COALESCE(reauthentication_token, '');
 
 SET session_replication_role = origin;

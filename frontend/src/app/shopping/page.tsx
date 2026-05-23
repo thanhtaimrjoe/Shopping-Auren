@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { shoppingListsApi, mealPlansApi } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { format, startOfWeek } from 'date-fns';
 
 function cn(...inputs: ClassValue[]) {
@@ -31,12 +31,13 @@ interface ShoppingList {
 }
 
 export default function ShoppingPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useRequireAuth();
   const [list, setList] = useState<ShoppingList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
   const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
@@ -98,6 +99,21 @@ export default function ShoppingPage() {
     }
   };
 
+  const handleCompleteList = async () => {
+    if (!list || list.status === 'completed') return;
+    setIsCompleting(true);
+    try {
+      const response = await shoppingListsApi.complete(list.id);
+      if (response.data.success) {
+        setList(response.data.data.shopping_list);
+      }
+    } catch (error) {
+      console.error('Failed to complete list:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const handleGenerateList = async () => {
     if (!currentMealPlanId) return;
     setIsGenerating(true);
@@ -119,7 +135,7 @@ export default function ShoppingPage() {
 
   const categories = Array.from(new Set(filteredItems.map(item => item.category)));
 
-  if (authLoading || (isLoading && !list)) {
+  if (authLoading || !user || (isLoading && !list)) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-sage" />
@@ -178,6 +194,28 @@ export default function ShoppingPage() {
         </div>
       ) : (
         <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="text-sm text-bark/50">
+              {list.checked_items} / {list.total_items} checked
+              {list.status === 'completed' && (
+                <span className="ml-3 text-sage-deep font-semibold uppercase tracking-widest text-xs">
+                  Completed
+                </span>
+              )}
+            </div>
+            {list.status === 'active' && list.total_items > 0 && (
+              <button
+                type="button"
+                onClick={handleCompleteList}
+                disabled={isCompleting}
+                className="bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
+              >
+                {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Finish shopping
+              </button>
+            )}
+          </div>
+
           {/* Search & Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="relative flex-1">

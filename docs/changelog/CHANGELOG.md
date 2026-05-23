@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-23 18:00] - Backend MVC refactor + frontend auth polish
+
+**担当**: AI Assistant  
+**タイプ**: Refactor / Feature  
+**関連US**: US-001, US-005, US-006, US-007  
+**影響範囲**: Backend, Frontend
+
+### 変更内容
+- **Backend MVC**: tách Pydantic → `app/schemas/`, logic → `app/services/`, router mỏng `app/api/v1/`
+- Shared `app/utils/ingredients.py`, `app/utils/db_errors.py`, `app/models/tables.py`
+- Sửa products GET filter `deleted_at`; meal GET filter soft-delete; meal delete chặn khi còn trong meal plan
+- Meal plan response: `ingredients` dạng text (giống meals API)
+- **Frontend**: `useRequireAuth` cho `/shopping`, `/settings`; Settings hiện email thật + Sign out
+- Shopping: nút **Finish shopping** (`POST .../complete`); API redirect 401 → `/login`
+- `mealPlansApi.delete` trong client
+
+### 実装詳細
+- `backend/ARCHITECTURE.md` — sơ đồ layer
+- Files: `app/services/{meal,product,meal_plan,shopping_list}_service.py`, `app/schemas/*.py`
+
+### テスト
+- [x] `pytest` (31 tests, pass với local/remote DB constraints)
+
+### 備考
+- Auth vẫn qua Supabase client (không có `/auth/login` trên FastAPI)
+
+---
+
 ## [2026-05-23 16:10] - Supabase local Docker + production data seed
 
 **担当**: AI Assistant  

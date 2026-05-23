@@ -152,33 +152,33 @@ def auth_users_insert(users: list[dict[str, Any]]) -> str:
                     sql_literal(user.get("email")),
                     sql_literal(user.get("encrypted_password")),
                     sql_literal(user.get("email_confirmed_at")),
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
+                    "NULL",  # invited_at
+                    "''",  # confirmation_token (GoTrue requires empty string, not NULL)
+                    "NULL",  # confirmation_sent_at
+                    "''",  # recovery_token
+                    "NULL",  # recovery_sent_at
+                    "''",  # email_change_token_new
+                    "''",  # email_change
+                    "NULL",  # email_change_sent_at
+                    "NULL",  # last_sign_in_at
                     sql_literal(user.get("raw_app_meta_data") or {"provider": "email", "providers": ["email"]}),
                     sql_literal(user.get("raw_user_meta_data") or {}),
-                    "NULL",
+                    "NULL",  # is_super_admin
                     sql_literal(user.get("created_at")),
                     sql_literal(user.get("updated_at")),
-                    "NULL",
-                    "NULL",
-                    "''",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "NULL",
-                    "false",
-                    "NULL",
-                    "false",
+                    "NULL",  # phone
+                    "NULL",  # phone_confirmed_at
+                    "''",  # phone_change
+                    "''",  # phone_change_token
+                    "NULL",  # phone_change_sent_at
+                    "''",  # email_change_token_current
+                    "0",  # email_change_confirm_status
+                    "NULL",  # banned_until
+                    "''",  # reauthentication_token
+                    "NULL",  # reauthentication_sent_at
+                    "false",  # is_sso_user
+                    "NULL",  # deleted_at
+                    "false",  # is_anonymous
                 ]
             )
             + ")"
@@ -207,9 +207,14 @@ def main() -> int:
         "SET session_replication_role = replica;\n\n",
     ]
 
+    auth_users_path = ROOT / "supabase" / ".seed_auth_users.json"
+    if not auth_users_path.exists():
+        print(f"Missing {auth_users_path} (auth password hashes for local seed)", file=sys.stderr)
+        return 1
+    users = json.loads(auth_users_path.read_text(encoding="utf-8"))
+    parts.append(auth_users_insert(users))
+
     with httpx.Client(base_url=url, headers=headers, timeout=60.0) as client:
-        users = fetch_auth_users(client)
-        parts.append(auth_users_insert(users))
 
         identities_path = ROOT / "supabase" / ".seed_identities.json"
         if identities_path.exists():
@@ -220,6 +225,18 @@ def main() -> int:
             rows = fetch_table(client, table)
             parts.append(insert_statement("public", table, rows))
 
+    parts.append(
+        "-- GoTrue cannot scan NULL into string token columns\n"
+        "UPDATE auth.users SET\n"
+        "  confirmation_token = COALESCE(confirmation_token, ''),\n"
+        "  recovery_token = COALESCE(recovery_token, ''),\n"
+        "  email_change_token_new = COALESCE(email_change_token_new, ''),\n"
+        "  email_change = COALESCE(email_change, ''),\n"
+        "  phone_change = COALESCE(phone_change, ''),\n"
+        "  phone_change_token = COALESCE(phone_change_token, ''),\n"
+        "  email_change_token_current = COALESCE(email_change_token_current, ''),\n"
+        "  reauthentication_token = COALESCE(reauthentication_token, '');\n\n"
+    )
     parts.append("SET session_replication_role = origin;\n")
 
     SEED_PATH.write_text("".join(parts), encoding="utf-8")
