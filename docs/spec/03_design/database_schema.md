@@ -138,7 +138,9 @@
 | id | UUID | NOT NULL | gen_random_uuid() | リストID（PK） |
 | user_id | UUID | NOT NULL | - | ユーザーID（FK） |
 | meal_plan_id | UUID | NULL | - | 食事計画ID（FK） |
-| week_start_date | DATE | NOT NULL | - | 週の開始日 |
+| week_start_date | DATE | NOT NULL | - | 内部用（レガシー互換） |
+| week_from_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の開始日 |
+| week_to_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の終了日 |
 | status | VARCHAR(20) | NOT NULL | 'active' | ステータス（active/completed） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | completed_at | TIMESTAMP | NULL | - | 完了日時 |

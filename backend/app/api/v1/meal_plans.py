@@ -1,7 +1,4 @@
-from datetime import date
-from typing import Optional
-
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.auth import get_current_user
 from app.schemas.meal_plan import MealPlanCreate, MealPlanUpdate
@@ -11,11 +8,8 @@ router = APIRouter()
 
 
 @router.get("/current", status_code=status.HTTP_200_OK)
-async def get_current_plan(
-    week_start: Optional[date] = Query(None, description="Week start date (YYYY-MM-DD, must be Monday)"),
-    user: dict = Depends(get_current_user),
-):
-    return meal_plan_service.get_current_plan(user["id"], week_start)
+async def get_current_plan(user: dict = Depends(get_current_user)):
+    return meal_plan_service.get_current_plan(user["id"])
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

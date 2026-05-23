@@ -1,5 +1,4 @@
 from datetime import date, datetime, timezone
-from typing import Optional
 
 from fastapi import HTTPException, status
 
@@ -9,15 +8,13 @@ from app.schemas.meal_plan import MealPlanCreate, MealPlanUpdate
 from app.utils.db_errors import is_not_found, raise_from_supabase
 from app.utils.ingredients import jsonb_to_text
 
-
-def is_monday(value: date) -> bool:
-    return value.weekday() == 0
+# Internal placeholder for DB unique constraint; not shown in UI.
+PLACEHOLDER_WEEK_START = date(2000, 1, 3)
 
 
 def format_meal_plan(plan: dict, items: list) -> dict:
     return {
         "id": plan["id"],
-        "week_start_date": plan["week_start_date"],
         "status": plan["status"],
         "meals": items,
         "created_at": plan["created_at"],
@@ -58,35 +55,22 @@ def fetch_plan_items(plan_id: str) -> list:
     return [format_plan_item(row) for row in resp.data]
 
 
-def get_current_plan(user_id: str, week_start: Optional[date]) -> dict:
-    if week_start is None:
-        today = date.today()
-        days_until_monday = (7 - today.weekday()) % 7 or 7
-        week_start = date.fromordinal(today.toordinal() + days_until_monday)
-
-    if not is_monday(week_start):
-        raise HTTPException(status_code=400, detail="week_start must be a Monday")
-
-    try:
-        response = (
-            db.table(MEAL_PLANS)
-            .select(
-                "id, week_start_date, status, created_at, updated_at, "
-                "meal_plan_items(id, day_of_week, meals(id, name, category, ingredients))"
-            )
-            .eq("user_id", user_id)
-            .eq("week_start_date", week_start.isoformat())
-            .single()
-            .execute()
+def get_current_plan(user_id: str) -> dict:
+    resp = (
+        db.table(MEAL_PLANS)
+        .select(
+            "id, week_start_date, status, created_at, updated_at, "
+            "meal_plan_items(id, day_of_week, meals(id, name, category, ingredients))"
         )
-    except Exception as exc:
-        raise_from_supabase(
-            exc,
-            not_found_detail="Meal plan not found for this week",
-            server_detail=f"Failed to fetch meal plan: {exc}",
-        )
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(status_code=404, detail="Meal plan not found")
 
-    plan = dict(response.data)
+    plan = dict(resp.data[0])
     items_raw = plan.pop("meal_plan_items", []) or []
     items = [
         format_plan_item(row)
@@ -96,28 +80,24 @@ def get_current_plan(user_id: str, week_start: Optional[date]) -> dict:
 
 
 def create_meal_plan(user_id: str, body: MealPlanCreate) -> dict:
-    try:
-        existing = (
-            db.table(MEAL_PLANS)
-            .select("id")
-            .eq("user_id", user_id)
-            .eq("week_start_date", body.week_start_date.isoformat())
-            .single()
-            .execute()
+    existing = (
+        db.table(MEAL_PLANS)
+        .select("id")
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    if existing.data:
+        raise HTTPException(
+            status_code=409,
+            detail="Meal plan already exists. Update the current plan instead.",
         )
-        if existing.data:
-            raise HTTPException(status_code=409, detail="Meal plan already exists for this week")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        if not is_not_found(exc):
-            raise HTTPException(status_code=500, detail=f"Failed to check existing plan: {exc}")
 
     _validate_meal_ids(user_id, body.meals)
 
     plan_resp = db.table(MEAL_PLANS).insert({
         "user_id": user_id,
-        "week_start_date": body.week_start_date.isoformat(),
+        "week_start_date": PLACEHOLDER_WEEK_START.isoformat(),
         "status": "draft",
     }).execute()
     plan = plan_resp.data[0]

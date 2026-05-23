@@ -141,10 +141,7 @@ export default function SettingsPage() {
   return (
     <div className="page-shell animate-page-enter min-w-0">
       <header className="mb-6 sm:mb-10">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2 sm:mb-4">
-          Preferences
-        </span>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
+        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Settings
         </h1>
         <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">

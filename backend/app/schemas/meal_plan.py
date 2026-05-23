@@ -1,7 +1,6 @@
-from datetime import date
 from typing import List
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class MealPlanItemInput(BaseModel):
@@ -10,15 +9,7 @@ class MealPlanItemInput(BaseModel):
 
 
 class MealPlanCreate(BaseModel):
-    week_start_date: date = Field(...)
     meals: List[MealPlanItemInput] = Field(default_factory=list)
-
-    @field_validator("week_start_date")
-    @classmethod
-    def validate_monday(cls, value: date) -> date:
-        if value.weekday() != 0:
-            raise ValueError("week_start_date must be a Monday")
-        return value
 
     @model_validator(mode="after")
     def validate_daily_limit(self):

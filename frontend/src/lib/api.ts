@@ -124,8 +124,6 @@ api.interceptors.request.use(async (config) => {
 
 export const mealsApi = {
   getAll: (params?: Record<string, unknown>) => api.get('/meals', { params }),
-  getSuggestions: (params?: Record<string, unknown>) =>
-    api.get('/meals/suggestions', { params }),
   getById: (id: string) => api.get(`/meals/${id}`),
   create: (data: unknown) => api.post('/meals', data),
   update: (id: string, data: unknown) => api.put(`/meals/${id}`, data),
@@ -152,7 +150,8 @@ export const shoppingListsApi = {
     api.post(`/shopping-lists/${listId}/items`, data),
   deleteItem: (listId: string, itemId: string) =>
     api.delete(`/shopping-lists/${listId}/items/${itemId}`),
-  complete: (listId: string) => api.post(`/shopping-lists/${listId}/complete`),
+  complete: (listId: string, data: { week_from_date: string; week_to_date: string }) =>
+    api.post(`/shopping-lists/${listId}/complete`, data),
 };
 
 export const mealPlansApi = {

@@ -219,10 +219,7 @@ export default function MealsPage() {
     <div className="page-shell animate-page-enter min-w-0">
       <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2">
-            Library
-          </span>
-          <h1 className="text-2xl sm:text-4xl text-bark font-serif">Meals</h1>
+          <h1 className="page-title text-2xl sm:text-4xl text-bark font-serif">Meals</h1>
         </div>
         <button
           type="button"

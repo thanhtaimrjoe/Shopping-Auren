@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Search, CheckCircle2, MoreHorizontal, ShoppingBag, ArrowLeft, Filter,
+  Search, CheckCircle2, MoreHorizontal, ShoppingBag, Filter,
   Loader2, ListPlus, Plus, Trash2, X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -10,7 +10,6 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { shoppingListsApi, mealPlansApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { format, startOfWeek } from 'date-fns';
 import { Toast, type ToastMessage } from '@/components/Toast';
 
 function cn(...inputs: ClassValue[]) {
@@ -23,11 +22,11 @@ interface ShoppingItem {
   category: string;
   is_checked: boolean;
   source_type?: string;
+  note?: string | null;
 }
 
 interface ShoppingList {
   id: string;
-  week_start_date: string;
   status: string;
   items: ShoppingItem[];
   total_items: number;
@@ -54,10 +53,10 @@ export default function ShoppingPage() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState<string>('other');
   const [isAddingItem, setIsAddingItem] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [weekFrom, setWeekFrom] = useState('');
+  const [weekTo, setWeekTo] = useState('');
   const allCheckedNotifiedRef = useRef(false);
-
-  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 1 }), []);
-  const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
 
   const isListActive = list?.status === 'active';
 
@@ -66,7 +65,7 @@ export default function ShoppingPage() {
     setIsLoading(true);
 
     try {
-      const planResp = await mealPlansApi.getCurrent({ week_start: weekStartKey });
+      const planResp = await mealPlansApi.getCurrent();
       if (planResp.data.success) {
         setCurrentMealPlanId(planResp.data.data.meal_plan?.id || null);
       }
@@ -87,7 +86,7 @@ export default function ShoppingPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, weekStartKey]);
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -131,13 +130,28 @@ export default function ShoppingPage() {
     }
   };
 
-  const handleCompleteList = async () => {
+  const openCompleteModal = () => {
     if (!list || list.status === 'completed') return;
+    setWeekFrom('');
+    setWeekTo('');
+    setIsCompleteModalOpen(true);
+  };
+
+  const handleCompleteList = async () => {
+    if (!list || list.status === 'completed' || !weekFrom || !weekTo) return;
+    if (weekTo < weekFrom) {
+      setToast({ type: 'error', message: '終了日は開始日以降にしてください。' });
+      return;
+    }
     setIsCompleting(true);
     try {
-      const response = await shoppingListsApi.complete(list.id);
+      const response = await shoppingListsApi.complete(list.id, {
+        week_from_date: weekFrom,
+        week_to_date: weekTo,
+      });
       if (response.data.success) {
-        setList(response.data.data.shopping_list);
+        setList(null);
+        setIsCompleteModalOpen(false);
         setToast({ type: 'success', message: '買い物リストを完了しました。' });
       }
     } catch (error) {
@@ -236,23 +250,7 @@ export default function ShoppingPage() {
       {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
 
       <header className="mb-6 sm:mb-10">
-        <div className="flex items-center justify-between gap-2 text-bark/40 mb-3 sm:mb-4">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="hover:text-sage-deep transition-colors p-1 -m-1 touch-manipulation">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em] sm:tracking-[0.4em]">
-              Back to Schedule
-            </span>
-          </div>
-          <Link
-            href="/history"
-            className="text-[10px] font-bold uppercase tracking-widest text-sage-deep hover:underline touch-manipulation"
-          >
-            History
-          </Link>
-        </div>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
+        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping List
         </h1>
         <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
@@ -268,7 +266,7 @@ export default function ShoppingPage() {
           <h2 className="text-3xl font-serif text-bark mb-4">No active list found</h2>
           <p className="text-bark/60 mb-10 text-lg">
             {currentMealPlanId
-              ? 'You have a meal plan for this week. Generate a shopping list to get started.'
+              ? 'You have a meal plan. Generate a shopping list to get started.'
               : 'Plan your meals first to automatically generate a shopping list.'}
           </p>
           {currentMealPlanId ? (
@@ -315,7 +313,7 @@ export default function ShoppingPage() {
               {isListActive && list.total_items > 0 && (
                 <button
                   type="button"
-                  onClick={handleCompleteList}
+                  onClick={openCompleteModal}
                   disabled={isCompleting}
                   className="w-full sm:w-auto justify-center bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm disabled:opacity-50 flex items-center gap-2 touch-manipulation min-h-[48px]"
                 >
@@ -376,11 +374,11 @@ export default function ShoppingPage() {
                             type="button"
                             onClick={() => toggleItem(item.id, item.is_checked)}
                             disabled={list.status === 'completed'}
-                            className="flex items-center gap-4 flex-1 text-left touch-manipulation min-h-[44px]"
+                            className="flex items-start gap-4 flex-1 text-left touch-manipulation min-h-[44px]"
                           >
                             <div
                               className={cn(
-                                'h-6 w-6 rounded-full flex items-center justify-center transition-colors shrink-0',
+                                'h-6 w-6 rounded-full flex items-center justify-center transition-colors shrink-0 mt-0.5',
                                 item.is_checked
                                   ? 'bg-sage text-cream'
                                   : 'border-2 border-bark/10 group-hover:border-sage/40'
@@ -388,14 +386,26 @@ export default function ShoppingPage() {
                             >
                               {item.is_checked ? <CheckCircle2 className="h-4 w-4" /> : null}
                             </div>
-                            <span
-                              className={cn(
-                                'font-medium transition-all',
-                                item.is_checked ? 'text-bark/40 line-through' : 'text-bark'
-                              )}
-                            >
-                              {item.name}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span
+                                className={cn(
+                                  'font-medium transition-all block',
+                                  item.is_checked ? 'text-bark/40 line-through' : 'text-bark'
+                                )}
+                              >
+                                {item.name}
+                              </span>
+                              {item.note ? (
+                                <span
+                                  className={cn(
+                                    'block text-xs mt-1 leading-snug',
+                                    item.is_checked ? 'text-bark/30' : 'text-bark/50'
+                                  )}
+                                >
+                                  {item.note}
+                                </span>
+                              ) : null}
+                            </div>
                           </button>
                           {isListActive && item.source_type === 'manual' && (
                             <button
@@ -419,6 +429,67 @@ export default function ShoppingPage() {
             )}
           </div>
         </>
+      )}
+
+      {isCompleteModalOpen && list && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-bark/40 backdrop-blur-sm"
+            aria-label="Close"
+            onClick={() => !isCompleting && setIsCompleteModalOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-warm animate-page-enter">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xs font-bold text-bark uppercase tracking-[0.2em]">
+                Weekly period
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsCompleteModalOpen(false)}
+                disabled={isCompleting}
+                className="p-3 bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-bark/60 mb-6">
+              Enter the date range for this shopping trip. It will be saved in your history.
+            </p>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
+                  From
+                </label>
+                <input
+                  type="date"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  value={weekFrom}
+                  onChange={(e) => setWeekFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
+                  To
+                </label>
+                <input
+                  type="date"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  value={weekTo}
+                  onChange={(e) => setWeekTo(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleCompleteList}
+                disabled={isCompleting || !weekFrom || !weekTo}
+                className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px]"
+              >
+                {isCompleting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save & finish'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {isAddSheetOpen && list && (

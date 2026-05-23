@@ -1,6 +1,7 @@
+from datetime import date
 from typing import List
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 VALID_ITEM_CATEGORIES = frozenset({
     "vegetables", "meat", "seafood", "dairy", "grains",
@@ -27,3 +28,14 @@ class AddItemBody(BaseModel):
 
 class CheckItemBody(BaseModel):
     is_checked: bool
+
+
+class CompleteListBody(BaseModel):
+    week_from_date: date = Field(...)
+    week_to_date: date = Field(...)
+
+    @model_validator(mode="after")
+    def validate_week_range(self):
+        if self.week_to_date < self.week_from_date:
+            raise ValueError("week_to_date must be on or after week_from_date")
+        return self

@@ -5,6 +5,66 @@
 
 ---
 
+## [2026-05-24 12:00] - Remove meal suggestions; show dish notes on shopping list
+
+**担当**: AI Assistant  
+**タイプ**: Refactor / Feature  
+**関連US**: US-011, US-015 (obsolete)  
+**影響範囲**: Frontend, Backend, API, Docs
+
+### 変更内容
+- 料理提案（gợi ý món / `GET /meals/suggestions`）をコード・仕様から完全削除（DEC-014）
+- 買い物チェックリスト各食材の下に `note` を表示（例: `Dùng cho món Thịt kho tàu`）
+- 履歴詳細でも同様に `note` を表示
+
+### 実装詳細
+- 削除: `backend/app/services/meal_suggestion_service.py`, `backend/tests/test_meals_suggestions.py`
+- `backend/app/api/v1/meals.py` — suggestions ルート削除
+- `frontend/src/app/page.tsx` — 提案チップ UI 削除
+- `frontend/src/lib/api.ts` — `getSuggestions` 削除
+- `frontend/src/app/shopping/page.tsx`, `history/page.tsx` — `note` サブタイトル表示
+- 生成時の `note` は既存の `shopping_list_service.generate_list` が設定（変更なし）
+- Spec: US-015 廃止、DEC-014、`screen_list.md`, `progress.md`
+
+### テスト
+- [x] `pytest` (backend, suggestions テスト削除後)
+- [x] `npm run build` (frontend)
+
+### 備考
+- 同一食材が複数料理で使われる場合は行が分かれ、それぞれに該当する `note` が付く
+
+---
+
+## [2026-05-23 25:30] - Remove timeline UI; week range on finish shopping only
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: US-009, US-014  
+**影響範囲**: Frontend, Backend, Database, API, Docs
+
+### 変更内容
+- アプリ全体から週ナビ・カレンダー日付・タイムラインUIを削除（食事計画は月〜日スロットのみ）
+- 「Finish shopping」後に from-to 日付ポップアップ → 履歴に `week_from_date` / `week_to_date` を保存
+- 各ページタイトル直上の装飾ラベル行（div/span）を削除
+- Spec / DEC-012 / migration `007_shopping_list_week_range.sql` を更新
+
+### 実装詳細
+- `frontend/src/app/page.tsx`, `shopping/page.tsx`, `history/page.tsx`, `meals/page.tsx`, `products/page.tsx`, `settings/page.tsx`
+- `backend/app/services/meal_plan_service.py`, `shopping_list_service.py`, `meal_suggestion_service.py`
+- `backend/app/schemas/shopping_list.py` (`CompleteListBody`), `meal_plan.py`
+- `backend/migrations/007_shopping_list_week_range.sql`, `supabase/migrations/20260523120000_shopping_list_week_range.sql`
+- `docs/spec/02_requirements/user_stories.md`, `03_design/screen_list.md`, `database_schema.md`, `04_api/api_spec.md`, `05_tracking/decisions.md`
+
+### テスト
+- [x] `pytest` (backend)
+- [ ] `npm run build` (frontend)
+- [ ] Manual: finish shopping → history shows date range
+
+### 備考
+- DB に migration を適用して `week_from_date` / `week_to_date` 列を追加すること
+
+---
+
 ## [2026-05-23 24:30] - Meals/Products grid + modal CRUD (no category UI)
 
 **担当**: AI Assistant  

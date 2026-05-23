@@ -443,6 +443,48 @@ def deduplicate_items(items):
 
 ---
 
+### DEC-012: 日付UIは買い物完了時のみ（履歴用 from-to）
+**日付**: 2026-05-23  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. アプリ内に週ナビ・カレンダー日付・タイムラインUIを置かない。
+2. 食事計画は月〜日の7スロット（`day_of_week`）のみ。ユーザーごとに最新の1計画を編集。
+3. 「Finish shopping」押下後にポップアップで `week_from_date` / `week_to_date` を入力し、完了リストを履歴に保存。
+
+#### 理由
+1. 買い物メモの主用途はリスト管理であり、日付操作を最小化する。
+2. 週の実日付は買い物完了時だけ記録すれば履歴として十分。
+
+#### 影響範囲
+- Frontend: Meal Plan, Shopping, History, 各ページヘッダー上のラベル行削除
+- Backend: `complete` API body、`shopping_lists.week_from_date` / `week_to_date`
+- Spec: US-009, US-014, SC-010〜012, API §4–5
+
+---
+
+### DEC-014: 料理提案（meal suggestions）をスコープ外とする
+**日付**: 2026-05-24  
+**決定者**: Tai + AI Assistant  
+**ステータス**: ✅ Approved
+
+#### 決定内容
+1. US-015（履歴ベースの料理提案 / gợi ý món）を実装しない。
+2. `GET /api/v1/meals/suggestions` エンドポイントと関連サービス・UIを削除。
+3. 買い物リストの食材行は従来どおり `note`（`Dùng cho món {tên}`）でどの料理用か示す（US-011）。
+
+#### 理由
+1. 計画は手動選択で十分。提案ロジックの保守コストに見合わない。
+2. 買い物時の「どの料理用か」表示の方がユーザー価値が高い。
+
+#### 影響範囲
+- Backend: `meals` router, `meal_suggestion_service` 削除
+- Frontend: Meal Plan から提案チップ UI 削除; Shopping / History で `note` 表示
+- Spec: US-015 廃止、Epic 7 廃止、SC-010/011 更新
+
+---
+
 ## 未決定事項
 
 ### PENDING-001: UI Component Library

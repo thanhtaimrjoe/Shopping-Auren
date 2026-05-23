@@ -119,6 +119,11 @@ body {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
+/* Main page titles: breathing room below heading, away from top edge on desktop */
+.page-title {
+  padding-bottom: 0.5rem;
+}
+
 @media (min-width: 1024px) {
   .page-shell {
     padding-bottom: 3rem;

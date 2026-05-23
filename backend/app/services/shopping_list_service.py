@@ -4,7 +4,8 @@ from fastapi import HTTPException, status
 
 from app.core.supabase import supabase_admin as db
 from app.models.tables import MEAL_PLAN_ITEMS, MEAL_PLANS, PRODUCTS, SHOPPING_ITEMS, SHOPPING_LISTS
-from app.schemas.shopping_list import AddItemBody, CheckItemBody, GenerateListBody
+from app.schemas.shopping_list import AddItemBody, CheckItemBody, CompleteListBody, GenerateListBody
+from app.services.meal_plan_service import PLACEHOLDER_WEEK_START
 from app.utils.db_errors import is_not_found, raise_from_supabase
 from app.utils.ingredients import normalize_ingredients_list
 
@@ -26,9 +27,8 @@ def format_item(row: dict) -> dict:
 def format_list(row: dict, items: list) -> dict:
     checked = sum(1 for item in items if item["is_checked"])
     total = len(items)
-    return {
+    payload = {
         "id": row["id"],
-        "week_start_date": row["week_start_date"],
         "status": row["status"],
         "meal_plan_id": row.get("meal_plan_id"),
         "items": items,
@@ -38,6 +38,11 @@ def format_list(row: dict, items: list) -> dict:
         "created_at": row.get("created_at"),
         "completed_at": row.get("completed_at"),
     }
+    if row.get("week_from_date"):
+        payload["week_from_date"] = row["week_from_date"]
+    if row.get("week_to_date"):
+        payload["week_to_date"] = row["week_to_date"]
+    return payload
 
 
 def fetch_items(list_id: str) -> list:
@@ -86,7 +91,10 @@ def items_from_snapshot(snapshot: list | None) -> list:
 
 
 def verify_list_owner(list_id: str, user_id: str, include_snapshot: bool = False) -> dict:
-    columns = "id, week_start_date, status, meal_plan_id, created_at, completed_at"
+    columns = (
+        "id, week_start_date, week_from_date, week_to_date, status, meal_plan_id, "
+        "created_at, completed_at"
+    )
     if include_snapshot:
         columns += ", snapshot_json"
     try:
@@ -113,7 +121,7 @@ def get_current_list(user_id: str) -> dict:
     resp = (
         db.table(SHOPPING_LISTS)
         .select(
-            "id, week_start_date, status, meal_plan_id, created_at, completed_at, "
+            "id, week_from_date, week_to_date, status, meal_plan_id, created_at, completed_at, "
             "shopping_items(id, name, category, source_type, source_id, note, "
             "is_checked, checked_at, created_at)"
         )
@@ -146,7 +154,6 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
         raise_from_supabase(exc, not_found_detail="Meal plan not found", server_detail=f"Failed to fetch meal plan: {exc}")
 
     plan = plan_resp.data
-    week_start_date = plan["week_start_date"]
 
     items_resp = (
         db.table(MEAL_PLAN_ITEMS)
@@ -190,12 +197,12 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
                 "is_checked": False,
             })
 
-    db.table(SHOPPING_LISTS).delete().eq("user_id", user_id).eq("week_start_date", week_start_date).execute()
+    db.table(SHOPPING_LISTS).delete().eq("user_id", user_id).eq("status", "active").execute()
 
     sl_resp = db.table(SHOPPING_LISTS).insert({
         "user_id": user_id,
         "meal_plan_id": body.meal_plan_id,
-        "week_start_date": week_start_date,
+        "week_start_date": PLACEHOLDER_WEEK_START.isoformat(),
         "status": "active",
     }).execute()
     if not sl_resp.data:
@@ -260,7 +267,7 @@ def add_item(user_id: str, list_id: str, body: AddItemBody) -> dict:
     }
 
 
-def complete_list(user_id: str, list_id: str) -> dict:
+def complete_list(user_id: str, list_id: str, body: CompleteListBody) -> dict:
     shopping_list = verify_list_owner(list_id, user_id)
     if shopping_list["status"] == "completed":
         raise HTTPException(status_code=409, detail="Shopping list is already completed")
@@ -268,16 +275,36 @@ def complete_list(user_id: str, list_id: str) -> dict:
     items = fetch_items(list_id)
     snapshot = build_snapshot(items)
     now = datetime.now(timezone.utc).isoformat()
-    update_payload = {"status": "completed", "completed_at": now, "snapshot_json": snapshot}
+    update_payload = {
+        "status": "completed",
+        "completed_at": now,
+        "snapshot_json": snapshot,
+        "week_from_date": body.week_from_date.isoformat(),
+        "week_to_date": body.week_to_date.isoformat(),
+        "week_start_date": body.week_from_date.isoformat(),
+    }
     try:
         resp = db.table(SHOPPING_LISTS).update(update_payload).eq("id", list_id).execute()
     except Exception:
-        resp = (
-            db.table(SHOPPING_LISTS)
-            .update({"status": "completed", "completed_at": now})
-            .eq("id", list_id)
-            .execute()
-        )
+        fallback_payload = {
+            "status": "completed",
+            "completed_at": now,
+            "week_start_date": body.week_from_date.isoformat(),
+        }
+        try:
+            resp = (
+                db.table(SHOPPING_LISTS)
+                .update({**fallback_payload, "snapshot_json": snapshot})
+                .eq("id", list_id)
+                .execute()
+            )
+        except Exception:
+            resp = (
+                db.table(SHOPPING_LISTS)
+                .update(fallback_payload)
+                .eq("id", list_id)
+                .execute()
+            )
     if not resp.data:
         raise HTTPException(status_code=500, detail="Failed to complete shopping list")
 
@@ -293,7 +320,10 @@ def get_history(user_id: str, weeks: int) -> dict:
     cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
     resp = (
         db.table(SHOPPING_LISTS)
-        .select("id, week_start_date, status, completed_at, shopping_items(is_checked)")
+        .select(
+            "id, week_from_date, week_to_date, week_start_date, status, completed_at, "
+            "shopping_items(is_checked)"
+        )
         .eq("user_id", user_id)
         .eq("status", "completed")
         .gte("completed_at", cutoff.isoformat())
@@ -307,9 +337,12 @@ def get_history(user_id: str, weeks: int) -> dict:
         total_items = len(items_raw)
         checked_items = sum(1 for item in items_raw if item.get("is_checked"))
 
+        week_from = row.get("week_from_date") or row.get("week_start_date")
+        week_to = row.get("week_to_date") or week_from
         history.append({
             "id": row["id"],
-            "week_start_date": row["week_start_date"],
+            "week_from_date": week_from,
+            "week_to_date": week_to,
             "status": row["status"],
             "total_items": total_items,
             "checked_items": checked_items,

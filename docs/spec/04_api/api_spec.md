@@ -355,10 +355,7 @@ No Content
 
 **Headers**: `Authorization: Bearer <token>`
 
-**Query Parameters**:
-| パラメータ | 型 | 必須 | デフォルト | 説明 |
-|-----------|-----|------|-----------|------|
-| week_start | date | No | 来週の月曜日 | 週の開始日（YYYY-MM-DD） |
+**Query Parameters**: なし（認証ユーザーの最新の食事計画1件を返す）
 
 **Response** (200):
 ```json
@@ -403,7 +400,6 @@ No Content
 **Request Body**:
 ```json
 {
-  "week_start_date": "2026-05-12",
   "meals": [
     {
       "day_of_week": 0,
@@ -418,7 +414,6 @@ No Content
 ```
 
 **Validation**:
-- `week_start_date`: 必須、月曜日の日付
 - `meals`: 配列、各要素は以下を含む
   - `day_of_week`: 0〜6（0=月, 6=日）
   - `meal_id`: 存在する料理ID
@@ -654,6 +649,18 @@ No Content
 
 **Headers**: `Authorization: Bearer <token>`
 
+**Request Body**:
+```json
+{
+  "week_from_date": "2026-05-12",
+  "week_to_date": "2026-05-18"
+}
+```
+
+**Validation**:
+- `week_from_date`, `week_to_date`: 必須、`week_to_date` >= `week_from_date`
+- 完了時にのみ週の日付範囲を保存（アプリ内の他画面では日付UIを表示しない）
+
 **Response** (200):
 ```json
 {
@@ -690,7 +697,8 @@ No Content
     "history": [
       {
         "id": "uuid",
-        "week_start_date": "2026-05-05",
+        "week_from_date": "2026-05-05",
+        "week_to_date": "2026-05-11",
         "status": "completed",
         "total_items": 15,
         "checked_items": 15,

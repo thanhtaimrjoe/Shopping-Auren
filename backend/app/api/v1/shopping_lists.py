@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.auth import get_current_user
-from app.schemas.shopping_list import AddItemBody, CheckItemBody, GenerateListBody
+from app.schemas.shopping_list import AddItemBody, CheckItemBody, CompleteListBody, GenerateListBody
 from app.services import shopping_list_service
 
 router = APIRouter()
@@ -51,8 +51,12 @@ async def add_item(
 
 
 @router.post("/{list_id}/complete", status_code=status.HTTP_200_OK)
-async def complete_list(list_id: str, user: dict = Depends(get_current_user)):
-    return shopping_list_service.complete_list(user["id"], list_id)
+async def complete_list(
+    list_id: str,
+    body: CompleteListBody,
+    user: dict = Depends(get_current_user),
+):
+    return shopping_list_service.complete_list(user["id"], list_id, body)
 
 
 @router.delete("/{list_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

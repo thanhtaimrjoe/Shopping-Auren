@@ -39,7 +39,7 @@ export default function RootLayout({
         <AuthProvider>
           <Sidebar />
           <MobileBottomNav />
-          <main className="flex-1 lg:ml-[260px] pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0 px-3 sm:px-4 md:px-8 lg:px-12 pb-0 min-h-[100dvh] relative transition-all duration-300 w-full min-w-0">
+          <main className="flex-1 lg:ml-[260px] pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-6 px-3 sm:px-4 md:px-8 lg:px-12 pb-0 min-h-[100dvh] relative transition-all duration-300 w-full min-w-0">
             <div className="w-full max-w-[1400px] mx-auto min-w-0">
               {children}
             </div>

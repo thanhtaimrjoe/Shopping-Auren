@@ -184,8 +184,8 @@ uvicorn app.main:app --reload
 
 ### 現在の状況 (2026-05-23)
 - ✅ **Specs** + **Local Supabase Docker** (`MIGRATION-PLAN.md`)
-- ✅ **MVP + Nice-to-have**: history, meal suggestions, manual shopping items, auth polish
-- ✅ **Backend tests**: meals, products, auth, shopping_lists, meal_plans, suggestions
+- ✅ **MVP + Nice-to-have**: history, manual shopping items, auth polish (meal suggestions removed per DEC-014)
+- ✅ **Backend tests**: meals, products, auth, shopping_lists, meal_plans
 - 🟡 **Deploy**: Vercel + Railway + hosted Supabase (planned)
 
 ### 今後の優先事項

@@ -167,7 +167,7 @@
 | **URL** | `/` (hoặc `/meal-plan`) |
 | **目的** | Lập kế hoạch ăn uống hàng tuần |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - 週カレンダー表示（月〜日）<br>- Hiển thị tối đa 3 món ăn mỗi ngày (không phân biệt bữa)<br>- Hiển thị nguyên liệu của từng món ăn ngay trên card ngày (Realtime)<br>- Nút "Thêm món" mở modal chọn từ danh sách món ăn<br>- Nút "Generate Shopping List": Xóa danh sách cũ và tạo danh sách mua sắm mới cho tuần hiện tại<br>- Nút "Thêm sản phẩm": Mở modal chọn các sản phẩm mua thêm (Products) |
+| **主要機能** | - 7日スロット表示（月〜日、日付・週ナビなし）<br>- Hiển thị tối đa 3 món ăn mỗi ngày<br>- Hiển thị nguyên liệu trên card ngày<br>- Nút "Thêm món" / "Generate Shopping List" / "Thêm sản phẩm"<br>- **料理提案（gợi ý món）UIなし**<br>- **日付・タイムラインUIなし**（週の from-to は買い物完了時のみ） |
 | **遷移先** | - Generate Shopping List: Hiển thị thông báo thành công và chuyển hướng (hoặc cập nhật) sang trang Shopping List |
 | **API** | GET `/api/v1/meal-plans/current`<br>POST `/api/v1/meal-plans`<br>PUT `/api/v1/meal-plans/{plan_id}`<br>POST `/api/v1/shopping-lists/generate` |
 
@@ -181,8 +181,8 @@
 | **URL** | `/shopping-list` |
 | **目的** | 買い物リストの表示・チェック |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - アイテムリスト表示（カテゴリ別）<br>- チェックボックス（タップでチェック）<br>- チェック済みアイテムは下部に移動<br>- 手動アイテム追加ボタン<br>- 進捗バー（チェック済み/全体）<br>- 完了ボタン |
-| **遷移先** | - 完了: `/meal-plan` (食事計画に戻る) |
+| **主要機能** | - アイテムリスト表示（カテゴリ別）<br>- 各食材行の下に `note`（例: `Dùng cho món …`）を表示<br>- チェックボックス<br>- 手動アイテム追加<br>- **「Finish shopping」押下後**、週の from-to 日付入力ポップアップ → 履歴に保存 |
+| **遷移先** | - 完了保存後: リストは非アクティブ化（履歴へ） |
 | **API** | GET `/api/v1/shopping-lists/current`<br>PATCH `/api/v1/shopping-lists/{list_id}/items/{item_id}`<br>POST `/api/v1/shopping-lists/{list_id}/items` |
 
 ---
@@ -195,7 +195,7 @@
 | **URL** | `/history` |
 | **目的** | 過去の買い物履歴表示 |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - 過去2週間の買い物リスト表示<br>- 日付順リスト<br>- 各リストの詳細表示（展開式）<br>- チェック済み/未チェック表示 |
+| **主要機能** | - 完了リスト一覧（完了 from-to 日付範囲を表示）<br>- 各リストの詳細表示（モーダル）<br>- チェック済み/未チェック表示 |
 | **遷移先** | - 詳細: 展開表示 |
 | **API** | GET `/api/v1/shopping-lists/history?weeks=2` |
 

@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
-import { ArrowLeft, ChevronRight, History, Loader2, X } from 'lucide-react';
+import { ChevronRight, History, Loader2, X } from 'lucide-react';
 import { shoppingListsApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/cn';
 
 interface HistorySummary {
   id: string;
-  week_start_date: string;
+  week_from_date: string;
+  week_to_date: string;
   status: string;
   total_items: number;
   checked_items: number;
@@ -22,11 +23,13 @@ interface HistoryItem {
   name: string;
   category: string;
   is_checked: boolean;
+  note?: string | null;
 }
 
 interface HistoryDetail {
   id: string;
-  week_start_date: string;
+  week_from_date?: string;
+  week_to_date?: string;
   status: string;
   items: HistoryItem[];
   total_items: number;
@@ -87,13 +90,7 @@ export default function HistoryPage() {
   return (
     <div className="page-shell animate-page-enter min-w-0">
       <header className="mb-6 sm:mb-10">
-        <div className="flex items-center gap-2 text-bark/40 mb-3 sm:mb-4">
-          <Link href="/settings" className="hover:text-sage-deep transition-colors p-1 -m-1 touch-manipulation">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Settings</span>
-        </div>
-        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
+        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping history
         </h1>
         <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
@@ -123,7 +120,9 @@ export default function HistoryPage() {
             >
               <div>
                 <p className="font-serif text-lg text-bark">
-                  Week of {format(parseISO(entry.week_start_date), 'MMM d, yyyy')}
+                  {format(parseISO(entry.week_from_date), 'MMM d, yyyy')}
+                  {' — '}
+                  {format(parseISO(entry.week_to_date), 'MMM d, yyyy')}
                 </p>
                 <p className="text-sm text-bark/50 mt-1">
                   {entry.checked_items}/{entry.total_items} items ·{' '}
@@ -172,19 +171,24 @@ export default function HistoryPage() {
                     <li
                       key={item.id}
                       className={cn(
-                        'flex items-center gap-3 p-4 rounded-2xl',
+                        'flex items-start gap-3 p-4 rounded-2xl',
                         item.is_checked ? 'bg-hemp/20 opacity-70' : 'bg-hemp/10'
                       )}
                     >
-                      <span
-                        className={cn(
-                          'font-medium',
-                          item.is_checked && 'line-through text-bark/40'
-                        )}
-                      >
-                        {item.name}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-widest text-bark/30 ml-auto">
+                      <div className="min-w-0 flex-1">
+                        <span
+                          className={cn(
+                            'font-medium block',
+                            item.is_checked && 'line-through text-bark/40'
+                          )}
+                        >
+                          {item.name}
+                        </span>
+                        {item.note ? (
+                          <span className="block text-xs text-bark/50 mt-1">{item.note}</span>
+                        ) : null}
+                      </div>
+                      <span className="text-[10px] uppercase tracking-widest text-bark/30 shrink-0">
                         {item.category}
                       </span>
                     </li>

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Plus, X, Search, Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { mealsApi, mealPlansApi, productsApi, shoppingListsApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -24,26 +23,31 @@ interface MealPlanItem {
   name?: string;
 }
 
-interface LegacyMealPlanDay {
-  meals?: Array<{
-    name?: string;
-  }>;
-}
-
 interface MealPlanResponse {
   id?: string;
   meals?: MealPlanItem[];
 }
 
+const DAY_LABELS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
+const DAY_INDICES = [0, 1, 2, 3, 4, 5, 6] as const;
+
 export default function MealPlanPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-  const [selectedMeals, setSelectedMeals] = useState<Record<string, string[]>>({});
+  const [selectedMeals, setSelectedMeals] = useState<Record<number, string[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeDayKey, setActiveDayKey] = useState<string | null>(null);
+  const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
@@ -55,16 +59,8 @@ export default function MealPlanPage() {
   const [extraProducts, setExtraProducts] = useState<any[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; never_used?: boolean }>>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-
-  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
-  const weekStartKey = useMemo(() => format(weekStart, 'yyyy-MM-dd'), [weekStart]);
-  const daysOfWeek = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Notification helper
   const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -98,21 +94,6 @@ export default function MealPlanPage() {
     }
   }, [user]);
 
-  const fetchSuggestions = useCallback(async () => {
-    if (!user) return;
-    setSuggestionsLoading(true);
-    try {
-      const response = await mealsApi.getSuggestions({ week_start: weekStartKey, limit: 5 });
-      if (response.data.success) {
-        setSuggestions(response.data.data.suggestions || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch meal suggestions:', error);
-    } finally {
-      setSuggestionsLoading(false);
-    }
-  }, [user, weekStartKey]);
-
   // Fetch meals for the modal
   const fetchMeals = useCallback(async () => {
     if (!user) return;
@@ -135,27 +116,17 @@ export default function MealPlanPage() {
   const fetchMealPlan = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await mealPlansApi.getCurrent({ week_start: weekStartKey });
+      const response = await mealPlansApi.getCurrent();
       if (response.data.success) {
-        // Transform backend format to local state format
         const plan = (response.data.data.meal_plan || {}) as MealPlanResponse;
         setCurrentPlanId(plan.id || null);
-        const transformed: Record<string, string[]> = {};
+        const transformed: Record<number, string[]> = {};
         if (Array.isArray(plan.meals)) {
           plan.meals.forEach((item: MealPlanItem) => {
             const dayIndex = Number(item.day_of_week);
             const mealName = item.meal?.name || item.name;
             if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealName) return;
-
-            const dateKey = format(addDays(weekStart, dayIndex), 'yyyy-MM-dd');
-            transformed[dateKey] = [...(transformed[dateKey] || []), mealName];
-          });
-        } else {
-          Object.entries(plan as Record<string, LegacyMealPlanDay>).forEach(([date, data]) => {
-            const meals = Array.isArray(data?.meals) ? data.meals : [];
-            transformed[date] = meals
-              .map((meal) => meal.name)
-              .filter((mealName): mealName is string => Boolean(mealName));
+            transformed[dayIndex] = [...(transformed[dayIndex] || []), mealName];
           });
         }
         setSelectedMeals(transformed);
@@ -170,46 +141,15 @@ export default function MealPlanPage() {
         console.error('Failed to fetch meal plan:', error);
       }
     }
-  }, [user, weekStart, weekStartKey]);
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && user) {
       fetchMeals();
       fetchMealPlan();
       fetchProductsAndShoppingList();
-      fetchSuggestions();
     }
-  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, fetchSuggestions, authLoading, user]);
-
-  // Handle week navigation
-  const handlePrevWeek = () => {
-    setCurrentDate(addDays(currentDate, -7));
-  };
-
-  const handleNextWeek = () => {
-    setCurrentDate(addDays(currentDate, 7));
-  };
-
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = new Date(e.target.value);
-    if (!isNaN(newDate.getTime())) {
-      setCurrentDate(newDate);
-    }
-  };
-
-  const triggerDatePicker = () => {
-    if (dateInputRef.current) {
-      try {
-        if ('showPicker' in HTMLInputElement.prototype) {
-          dateInputRef.current.showPicker();
-        } else {
-          dateInputRef.current.click();
-        }
-      } catch (error) {
-        dateInputRef.current.click();
-      }
-    }
-  };
+  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, authLoading, user]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -222,8 +162,8 @@ export default function MealPlanPage() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isModalOpen]);
 
-  const openModal = (dayKey: string) => {
-    setActiveDayKey(dayKey);
+  const openModal = (dayIndex: number) => {
+    setActiveDayIndex(dayIndex);
     setIsModalOpen(true);
     setSearchQuery('');
     if (mealDatabase.length === 0 && !fetchLoading) {
@@ -231,13 +171,9 @@ export default function MealPlanPage() {
     }
   };
 
-  const buildMealPlanPayload = (mealsByDate: Record<string, string[]>) => {
-    const meals = Object.entries(mealsByDate).flatMap(([dateKey, mealNames]) => {
-      const dayIndex = Math.round(
-        (new Date(`${dateKey}T00:00:00`).getTime() - new Date(`${weekStartKey}T00:00:00`).getTime()) /
-        (1000 * 60 * 60 * 24)
-      );
-
+  const buildMealPlanPayload = (mealsByDay: Record<number, string[]>) => {
+    const meals = Object.entries(mealsByDay).flatMap(([dayKey, mealNames]) => {
+      const dayIndex = Number(dayKey);
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return [];
 
       return mealNames.flatMap((mealName) => {
@@ -251,13 +187,10 @@ export default function MealPlanPage() {
       });
     });
 
-    return {
-      week_start_date: weekStartKey,
-      meals,
-    };
+    return { meals };
   };
 
-  const persistMealPlan = async (nextSelectedMeals: Record<string, string[]>) => {
+  const persistMealPlan = async (nextSelectedMeals: Record<number, string[]>) => {
     const payload = buildMealPlanPayload(nextSelectedMeals);
 
     if (currentPlanId) {
@@ -322,11 +255,11 @@ export default function MealPlanPage() {
   };
 
   const handleToggleMeal = async (mealName: string) => {
-    if (!activeDayKey || !user) return;
+    if (activeDayIndex === null || !user) return;
     
     setIsLoading(true);
     try {
-      const currentMeals = selectedMeals[activeDayKey] || [];
+      const currentMeals = selectedMeals[activeDayIndex] || [];
       let updatedMeals;
       
       if (currentMeals.includes(mealName)) {
@@ -343,7 +276,7 @@ export default function MealPlanPage() {
 
       const nextSelectedMeals = {
         ...selectedMeals,
-        [activeDayKey]: updatedMeals
+        [activeDayIndex]: updatedMeals,
       };
       
       // Save to backend
@@ -359,13 +292,13 @@ export default function MealPlanPage() {
     }
   };
 
-  const removeMeal = async (dayKey: string, mealIndex: number) => {
+  const removeMeal = async (dayIndex: number, mealIndex: number) => {
     if (!user) return;
-    const currentMeals = selectedMeals[dayKey] || [];
+    const currentMeals = selectedMeals[dayIndex] || [];
     const updatedMeals = currentMeals.filter((_, i) => i !== mealIndex);
     const nextSelectedMeals = {
       ...selectedMeals,
-      [dayKey]: updatedMeals
+      [dayIndex]: updatedMeals,
     };
     
     try {
@@ -377,40 +310,6 @@ export default function MealPlanPage() {
       console.error('Failed to update meal plan:', error);
       const errorMsg = error.response?.data?.detail || error.message || 'Lỗi không xác định';
       showNotification('error', `Không thể xóa món ăn: ${errorMsg}`);
-    }
-  };
-
-  const handleAddSuggestion = async (mealName: string) => {
-    if (!user) return;
-    const todayKey = format(new Date(), 'yyyy-MM-dd');
-    const inCurrentWeek = daysOfWeek.some((day) => format(day, 'yyyy-MM-dd') === todayKey);
-    const targetDayKey = inCurrentWeek ? todayKey : format(daysOfWeek[0], 'yyyy-MM-dd');
-    const currentMeals = selectedMeals[targetDayKey] || [];
-
-    if (currentMeals.length >= 3) {
-      showNotification('error', 'Mỗi ngày chỉ tối đa 3 món ăn.');
-      return;
-    }
-    if (currentMeals.includes(mealName)) {
-      showNotification('info', 'Món này đã có trong ngày.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const nextSelectedMeals = {
-        ...selectedMeals,
-        [targetDayKey]: [...currentMeals, mealName],
-      };
-      await persistMealPlan(nextSelectedMeals);
-      setSelectedMeals(nextSelectedMeals);
-      showNotification('success', `Đã thêm ${mealName}`);
-      fetchSuggestions();
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string } }; message?: string };
-      showNotification('error', err.response?.data?.detail || err.message || 'Không thể thêm món');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -443,20 +342,15 @@ export default function MealPlanPage() {
         </div>
       )}
 
-      {/* Editorial Header */}
       <header className="mb-6 sm:mb-10">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2">
-          {format(currentDate, 'EEEE, MMMM d')}
-        </span>
-        <h3 className="text-2xl sm:text-3xl md:text-4xl text-bark font-serif mb-3 sm:mb-4 leading-tight">
-          Weekly Alignment
+        <h3 className="page-title text-2xl sm:text-3xl md:text-4xl text-bark font-serif mb-3 sm:mb-4 leading-tight">
+          Meal plan
         </h3>
         <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
-          Choose each meal with intention.
+          Plan meals for each day of the week, then generate your shopping list.
         </p>
       </header>
 
-      {/* Week Navigation */}
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div className="w-full sm:w-auto">
           <button
@@ -491,100 +385,21 @@ export default function MealPlanPage() {
             <span className="truncate">Generate shopping list</span>
           </button>
         </div>
-        <div className="relative flex items-center justify-between gap-1 sm:gap-2 bg-cream rounded-full p-1 shadow-soft w-full sm:w-fit sm:mx-auto">
-          <input 
-            type="date"
-            ref={dateInputRef}
-            className="absolute opacity-0 pointer-events-none w-0 h-0"
-            onChange={handleDateChange}
-          />
-          <button 
-            onClick={handlePrevWeek}
-            className="p-3 hover:bg-hemp/50 rounded-full transition-all active:scale-95"
-            aria-label="Previous week"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div 
-            onClick={triggerDatePicker}
-            className="text-[11px] sm:text-sm font-bold text-bark flex-1 text-center uppercase tracking-wide sm:tracking-widest cursor-pointer hover:text-sage-deep transition-colors select-none px-1 sm:px-2 min-w-0"
-          >
-             {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d')}
-          </div>
-          <button 
-            onClick={handleNextWeek}
-            className="p-3 hover:bg-hemp/50 rounded-full transition-all active:scale-95"
-            aria-label="Next week"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
       </div>
 
-      {(suggestionsLoading || suggestions.length > 0) && (
-        <section className="mb-8 sm:mb-10">
-          <h4 className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] mb-4">
-            Gợi ý món (chưa dùng gần đây)
-          </h4>
-          {suggestionsLoading ? (
-            <div className="flex items-center gap-2 text-bark/40 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading suggestions…
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {suggestions.map((meal) => (
-                <button
-                  key={meal.id}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleAddSuggestion(meal.name)}
-                  className="px-4 py-2.5 bg-hemp/30 hover:bg-sage/15 text-bark rounded-full text-sm font-medium transition-colors touch-manipulation min-h-[44px] disabled:opacity-50"
-                >
-                  {meal.name}
-                  {meal.never_used && (
-                    <span className="ml-2 text-[10px] uppercase tracking-widest text-sage-deep">new</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Days Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-        {daysOfWeek.map((day, idx) => {
-          const dayKey = format(day, 'yyyy-MM-dd');
-          const isToday = dayKey === format(new Date(), 'yyyy-MM-dd');
-          const dayMeals = selectedMeals[dayKey] || [];
-          
+        {DAY_INDICES.map((dayIndex) => {
+          const dayMeals = selectedMeals[dayIndex] || [];
+
           return (
-            <div 
-              key={idx}
-              className={cn(
-                "group bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 transition-all duration-300 flex flex-col h-full min-w-0",
-                isToday ? "shadow-warm ring-2 ring-sage/20 z-10" : "shadow-soft"
-              )}
+            <div
+              key={dayIndex}
+              className="group bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 transition-all duration-300 flex flex-col h-full min-w-0 shadow-soft"
             >
-              <div className="flex items-end justify-between mb-6">
-                <div>
-                  <h4 className={cn(
-                    "text-base font-bold uppercase tracking-[0.2em] mb-0.5",
-                    isToday ? "text-sage-deep" : "text-bark"
-                  )}>
-                    {format(day, 'EEEE')}
-                  </h4>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xs font-medium text-bark/40">{format(day, 'd')}</span>
-                    <span className="text-xs font-medium text-bark/40">{format(day, 'MMMM')}</span>
-                  </div>
-                </div>
-                {isToday && (
-                  <div className="px-3 py-1 bg-sage/10 text-sage-deep text-[9px] font-bold rounded-full uppercase tracking-widest">
-                    Current
-                  </div>
-                )}
+              <div className="mb-6">
+                <h4 className="text-base font-bold uppercase tracking-[0.2em] text-bark">
+                  {DAY_LABELS[dayIndex]}
+                </h4>
               </div>
 
               {/* Selected Meals List */}
@@ -617,7 +432,7 @@ export default function MealPlanPage() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-bark font-bold">{mealName}</span>
                           <button 
-                            onClick={() => removeMeal(dayKey, mIdx)}
+                            onClick={() => removeMeal(dayIndex, mIdx)}
                             className="sm:opacity-0 sm:group-hover/meal:opacity-100 p-2 -mr-1 hover:bg-bark/10 rounded-full transition-all touch-manipulation min-h-[36px] min-w-[36px] flex items-center justify-center"
                           >
                             <X className="h-3 w-3 text-bark/40" />
@@ -645,7 +460,7 @@ export default function MealPlanPage() {
 
               {/* Add Button */}
               <button 
-                onClick={() => openModal(dayKey)}
+                onClick={() => openModal(dayIndex)}
                 className="w-full py-3 px-4 bg-sage text-cream rounded-xl flex items-center justify-center gap-2 hover:bg-sage-deep shadow-soft transition-all font-bold text-xs uppercase tracking-widest"
               >
                 <Plus className="h-4 w-4" />
@@ -743,13 +558,13 @@ export default function MealPlanPage() {
                     disabled={isLoading}
                     className={cn(
                         "w-full text-left px-6 py-4 rounded-2xl transition-all font-medium flex items-center justify-between group",
-                        activeDayKey && selectedMeals[activeDayKey]?.includes(meal.name)
+                        activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name)
                           ? "bg-sage text-cream shadow-sm"
                           : "hover:bg-sage/10 hover:text-sage-deep text-bark"
                       )}
                     >
                       {meal.name}
-                      {activeDayKey && selectedMeals[activeDayKey]?.includes(meal.name) ? (
+                      {activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name) ? (
                         <CheckCircle2 className="h-5 w-5 text-cream" />
                       ) : (
                         <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
