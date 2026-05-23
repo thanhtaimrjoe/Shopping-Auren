@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { setApiAccessToken } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
@@ -32,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setSession(session);
         setUser(session?.user ?? null);
+        setApiAccessToken(session?.access_token ?? null, session?.expires_at);
       } catch (e) {
         console.error('Unexpected auth initialization error:', e);
       } finally {
@@ -42,15 +44,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Handle session refresh errors or sign outs
-      if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-        setSession(session);
-        setUser(session?.user ?? null);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setApiAccessToken(session?.access_token ?? null, session?.expires_at);
       setLoading(false);
     });
 
@@ -61,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setApiAccessToken(null);
   };
 
   return (

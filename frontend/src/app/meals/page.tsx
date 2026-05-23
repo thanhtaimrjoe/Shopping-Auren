@@ -158,9 +158,16 @@ export default function MealsPage() {
       }
       setIsEditing(false);
       setIsAdding(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save meal:', error);
-      setNotification({ type: 'error', message: 'Lỗi khi lưu món ăn' });
+      // Extract error message from backend response
+      let errorMessage = 'Lỗi khi lưu món ăn';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.status === 409) {
+        errorMessage = 'Món ăn này đã tồn tại. Vui lòng dùng tên khác.';
+      }
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setIsLoading(false);
     }

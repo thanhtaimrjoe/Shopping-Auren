@@ -122,7 +122,10 @@ async def get_current_plan(
     try:
         response = (
             db.table("meal_plans")
-            .select("id, week_start_date, status, created_at, updated_at")
+            .select(
+                "id, week_start_date, status, created_at, updated_at, "
+                "meal_plan_items(id, day_of_week, meals(id, name, category, ingredients))"
+            )
             .eq("user_id", user_id)
             .eq("week_start_date", week_start.isoformat())
             .single()
@@ -134,8 +137,12 @@ async def get_current_plan(
             raise HTTPException(status_code=404, detail="Meal plan not found for this week")
         raise HTTPException(status_code=500, detail=f"Failed to fetch meal plan: {error_msg}")
 
-    plan = response.data
-    items = fetch_plan_items(plan["id"])
+    plan = dict(response.data)
+    items_raw = plan.pop("meal_plan_items", []) or []
+    items = [
+        format_plan_item(row)
+        for row in sorted(items_raw, key=lambda row: row.get("day_of_week", 0))
+    ]
 
     return {"success": True, "data": {"meal_plan": format_meal_plan(plan, items)}}
 

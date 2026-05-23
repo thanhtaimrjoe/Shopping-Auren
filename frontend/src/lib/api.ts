@@ -1,37 +1,78 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { supabase } from './supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 15000,
 });
 
-// Helper to check if error is a network error or 5xx
-const isRetryableError = (error: any) => {
+let cachedAccessToken: string | null = null;
+let tokenExpiresAt = 0;
+
+/** Sync access token from AuthContext to avoid getSession() on every API call. */
+export function setApiAccessToken(token: string | null, expiresAt?: number) {
+  cachedAccessToken = token;
+  tokenExpiresAt = expiresAt ?? 0;
+}
+
+function isTokenStale(): boolean {
+  if (!cachedAccessToken) return true;
+  if (!tokenExpiresAt) return false;
+  // Refresh one minute before expiry
+  return Date.now() / 1000 >= tokenExpiresAt - 60;
+}
+
+async function resolveAccessToken(): Promise<string | null> {
+  if (!isTokenStale()) {
+    return cachedAccessToken;
+  }
+
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    console.warn('API Request Auth Error:', error.message);
+    cachedAccessToken = null;
+    tokenExpiresAt = 0;
+    return null;
+  }
+
+  if (session?.access_token) {
+    cachedAccessToken = session.access_token;
+    tokenExpiresAt = session.expires_at ?? 0;
+    return session.access_token;
+  }
+
+  cachedAccessToken = null;
+  tokenExpiresAt = 0;
+  return null;
+}
+
+type RetryableConfig = InternalAxiosRequestConfig & { _retryCount?: number };
+
+const isRetryableError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return false;
   return !error.response || (error.response.status >= 500 && error.response.status <= 599);
 };
 
-// Add a response interceptor for detailed error logging and user notification
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const config = error.config;
+    const config = error.config as RetryableConfig | undefined;
+    if (!config) {
+      return Promise.reject(error);
+    }
 
-    // Retry logic for network errors or 5xx server errors
-    if (isRetryableError(error) && !config._retryCount) {
-      config._retryCount = (config._retryCount || 0) + 1;
-      if (config._retryCount <= 3) {
-        console.warn(`Retrying request to ${config.url} (${config._retryCount}/3)...`);
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, config._retryCount * 1000));
-        return api(config);
-      }
+    const retryCount = config._retryCount ?? 0;
+    if (isRetryableError(error) && retryCount < 3) {
+      const nextRetry = retryCount + 1;
+      config._retryCount = nextRetry;
+      console.warn(`Retrying request to ${config.url} (${nextRetry}/3)...`);
+      await new Promise((resolve) => setTimeout(resolve, nextRetry * 1000));
+      return api(config);
     }
 
     if (error.response) {
-      // Don't log or throw standard 401/404 errors as they are handled by components
       if (
         error.response.status === 401 ||
         (error.response.status === 404 && error.config?.url === '/meal-plans/current') ||
@@ -46,8 +87,7 @@ api.interceptors.response.use(
         data: error.response.data,
       });
     } else if (error.request) {
-      // Only log network error if we've exhausted retries or it's not a retryable case
-      if (!config._retryCount || config._retryCount >= 3) {
+      if (retryCount >= 3) {
         console.error('Network Error: Backend server is not responding at', API_URL);
       }
     } else {
@@ -59,21 +99,11 @@ api.interceptors.response.use(
 
 api.interceptors.request.use(async (config) => {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.warn('API Request Auth Error:', error.message);
-      // If refresh token failed, we don't attach token
-      return config;
-    }
-
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
-    } else {
-      // If no session and trying to call protected API, we might want to cancel
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        console.warn('Attempted API call without active session:', config.url);
-      }
+    const token = await resolveAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      console.warn('Attempted API call without active session:', config.url);
     }
   } catch (e) {
     console.error('Unexpected error in API request interceptor:', e);
@@ -82,37 +112,37 @@ api.interceptors.request.use(async (config) => {
 });
 
 export const mealsApi = {
-  getAll: (params?: any) => api.get('/meals', { params }),
+  getAll: (params?: Record<string, unknown>) => api.get('/meals', { params }),
   getById: (id: string) => api.get(`/meals/${id}`),
-  create: (data: any) => api.post('/meals', data),
-  update: (id: string, data: any) => api.put(`/meals/${id}`, data),
+  create: (data: unknown) => api.post('/meals', data),
+  update: (id: string, data: unknown) => api.put(`/meals/${id}`, data),
   delete: (id: string) => api.delete(`/meals/${id}`),
 };
 
 export const productsApi = {
-  getAll: (params?: any) => api.get('/products', { params }),
+  getAll: (params?: Record<string, unknown>) => api.get('/products', { params }),
   getById: (id: string) => api.get(`/products/${id}`),
-  create: (data: any) => api.post('/products', data),
-  update: (id: string, data: any) => api.put(`/products/${id}`, data),
+  create: (data: unknown) => api.post('/products', data),
+  update: (id: string, data: unknown) => api.put(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
 };
 
 export const shoppingListsApi = {
   getCurrent: () => api.get('/shopping-lists/current'),
-  generate: (data: any) => api.post('/shopping-lists/generate', data),
-  updateItem: (listId: string, itemId: string, data: any) => 
+  generate: (data: unknown) => api.post('/shopping-lists/generate', data),
+  updateItem: (listId: string, itemId: string, data: unknown) =>
     api.patch(`/shopping-lists/${listId}/items/${itemId}`, data),
-  addItem: (listId: string, data: any) => 
+  addItem: (listId: string, data: unknown) =>
     api.post(`/shopping-lists/${listId}/items`, data),
-  deleteItem: (listId: string, itemId: string) => 
+  deleteItem: (listId: string, itemId: string) =>
     api.delete(`/shopping-lists/${listId}/items/${itemId}`),
   complete: (listId: string) => api.post(`/shopping-lists/${listId}/complete`),
 };
 
 export const mealPlansApi = {
-  getCurrent: (params?: any) => api.get('/meal-plans/current', { params }),
-  save: (data: any) => api.post('/meal-plans', data),
-  update: (planId: string, data: any) => api.put(`/meal-plans/${planId}`, data),
+  getCurrent: (params?: Record<string, unknown>) => api.get('/meal-plans/current', { params }),
+  save: (data: unknown) => api.post('/meal-plans', data),
+  update: (planId: string, data: unknown) => api.put(`/meal-plans/${planId}`, data),
 };
 
 export default api;

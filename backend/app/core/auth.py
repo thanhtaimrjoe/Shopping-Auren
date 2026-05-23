@@ -1,29 +1,48 @@
+from typing import Any
+
 from fastapi import HTTPException, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.core.supabase import supabase
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+
+from app.core.config import settings
 
 security = HTTPBearer()
 
+SUPABASE_JWT_AUDIENCE = "authenticated"
+SUPABASE_JWT_ALGORITHMS = ["HS256"]
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    """Verify a Supabase access token locally (no Auth API round-trip)."""
+    return jwt.decode(
+        token,
+        settings.supabase_jwt_secret,
+        algorithms=SUPABASE_JWT_ALGORITHMS,
+        audience=SUPABASE_JWT_AUDIENCE,
+    )
+
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(security)
+    credentials: HTTPAuthorizationCredentials = Security(security),
 ) -> dict:
-    """Verify JWT token using Supabase Auth API and return user info."""
+    """Verify JWT and return user info from token claims."""
     token = credentials.credentials
 
     try:
-        # Verify the token with Supabase
-        response = supabase.auth.get_user(token)
-        
-        if not response.user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        payload = decode_access_token(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from None
 
-        return {
-            "id": response.user.id,
-            "email": response.user.email,
-            "display_name": response.user.user_metadata.get("display_name")
-        }
-
-    except Exception as e:
-        print(f"Auth error: {str(e)}")
+    user_id = payload.get("sub")
+    if not user_id:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user_metadata = payload.get("user_metadata") or {}
+    if not isinstance(user_metadata, dict):
+        user_metadata = {}
+
+    return {
+        "id": user_id,
+        "email": payload.get("email"),
+        "display_name": user_metadata.get("display_name"),
+    }
