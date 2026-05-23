@@ -102,6 +102,24 @@ Shopping-Auren/
 
 ## 🚀 How to Run (Cách chạy dự án)
 
+### Local Supabase (Docker) — recommended for dev
+
+See **[MIGRATION-PLAN.md](./MIGRATION-PLAN.md)** for the full workflow.
+
+```bash
+# 1. Start Supabase (requires Docker Desktop)
+supabase start
+
+# 2. Local env files
+cp backend/.env.local.example backend/.env.local
+cp frontend/.env.local.example frontend/.env.local
+
+# 3. Apply schema + production seed
+supabase db reset
+```
+
+Studio: http://127.0.0.1:54323 · API: http://127.0.0.1:54321
+
 Để ứng dụng hoạt động đầy đủ, bạn cần chạy song song cả **Frontend** và **Backend**.
 
 ### 1. Khởi động Backend (FastAPI)

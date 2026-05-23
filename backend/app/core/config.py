@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     app_port: int = 8000
 
     class Config:
-        env_file = ".env"
+        # .env.local overrides .env for local Supabase Docker (see MIGRATION-PLAN.md)
+        env_file = (".env", ".env.local")
 
 
 settings = Settings()

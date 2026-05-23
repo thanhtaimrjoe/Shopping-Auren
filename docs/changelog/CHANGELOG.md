@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-23 16:10] - Supabase local Docker + production data seed
+
+**担当**: AI Assistant  
+**タイプ**: Feature / Docs  
+**関連US**: US-001  
+**影響範囲**: Database, DevOps, Backend config, Docs
+
+### 変更内容
+- `supabase init` + local Docker stack (`supabase start`)
+- Baseline migration `supabase/migrations/20260523090125_shopping_memo_baseline.sql` (schema + RLS, production-aligned)
+- `supabase/seed.sql` exported from production (meals, products, meal plans, shopping, auth users)
+- `scripts/export_supabase_seed.py` + `scripts/local-supabase.sh`
+- `MIGRATION-PLAN.md` — local dev ↔ production workflow
+- `backend/.env.local.example`, `frontend/.env.local.example`
+- `backend/app/core/config.py` loads `.env.local` over `.env`
+
+### 実装詳細
+- Verified local counts: meals 45, products 80, meal_plans 2, users 2
+- `docs/spec/03_design/migration_plan.md` remains historical schema migration; Docker plan is `MIGRATION-PLAN.md`
+
+### テスト
+- [x] `supabase db reset` succeeds
+- [x] `supabase db query` count check
+- [ ] Full app smoke test (login + API) — manual
+
+### 備考
+- Production deploy unchanged: Railway/Vercel use hosted Supabase env vars
+- Re-sync: `backend/venv/bin/python scripts/export_supabase_seed.py` then `supabase db reset`
+
+---
+
 ## [2026-05-23 15:15] - Sửa 401 JWT ES256 (Supabase JWKS)
 
 **担当**: AI Assistant  
