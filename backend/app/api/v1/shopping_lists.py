@@ -109,7 +109,11 @@ async def get_current_list(user: dict = Depends(get_current_user)):
     try:
         resp = (
             db.table("shopping_lists")
-            .select("id, week_start_date, status, meal_plan_id, created_at, completed_at")
+            .select(
+                "id, week_start_date, status, meal_plan_id, created_at, completed_at, "
+                "shopping_items(id, name, category, source_type, source_id, note, "
+                "is_checked, checked_at, created_at)"
+            )
             .eq("user_id", user_id)
             .eq("status", "active")
             .order("created_at", desc=True)
@@ -122,8 +126,12 @@ async def get_current_list(user: dict = Depends(get_current_user)):
     if not resp.data:
         raise HTTPException(status_code=404, detail="No active shopping list found")
 
-    sl = resp.data[0]
-    items = fetch_items(sl["id"])
+    sl = dict(resp.data[0])
+    items_raw = sl.pop("shopping_items", []) or []
+    items = [
+        format_item(row)
+        for row in sorted(items_raw, key=lambda row: row.get("created_at") or "")
+    ]
 
     return {"success": True, "data": {"shopping_list": format_list(sl, items)}}
 

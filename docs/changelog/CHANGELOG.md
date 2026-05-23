@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-05-23 13:45] - Tối ưu kết nối Supabase và tải API
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / Refactor  
+**関連US**: US-001, US-005, US-006  
+**影響範囲**: Backend, Frontend, API
+
+### 変更内容
+- **Backend**: Xác thực JWT cục bộ bằng `SUPABASE_JWT_SECRET` thay vì gọi Supabase Auth API trên mỗi request
+- **Backend**: Gộp truy vấn PostgREST (meal plan + items, shopping list + items; meals + count) để giảm round-trip
+- **Backend**: Thêm timeout 15s cho Supabase Python client
+- **Frontend**: Cache access token từ `AuthContext`, tránh `getSession()` trên mọi API call
+- **Frontend**: Sửa retry axios (tối đa 3 lần) và tăng timeout lên 15s
+- **Tests**: Fixture `auth_headers` dùng JWT hợp lệ; thêm `tests/test_auth.py`
+
+### 実装詳細
+- File: `backend/app/core/auth.py` — `decode_access_token()` với python-jose
+- File: `backend/app/core/supabase.py` — `ClientOptions` timeout
+- File: `backend/app/api/v1/meals.py`, `meal_plans.py`, `shopping_lists.py` — giảm số query
+- File: `frontend/src/lib/api.ts`, `frontend/src/context/AuthContext.tsx`, `frontend/src/lib/supabase.ts`
+- Lý do: Mỗi request UI gây 2+ round-trip Supabase (auth + DB), làm chậm và dễ timeout/lỗi mạng
+
+### テスト
+- [x] `pytest tests/test_auth.py tests/test_meals.py tests/test_products.py` — 31 passed
+- [ ] E2E trên production Supabase
+
+### 備考
+- Cần `SUPABASE_JWT_SECRET` khớp project Supabase (Dashboard → Settings → API → JWT Secret)
+- Frontend: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`
+
+---
+
 ## [2026-05-18 17:02] - Sửa lỗi 500 khi tạo món ăn trùng tên
 
 **Assignee**: AI Assistant  

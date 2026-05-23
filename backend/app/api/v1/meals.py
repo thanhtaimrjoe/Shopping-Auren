@@ -104,7 +104,7 @@ async def get_meals(
         print(f"Fetching meals for user_id: {user_id}")
         query = (
             db.table("meals")
-            .select("id, name, ingredients, category, created_at, updated_at")
+            .select("id, name, ingredients, category, created_at, updated_at", count="exact")
             .eq("user_id", user_id)
             .is_("deleted_at", "null")
         )
@@ -119,29 +119,13 @@ async def get_meals(
         query = query.range(offset, offset + limit - 1)
 
         response = query.execute()
-        
+
         if response.data is None:
-            print("Warning: query.execute() returned None data")
             meals = []
         else:
             meals = [format_meal(row) for row in response.data]
 
-        # Separate count query
-        count_query = (
-            db.table("meals")
-            .select("id", count="exact")
-            .eq("user_id", user_id)
-            .is_("deleted_at", "null")
-        )
-        if category:
-            count_query = count_query.eq("category", category)
-        if search:
-            count_query = count_query.ilike("name", f"%{search}%")
-
-        count_response = count_query.execute()
-        total = count_response.count if count_response.count is not None else len(meals)
-
-        print(f"Successfully fetched {len(meals)} meals (Total: {total})")
+        total = response.count if response.count is not None else len(meals)
         return {
             "success": True,
             "data": {"meals": meals, "total": total, "limit": limit, "offset": offset},
