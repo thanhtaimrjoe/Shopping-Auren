@@ -2,24 +2,11 @@ from typing import Any
 
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jose import JWTError
 
-from app.core.config import settings
+from app.core.jwt_verify import decode_access_token
 
 security = HTTPBearer()
-
-SUPABASE_JWT_AUDIENCE = "authenticated"
-SUPABASE_JWT_ALGORITHMS = ["HS256"]
-
-
-def decode_access_token(token: str) -> dict[str, Any]:
-    """Verify a Supabase access token locally (no Auth API round-trip)."""
-    return jwt.decode(
-        token,
-        settings.supabase_jwt_secret,
-        algorithms=SUPABASE_JWT_ALGORITHMS,
-        audience=SUPABASE_JWT_AUDIENCE,
-    )
 
 
 async def get_current_user(

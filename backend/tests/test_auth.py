@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from jose import jwt
 
-from app.core.auth import decode_access_token
+from app.core.jwt_verify import decode_access_token
 from app.core.config import settings
 
 

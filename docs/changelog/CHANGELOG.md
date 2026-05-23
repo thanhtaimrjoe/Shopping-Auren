@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-05-23 15:15] - Sửa 401 JWT ES256 (Supabase JWKS)
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-001  
+**影響範囲**: Backend, API
+
+### 変更内容
+- Verify JWT **ES256** qua JWKS (`/auth/v1/.well-known/jwks.json`) — project Shopping Memo dùng ECC signing key, không còn HS256
+- Giữ verify **HS256** với `SUPABASE_JWT_SECRET` cho legacy/tests
+- Trim whitespace trên `SUPABASE_JWT_SECRET` (tránh lỗi copy/paste trên Render)
+
+### 実装詳細
+- File: `backend/app/core/jwt_verify.py` (mới), `backend/app/core/auth.py`, `backend/app/core/config.py`
+- Nguyên nhân 401 production: token Supabase ký bằng ES256, backend chỉ decode HS256 + shared secret
+
+### テスト
+- [x] `pytest tests/test_auth.py`
+
+### 備考
+- `SUPABASE_JWT_SECRET` trên Render vẫn nên giữ (legacy HS256); token mới không cần secret đúng để verify ES256
+- Sau deploy: user đăng xuất / đăng nhập lại để lấy access token mới
+
+---
+
 ## [2026-05-23 13:45] - Tối ưu kết nối Supabase và tải API
 
 **担当**: AI Assistant  
