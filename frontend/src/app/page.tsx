@@ -3,15 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Search, Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { mealsApi, mealPlansApi, productsApi, shoppingListsApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/cn';
 
 interface Meal {
   id: string;
@@ -380,11 +375,11 @@ export default function MealPlanPage() {
   }
 
   return (
-    <div className="pb-12 animate-page-enter">
+    <div className="page-shell pb-4 sm:pb-12 animate-page-enter min-w-0">
       {/* Notifications */}
       {notification && (
         <div className={cn(
-          "fixed top-8 right-8 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-warm animate-scale-in",
+          "fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto",
           notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-cream"
         )}>
           {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <X className="h-5 w-5" />}
@@ -393,23 +388,21 @@ export default function MealPlanPage() {
       )}
 
       {/* Editorial Header */}
-      <header className="mb-12">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-4 mb-2">
+      <header className="mb-6 sm:mb-10">
+        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2">
           {format(currentDate, 'EEEE, MMMM d')}
         </span>
-        <h3 className="text-3xl md:text-4xl text-bark font-serif mb-4 leading-tight">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl text-bark font-serif mb-3 sm:mb-4 leading-tight">
           Weekly Alignment
         </h3>
-        <div className="flex items-center gap-4 text-bark/60">
-          <p className="text-xl max-w-2xl leading-relaxed">
-            Choose each meal with intention. Begin your day with a nourish mind.
-          </p>
-        </div>
+        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
+          Choose each meal with intention.
+        </p>
       </header>
 
       {/* Week Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
+        <div className="w-full sm:w-auto">
           <button
             onClick={async () => {
               if (!currentPlanId) return;
@@ -436,13 +429,13 @@ export default function MealPlanPage() {
               }
             }}
             disabled={!currentPlanId || isLoading}
-            className="px-4 py-2 bg-bark text-cream rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-bark/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="w-full sm:w-auto justify-center px-4 py-3 bg-bark text-cream rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-bark/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation min-h-[44px]"
           >
-            <ShoppingBag className="h-3 w-3" />
-            Generate Shopping List
+            <ShoppingBag className="h-4 w-4 shrink-0" />
+            <span className="truncate">Generate shopping list</span>
           </button>
         </div>
-        <div className="relative flex items-center gap-2 md:gap-4 bg-cream rounded-full p-1 shadow-soft w-fit">
+        <div className="relative flex items-center justify-between gap-1 sm:gap-2 bg-cream rounded-full p-1 shadow-soft w-full sm:w-fit sm:mx-auto">
           <input 
             type="date"
             ref={dateInputRef}
@@ -458,7 +451,7 @@ export default function MealPlanPage() {
           </button>
           <div 
             onClick={triggerDatePicker}
-            className="text-xs md:text-sm font-bold text-bark min-w-[150px] md:min-w-[200px] text-center uppercase tracking-widest cursor-pointer hover:text-sage-deep transition-colors select-none px-2"
+            className="text-[11px] sm:text-sm font-bold text-bark flex-1 text-center uppercase tracking-wide sm:tracking-widest cursor-pointer hover:text-sage-deep transition-colors select-none px-1 sm:px-2 min-w-0"
           >
              {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d')}
           </div>
@@ -473,7 +466,7 @@ export default function MealPlanPage() {
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
         {daysOfWeek.map((day, idx) => {
           const dayKey = format(day, 'yyyy-MM-dd');
           const isToday = dayKey === format(new Date(), 'yyyy-MM-dd');
@@ -483,8 +476,8 @@ export default function MealPlanPage() {
             <div 
               key={idx}
               className={cn(
-                "group bg-cream rounded-[2.5rem] p-8 transition-all duration-700 flex flex-col h-full",
-                isToday ? "shadow-warm scale-[1.02] z-10" : "shadow-soft hover:shadow-warm hover:scale-[1.01]"
+                "group bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 transition-all duration-300 flex flex-col h-full min-w-0",
+                isToday ? "shadow-warm ring-2 ring-sage/20 z-10" : "shadow-soft"
               )}
             >
               <div className="flex items-end justify-between mb-6">
@@ -538,7 +531,7 @@ export default function MealPlanPage() {
                           <span className="text-sm text-bark font-bold">{mealName}</span>
                           <button 
                             onClick={() => removeMeal(dayKey, mIdx)}
-                            className="opacity-0 group-hover/meal:opacity-100 p-1 hover:bg-bark/10 rounded-full transition-all"
+                            className="sm:opacity-0 sm:group-hover/meal:opacity-100 p-2 -mr-1 hover:bg-bark/10 rounded-full transition-all touch-manipulation min-h-[36px] min-w-[36px] flex items-center justify-center"
                           >
                             <X className="h-3 w-3 text-bark/40" />
                           </button>
@@ -583,12 +576,12 @@ export default function MealPlanPage() {
       </div>
 
       {/* Extra Products Section */}
-      <div className="mt-10 bg-cream rounded-[2.5rem] p-8 shadow-soft">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mt-8 sm:mt-10 bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-soft">
+        <div className="flex flex-col xs:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
           <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Mua thêm (Products)</h3>
           <button 
             onClick={() => setIsProductModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-sage text-cream rounded-xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-sage text-cream rounded-xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all touch-manipulation min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
             Thêm sản phẩm
@@ -620,17 +613,19 @@ export default function MealPlanPage() {
 
       {/* Modal Popup */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close" onClick={() => setIsModalOpen(false)} />
           <div 
             ref={modalRef}
-            className="bg-cream rounded-[2.5rem] w-full max-w-lg shadow-warm animate-scale-in overflow-hidden"
+            className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-lg shadow-warm animate-scale-in overflow-hidden max-h-[min(90dvh,640px)] flex flex-col pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="p-8 border-b border-bark/5">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Chọn món ăn</h3>
+            <div className="p-5 sm:p-8 border-b border-bark/5 shrink-0">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.2em] sm:tracking-[0.3em]">Chọn món ăn</h3>
                 <button 
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-hemp/50 rounded-full transition-all"
+                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/50 rounded-full transition-all touch-manipulation"
                 >
                   <X className="h-5 w-5 text-bark/40" />
                 </button>
@@ -641,14 +636,14 @@ export default function MealPlanPage() {
                   ref={searchInputRef}
                   type="text" 
                   placeholder="Tìm kiếm món ăn..."
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-3.5 sm:py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             
-            <div className="max-h-[400px] overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 custom-scrollbar">
               {fetchLoading ? (
                 <div className="py-12 flex justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-sage" />
@@ -686,11 +681,12 @@ export default function MealPlanPage() {
 
       {/* Product Modal Popup */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close" onClick={() => setIsProductModalOpen(false)} />
           <div 
-            className="bg-cream rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[85vh]"
+            className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="p-6 border-b border-bark/5 flex-shrink-0">
+            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em] mb-1">Thư viện sản phẩm</h3>
@@ -707,7 +703,7 @@ export default function MealPlanPage() {
             
             <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar">
               {productsDatabase.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                   {productsDatabase.map((p, idx) => {
                     const isSelected = extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase());
                     return (
@@ -717,7 +713,7 @@ export default function MealPlanPage() {
                           if (!isSelected) handleAddProduct(p);
                         }}
                         disabled={isSelected || isProductsLoading}
-                        className={`p-3 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[150px] ${
+                        className={`p-2 sm:p-3 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[120px] sm:min-h-[150px] touch-manipulation ${
                           isSelected 
                             ? 'bg-sage text-cream shadow-md scale-100 opacity-90' 
                             : 'bg-cream hover:bg-sage/10 text-bark border border-hemp/20 shadow-sm hover:shadow hover:scale-[1.02] active:scale-95'

@@ -144,27 +144,26 @@ export default function ShoppingPage() {
   }
 
   return (
-    <div className="pb-24 animate-page-enter">
-      {/* Editorial Header */}
-      <header className="mb-12 pt-8">
-        <div className="flex items-center gap-2 text-bark/40 mb-4">
-          <Link href="/" className="hover:text-sage-deep transition-colors">
+    <div className="page-shell animate-page-enter min-w-0">
+      <header className="mb-6 sm:mb-10">
+        <div className="flex items-center gap-2 text-bark/40 mb-3 sm:mb-4">
+          <Link href="/" className="hover:text-sage-deep transition-colors p-1 -m-1 touch-manipulation">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <span className="text-[10px] font-bold uppercase tracking-[0.4em]">
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] sm:tracking-[0.4em]">
             Back to Schedule
           </span>
         </div>
-        <h1 className="text-4xl md:text-5xl text-bark font-serif mb-6 leading-tight">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping List
         </h1>
-        <p className="text-xl text-bark/60 max-w-2xl leading-relaxed">
+        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
           The essential elements for your weekly nourishment.
         </p>
       </header>
 
       {!list ? (
-        <div className="bg-cream rounded-[2.5rem] p-12 shadow-soft text-center max-w-3xl mx-auto">
+        <div className="bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-6 sm:p-12 shadow-soft text-center max-w-3xl mx-auto">
           <div className="h-20 w-20 rounded-full bg-sage/10 flex items-center justify-center mx-auto mb-8">
             <ShoppingBag className="h-10 w-10 text-sage" />
           </div>
@@ -208,7 +207,7 @@ export default function ShoppingPage() {
                 type="button"
                 onClick={handleCompleteList}
                 disabled={isCompleting}
-                className="bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto justify-center bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm disabled:opacity-50 flex items-center gap-2 touch-manipulation min-h-[48px]"
               >
                 {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Finish shopping
@@ -251,16 +250,17 @@ export default function ShoppingPage() {
                       {category}
                       <div className="h-px flex-1 bg-bark/5" />
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                       {categoryItems.map(item => (
                         <button
                           key={item.id}
+                          type="button"
                           onClick={() => toggleItem(item.id, item.is_checked)}
                           className={cn(
-                            "group flex items-center justify-between p-6 rounded-[2rem] transition-all duration-300 text-left",
+                            "group flex items-center justify-between p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] transition-all duration-300 text-left touch-manipulation min-h-[56px]",
                             item.is_checked 
                               ? "bg-hemp/20 opacity-60" 
-                              : "bg-cream shadow-soft hover:shadow-warm hover:scale-[1.01]"
+                              : "bg-cream shadow-soft active:shadow-warm"
                           )}
                         >
                           <div className="flex items-center gap-4">

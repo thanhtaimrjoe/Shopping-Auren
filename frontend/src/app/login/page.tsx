@@ -50,10 +50,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-cream p-4 z-[60] overflow-y-auto">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-warm p-8 md:p-12 my-auto">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-serif text-bark mb-2">Welcome</h1>
+    <div className="fixed inset-0 flex items-center justify-center bg-cream p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] z-[60] overflow-y-auto">
+      <div className="max-w-md w-full bg-white rounded-[1.75rem] sm:rounded-[2.5rem] shadow-warm p-6 sm:p-8 md:p-12 my-auto">
+        <div className="text-center mb-8 sm:mb-10">
+          <h1 className="text-3xl sm:text-4xl font-serif text-bark mb-2">Welcome</h1>
           <p className="text-bark/60">Sign in to manage your culinary rhythm</p>
         </div>
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs shadow-soft hover:bg-sage-deep transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs shadow-soft hover:bg-sage-deep transition-all flex items-center justify-center gap-2 touch-manipulation min-h-[48px]"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
             </button>

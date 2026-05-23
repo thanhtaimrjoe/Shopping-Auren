@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AuthProvider } from "@/context/AuthContext";
 
 const outfit = Outfit({ 
@@ -20,6 +21,13 @@ export const metadata: Metadata = {
   description: "Plan your meals and generate shopping lists",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f5f0e8",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,11 +35,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen`}>
+      <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen min-h-[100dvh]`}>
         <AuthProvider>
           <Sidebar />
-          <main className="flex-1 lg:ml-[260px] pt-16 lg:pt-0 p-4 md:p-8 lg:p-12 min-h-screen relative transition-all duration-300">
-            <div className="w-full h-full max-w-[1400px] mx-auto">
+          <MobileBottomNav />
+          <main className="flex-1 lg:ml-[260px] pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0 px-3 sm:px-4 md:px-8 lg:px-12 pb-0 min-h-[100dvh] relative transition-all duration-300 w-full min-w-0">
+            <div className="w-full max-w-[1400px] mx-auto min-w-0">
               {children}
             </div>
           </main>

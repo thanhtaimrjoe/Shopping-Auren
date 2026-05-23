@@ -41,7 +41,7 @@ const SettingItem = ({ icon: Icon, label, value, isLast, danger, onClick }: Sett
     type="button"
     onClick={onClick}
     className={cn(
-      'w-full flex items-center justify-between p-6 hover:bg-hemp/20 transition-colors group',
+      'w-full flex items-center justify-between p-4 sm:p-6 hover:bg-hemp/20 transition-colors group touch-manipulation min-h-[56px]',
       !isLast && 'border-b border-bark/5'
     )}
   >
@@ -89,18 +89,18 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="pb-24 animate-page-enter">
-      <header className="mb-12">
-        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-4">
+    <div className="page-shell animate-page-enter min-w-0">
+      <header className="mb-6 sm:mb-10">
+        <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2 sm:mb-4">
           Preferences
         </span>
-        <h1 className="text-4xl md:text-5xl text-bark font-serif mb-6 leading-tight">Settings</h1>
-        <p className="text-xl text-bark/60 max-w-2xl leading-relaxed">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">Settings</h1>
+        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
           Tailor your culinary planning experience to your personal rhythm.
         </p>
       </header>
 
-      <div className="bg-sage text-cream rounded-[3rem] p-8 md:p-12 mb-12 shadow-warm relative overflow-hidden">
+      <div className="bg-sage text-cream rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 md:p-12 mb-8 sm:mb-12 shadow-warm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
           <div className="relative">

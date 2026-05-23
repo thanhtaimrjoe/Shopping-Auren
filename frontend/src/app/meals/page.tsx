@@ -5,15 +5,10 @@ import {
   Plus, Search, ArrowUpDown, MoreVertical, Edit2, Trash2, 
   X, Save, Loader2, Utensils, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { mealsApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/cn';
 
 // Types
 interface Meal {
@@ -26,6 +21,137 @@ interface Meal {
 }
 
 const ITEMS_PER_PAGE = 15;
+
+interface MealDetailPanelProps {
+  isAdding: boolean;
+  isEditing: boolean;
+  selectedMeal: Meal | null;
+  formState: Partial<Meal>;
+  isLoading: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  onClose?: () => void;
+  setFormState: (state: Partial<Meal>) => void;
+}
+
+function MealDetailPanel({
+  isAdding,
+  isEditing,
+  selectedMeal,
+  formState,
+  isLoading,
+  onEdit,
+  onDelete,
+  onCancel,
+  onSave,
+  onClose,
+  setFormState,
+}: MealDetailPanelProps) {
+  return (
+    <div className="bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-10 shadow-soft animate-page-enter">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 gap-2">
+        <h3 className="text-xs font-bold text-bark uppercase tracking-[0.2em] sm:tracking-[0.3em] min-w-0 truncate">
+          {isAdding ? 'Thêm món ăn mới' : isEditing ? 'Chỉnh sửa món ăn' : 'Chi tiết món ăn'}
+        </h3>
+        <div className="flex items-center gap-2 shrink-0">
+          {!isEditing ? (
+            <>
+              <button type="button" onClick={onEdit} className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
+                <Edit2 className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={onDelete} className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
+                <Trash2 className="h-4 w-4" />
+              </button>
+              {onClose && (
+                <button type="button" onClick={onClose} className="lg:hidden p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </>
+          ) : (
+            <button type="button" onClick={onCancel} className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Tên món ăn</label>
+            <input
+              type="text"
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-3.5 sm:py-4 px-6 text-bark font-serif text-lg sm:text-xl focus:ring-2 focus:ring-sage/20 transition-all"
+              value={formState.name || ''}
+              onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+              placeholder="Nhập tên món ăn..."
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Phân loại</label>
+            <select
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-3.5 sm:py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all appearance-none"
+              value={formState.category || 'other'}
+              onChange={(e) => setFormState({ ...formState, category: e.target.value as Meal['category'] })}
+            >
+              <option value="japanese">Japanese</option>
+              <option value="western">Western</option>
+              <option value="chinese">Chinese</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Nguyên liệu (mỗi dòng một mục)</label>
+            <textarea
+              rows={6}
+              className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all resize-none"
+              value={formState.ingredients || ''}
+              onChange={(e) => setFormState({ ...formState, ingredients: e.target.value })}
+              placeholder={'Ví dụ:\nThịt bò\nHành tây'}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isLoading}
+            className="w-full py-4 sm:py-5 bg-sage text-cream rounded-[1.5rem] font-bold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep transition-all flex items-center justify-center gap-3 touch-manipulation min-h-[48px]"
+          >
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu món ăn</>}
+          </button>
+        </div>
+      ) : selectedMeal ? (
+        <div className="space-y-8 sm:space-y-10 animate-page-enter">
+          <div>
+            <span className="inline-block px-4 py-1.5 bg-sage/10 text-sage-deep rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">
+              {selectedMeal.category}
+            </span>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl text-bark font-serif leading-tight">{selectedMeal.name}</h2>
+          </div>
+          <div className="space-y-4 sm:space-y-6">
+            <h4 className="text-xs font-bold text-bark uppercase tracking-[0.2em] flex items-center gap-2">
+              <Utensils className="h-4 w-4 text-sage" /> Nguyên liệu
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {selectedMeal.ingredients ? (
+                selectedMeal.ingredients.split('\n').filter(Boolean).map((ing, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 sm:p-4 bg-hemp/5 rounded-2xl border border-bark/5">
+                    <div className="h-2 w-2 rounded-full bg-sage/40 shrink-0" />
+                    <span className="text-sm font-medium text-bark/80">{ing}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-bark/40 italic px-2">Chưa có nguyên liệu nào được liệt kê.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function MealsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -209,30 +335,27 @@ export default function MealsPage() {
   }
 
   return (
-    <div className="pb-24 animate-page-enter">
-      {/* Header Toolbar */}
-      <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-2">
+    <div className="page-shell animate-page-enter min-w-0">
+      <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2">
             Library
           </span>
-          <h1 className="text-4xl text-bark font-serif">Meals Database</h1>
+          <h1 className="text-2xl sm:text-4xl text-bark font-serif">Meals Database</h1>
         </div>
-        <button 
+        <button
+          type="button"
           onClick={handleAddNew}
-          className="h-14 px-8 bg-sage text-cream rounded-2xl shadow-warm flex items-center gap-3 hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all group font-bold uppercase tracking-widest text-xs"
+          className="w-full sm:w-auto justify-center h-12 sm:h-14 px-6 sm:px-8 bg-sage text-cream rounded-2xl shadow-warm flex items-center gap-3 hover:bg-sage-deep transition-all font-bold uppercase tracking-widest text-xs touch-manipulation min-h-[48px]"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-5 w-5 shrink-0" />
           Add New Meal
         </button>
       </header>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Side: Search & List */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-cream rounded-[2.5rem] p-8 shadow-soft space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
+        <div className="lg:col-span-5 flex flex-col gap-6 min-w-0">
+          <div className="bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-soft space-y-4 sm:space-y-6">
             {/* Search and Filters */}
             <div className="space-y-4">
               <div className="relative">
@@ -279,7 +402,7 @@ export default function MealsPage() {
             </div>
 
             {/* Meals List */}
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[50vh] sm:max-h-[600px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
               {paginatedMeals.length > 0 ? (
                 paginatedMeals.map((meal) => (
                   <div 
@@ -302,7 +425,7 @@ export default function MealsPage() {
                       <h4 className="font-bold text-bark truncate">{meal.name}</h4>
                       <p className="text-[10px] font-bold text-bark/40 uppercase tracking-widest">{meal.category}</p>
                     </div>
-                    <button className="opacity-0 group-hover:opacity-100 p-2 hover:bg-bark/5 rounded-lg transition-all">
+                    <button type="button" className="sm:opacity-0 sm:group-hover:opacity-100 p-2 hover:bg-bark/5 rounded-lg transition-all touch-manipulation" onClick={(e) => e.stopPropagation()}>
                       <MoreVertical className="h-4 w-4 text-bark/40" />
                     </button>
                   </div>
@@ -340,118 +463,20 @@ export default function MealsPage() {
           </div>
         </div>
 
-        {/* Right Side: Detail & Form */}
-        <div className="lg:col-span-7 sticky top-8">
+        <div className="hidden lg:block lg:col-span-7 sticky top-8">
           {selectedMeal || isAdding ? (
-            <div className="bg-cream rounded-[2.5rem] p-8 md:p-10 shadow-soft animate-page-enter">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">
-                  {isAdding ? 'Thêm món ăn mới' : isEditing ? 'Chỉnh sửa món ăn' : 'Chi tiết món ăn'}
-                </h3>
-                <div className="flex items-center gap-2">
-                  {!isEditing ? (
-                    <>
-                      <button 
-                        onClick={() => setIsEditing(true)}
-                        className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => setShowDeleteConfirm(selectedMeal!.id)}
-                        className="p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={handleCancel}
-                      className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {isEditing ? (
-                <div className="space-y-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Tên món ăn</label>
-                    <input 
-                      type="text" 
-                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-serif text-xl focus:ring-2 focus:ring-sage/20 transition-all"
-                      value={formState.name || ''}
-                      onChange={e => setFormState({...formState, name: e.target.value})}
-                      placeholder="Nhập tên món ăn..."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Phân loại</label>
-                      <select 
-                        className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all appearance-none"
-                        value={formState.category || 'other'}
-                        onChange={e => setFormState({...formState, category: e.target.value as any})}
-                      >
-                        <option value="japanese">Japanese</option>
-                        <option value="western">Western</option>
-                        <option value="chinese">Chinese</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">Nguyên liệu (Mỗi dòng một nguyên liệu)</label>
-                    <textarea 
-                      rows={6}
-                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 transition-all resize-none"
-                      value={formState.ingredients || ''}
-                      onChange={e => setFormState({...formState, ingredients: e.target.value})}
-                      placeholder="Ví dụ:&#10;Thịt bò&#10;Hành tây&#10;Gia vị"
-                    />
-                  </div>
-
-                  <button 
-                    onClick={handleSave}
-                    disabled={isLoading}
-                    className="w-full py-5 bg-sage text-cream rounded-[1.5rem] font-bold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
-                  >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-5 w-5" /> Lưu món ăn</>}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-10 animate-page-enter">
-                  <div>
-                    <span className="inline-block px-4 py-1.5 bg-sage/10 text-sage-deep rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">
-                      {selectedMeal!.category}
-                    </span>
-                    <h2 className="text-4xl md:text-5xl text-bark font-serif leading-tight">{selectedMeal!.name}</h2>
-                  </div>
-
-                  <div className="space-y-6">
-                    <h4 className="text-xs font-bold text-bark uppercase tracking-[0.2em] flex items-center gap-2">
-                      <Utensils className="h-4 w-4 text-sage" /> Nguyên liệu
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {selectedMeal!.ingredients ? (
-                        selectedMeal!.ingredients.split('\n').map((ing, i) => (
-                          <div key={i} className="flex items-center gap-3 p-4 bg-hemp/5 rounded-2xl border border-bark/5">
-                            <div className="h-2 w-2 rounded-full bg-sage/40" />
-                            <span className="text-sm font-medium text-bark/80">{ing}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-bark/40 italic px-2">Chưa có nguyên liệu nào được liệt kê.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <MealDetailPanel
+              isAdding={isAdding}
+              isEditing={isEditing}
+              selectedMeal={selectedMeal}
+              formState={formState}
+              isLoading={isLoading}
+              onEdit={() => setIsEditing(true)}
+              onDelete={() => setShowDeleteConfirm(selectedMeal!.id)}
+              onCancel={handleCancel}
+              onSave={handleSave}
+              setFormState={setFormState}
+            />
           ) : (
             <div className="h-[600px] border-2 border-dashed border-bark/5 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center bg-cream/30">
               <div className="h-24 w-24 bg-hemp/10 rounded-full flex items-center justify-center mb-6">
@@ -464,10 +489,44 @@ export default function MealsPage() {
         </div>
       </div>
 
+      {(selectedMeal || isAdding) && (
+        <div
+          className="lg:hidden fixed inset-0 bg-bark/30 backdrop-blur-sm z-50 flex items-end justify-center p-0"
+          onClick={() => {
+            setSelectedMeal(null);
+            setIsAdding(false);
+            setIsEditing(false);
+          }}
+        >
+          <div
+            className="w-full max-h-[min(92dvh,720px)] overflow-y-auto custom-scrollbar pb-[env(safe-area-inset-bottom)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MealDetailPanel
+              isAdding={isAdding}
+              isEditing={isEditing}
+              selectedMeal={selectedMeal}
+              formState={formState}
+              isLoading={isLoading}
+              onEdit={() => setIsEditing(true)}
+              onDelete={() => setShowDeleteConfirm(selectedMeal!.id)}
+              onCancel={handleCancel}
+              onSave={handleSave}
+              onClose={() => {
+                setSelectedMeal(null);
+                setIsAdding(false);
+                setIsEditing(false);
+              }}
+              setFormState={setFormState}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Notifications */}
       {notification && (
         <div className={cn(
-          "fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-warm flex items-center gap-3 animate-slide-up z-50",
+          "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-8 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-warm flex items-center gap-3 animate-slide-up z-[70] max-w-md sm:max-w-none mx-auto sm:mx-0",
           notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-white"
         )}>
           {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
@@ -477,8 +536,8 @@ export default function MealsPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-bark/20 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-cream rounded-[2.5rem] p-10 max-w-sm w-full shadow-warm animate-scale-in">
+        <div className="fixed inset-0 bg-bark/30 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-4 pb-[env(safe-area-inset-bottom)]">
+          <div className="bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 max-w-sm w-full shadow-warm animate-scale-in">
             <div className="h-16 w-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mb-6">
               <AlertCircle className="h-8 w-8" />
             </div>

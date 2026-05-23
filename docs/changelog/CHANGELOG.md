@@ -5,6 +5,35 @@
 
 ---
 
+## [2026-05-23 21:30] - Mobile responsive UI (Galaxy S24)
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-005, US-006, US-007  
+**影響範囲**: Frontend
+
+### 変更内容
+- Bottom navigation (`MobileBottomNav`) cho màn hình &lt; lg; header mobile gọn, bỏ drawer trùng nav
+- Safe-area (`viewportFit: cover`), `page-shell` tránh che bởi tab bar, input 16px chống zoom iOS/Android
+- Weekly plan: toast/modal full-width, bỏ `scale` gây tràn, nút touch 44px+
+- Meals: bottom sheet chi tiết/chỉnh sửa trên mobile (giống Products)
+- Shopping, Settings, Login: typography/padding responsive
+
+### 実装詳細
+- `frontend/src/components/MobileBottomNav.tsx`, `frontend/src/lib/cn.ts`
+- `frontend/src/app/globals.css` — `.page-shell`, safe-area
+- `frontend/src/app/layout.tsx` — viewport export
+- Cập nhật `page.tsx`, `meals/`, `products/`, `shopping/`, `settings/`, `login/`, `Sidebar.tsx`
+
+### テスト
+- [x] `npm run build` (Next.js)
+- [ ] Manual QA trên Galaxy S24 / DevTools ~390px
+
+### 備考
+- Sign out trên mobile: Settings hoặc desktop sidebar
+
+---
+
 ## [2026-05-23 18:00] - Backend MVC refactor + frontend auth polish
 
 **担当**: AI Assistant  

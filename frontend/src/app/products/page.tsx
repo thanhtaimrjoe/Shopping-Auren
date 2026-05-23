@@ -362,18 +362,18 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="pb-24 animate-page-enter">
-      {/* Header Toolbar */}
-      <header className="mb-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.4em] block pt-8 mb-2">
+    <div className="page-shell animate-page-enter min-w-0">
+      <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <span className="text-[10px] font-bold text-bark/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] block mb-2">
             Inventory
           </span>
-          <h1 className="text-4xl text-bark font-serif">Product Database</h1>
+          <h1 className="text-2xl sm:text-4xl text-bark font-serif">Product Database</h1>
         </div>
-        <button 
+        <button
+          type="button"
           onClick={handleAddNew}
-          className="h-14 px-8 bg-sage text-cream rounded-2xl shadow-warm flex items-center gap-3 hover:bg-sage-deep hover:-translate-y-0.5 active:translate-y-0 transition-all group font-bold uppercase tracking-widest text-xs"
+          className="w-full sm:w-auto justify-center h-12 sm:h-14 px-6 sm:px-8 bg-sage text-cream rounded-2xl shadow-warm flex items-center gap-3 hover:bg-sage-deep transition-all font-bold uppercase tracking-widest text-xs touch-manipulation min-h-[48px]"
         >
           <Plus className="h-5 w-5" />
           Add New Product
@@ -381,11 +381,9 @@ export default function ProductsPage() {
       </header>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Side: Search & List */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-cream rounded-[2.5rem] p-8 shadow-soft space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 items-start">
+        <div className="lg:col-span-5 flex flex-col gap-6 min-w-0">
+          <div className="bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-soft space-y-4 sm:space-y-6">
             {/* Search and Filters */}
             <div className="space-y-4">
               <div className="relative">
@@ -432,7 +430,7 @@ export default function ProductsPage() {
             </div>
 
             {/* Products List */}
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[50vh] sm:max-h-[600px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
               {paginatedProducts.length > 0 ? (
                 paginatedProducts.map((product) => (
                   <div 
@@ -528,7 +526,7 @@ export default function ProductsPage() {
       {/* Mobile Detail Modal */}
       {(selectedProduct || isAdding) && (
         <div 
-          className="lg:hidden fixed inset-0 bg-bark/20 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          className="lg:hidden fixed inset-0 bg-bark/30 backdrop-blur-sm z-50 flex items-end justify-center p-0"
           onClick={() => {
             setSelectedProduct(null);
             setIsAdding(false);
@@ -536,7 +534,7 @@ export default function ProductsPage() {
           }}
         >
           <div 
-            className="w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar shadow-warm"
+            className="w-full max-h-[min(92dvh,720px)] overflow-y-auto custom-scrollbar shadow-warm pb-[env(safe-area-inset-bottom)]"
             onClick={e => e.stopPropagation()}
           >
             <DetailContent 
@@ -559,7 +557,7 @@ export default function ProductsPage() {
       {/* Notifications */}
       {notification && (
         <div className={cn(
-          "fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-warm flex items-center gap-3 animate-slide-up z-50",
+          "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:bottom-8 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 px-4 sm:px-8 py-3 sm:py-4 rounded-2xl shadow-warm flex items-center gap-3 animate-slide-up z-[70] max-w-md sm:max-w-none mx-auto sm:mx-0",
           notification.type === 'success' ? "bg-sage text-cream" : "bg-red-500 text-white"
         )}>
           {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
