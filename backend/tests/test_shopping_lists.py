@@ -64,16 +64,3 @@ class TestShoppingListsAPI:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
         ]
-
-    def test_add_item_invalid_category(self, client, auth_headers):
-        fake_id = "00000000-0000-0000-0000-000000000000"
-        response = client.post(
-            f"/api/v1/shopping-lists/{fake_id}/items",
-            json={"name": "Milk", "category": "invalid"},
-            headers=auth_headers,
-        )
-        assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_404_NOT_FOUND,
-        ]

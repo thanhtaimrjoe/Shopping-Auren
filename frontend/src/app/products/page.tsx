@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -13,11 +13,12 @@ import {
   Package,
   AlertCircle,
   CheckCircle2,
-  Image as ImageIcon,
+  Upload,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
 import { productsApi } from '@/lib/api';
+import { uploadProductImage, validateProductImageFile } from '@/lib/product-image-upload';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -25,14 +26,12 @@ import { cn } from '@/lib/cn';
 interface Product {
   id: string;
   name: string;
-  category?: string;
   image_url?: string;
   created_at: string;
   updated_at: string;
 }
 
 const ITEMS_PER_PAGE = 18;
-const DEFAULT_CATEGORY = 'other';
 
 export default function ProductsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -52,8 +51,35 @@ export default function ProductsPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [formState, setFormState] = useState<Partial<Product>>({});
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const modalOpen = isAdding || selectedProduct !== null;
+
+  const revokeBlobPreview = useCallback((url: string | null) => {
+    if (url?.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
+  const resetImageSelection = useCallback(() => {
+    setPendingImageFile(null);
+    setImagePreviewUrl((prev) => {
+      revokeBlobPreview(prev);
+      return null;
+    });
+  }, [revokeBlobPreview]);
+
+  const setImagePreview = useCallback(
+    (url: string | null) => {
+      setImagePreviewUrl((prev) => {
+        revokeBlobPreview(prev);
+        return url;
+      });
+    },
+    [revokeBlobPreview]
+  );
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -90,6 +116,12 @@ export default function ProductsPage() {
     setCurrentPage(1);
   }, [searchQuery, sortBy, sortOrder]);
 
+  useEffect(() => {
+    return () => {
+      revokeBlobPreview(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl, revokeBlobPreview]);
+
   const filteredProducts = useMemo(() => {
     return products
       .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -110,6 +142,7 @@ export default function ProductsPage() {
   );
 
   const closeModal = () => {
+    resetImageSelection();
     setSelectedProduct(null);
     setIsAdding(false);
     setIsEditing(false);
@@ -117,17 +150,41 @@ export default function ProductsPage() {
   };
 
   const openProduct = (product: Product) => {
+    resetImageSelection();
     setSelectedProduct(product);
     setIsAdding(false);
     setIsEditing(false);
     setFormState(product);
+    setImagePreview(product.image_url || null);
   };
 
   const handleAddNew = () => {
+    resetImageSelection();
     setIsAdding(true);
     setIsEditing(true);
     setSelectedProduct(null);
     setFormState({ name: '', image_url: '' });
+  };
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const validationError = validateProductImageFile(file);
+    if (validationError) {
+      setNotification({ type: 'error', message: validationError });
+      return;
+    }
+
+    setPendingImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage = () => {
+    setPendingImageFile(null);
+    setImagePreview(null);
+    setFormState((prev) => ({ ...prev, image_url: '' }));
   };
 
   const handleSave = async () => {
@@ -138,36 +195,65 @@ export default function ProductsPage() {
 
     const payload = {
       name: formState.name.trim(),
-      image_url: formState.image_url || '',
-      category: formState.category || DEFAULT_CATEGORY,
+      image_url: pendingImageFile ? '' : formState.image_url || '',
     };
 
     setIsLoading(true);
     try {
+      let savedProduct: Product | null = null;
+
       if (isAdding) {
         const response = await productsApi.create(payload);
         if (response.data.success) {
-          const newProduct = response.data.data.product;
-          setProducts([newProduct, ...products]);
-          setSelectedProduct(newProduct);
-          setIsAdding(false);
-          setIsEditing(false);
-          setFormState(newProduct);
-          setNotification({ type: 'success', message: 'Đã thêm sản phẩm mới thành công' });
+          savedProduct = response.data.data.product;
         }
       } else {
         const response = await productsApi.update(selectedProduct!.id, payload);
         if (response.data.success) {
-          const updated = response.data.data.product;
-          setProducts(products.map((p) => (p.id === updated.id ? updated : p)));
-          setSelectedProduct(updated);
-          setIsEditing(false);
-          setFormState(updated);
-          setNotification({ type: 'success', message: 'Đã cập nhật sản phẩm thành công' });
+          savedProduct = response.data.data.product;
         }
       }
-    } catch {
-      setNotification({ type: 'error', message: 'Lỗi khi lưu sản phẩm' });
+
+      if (!savedProduct) {
+        setNotification({ type: 'error', message: 'Lỗi khi lưu sản phẩm' });
+        return;
+      }
+
+      if (pendingImageFile) {
+        const imageUrl = await uploadProductImage(savedProduct.id, pendingImageFile);
+        const imageResponse = await productsApi.update(savedProduct.id, {
+          name: savedProduct.name,
+          image_url: imageUrl,
+        });
+        if (imageResponse.data.success) {
+          savedProduct = imageResponse.data.data.product;
+        }
+        setPendingImageFile(null);
+        setImagePreview(savedProduct.image_url || null);
+      } else {
+        setImagePreview(savedProduct.image_url || null);
+      }
+
+      if (isAdding) {
+        setProducts([savedProduct, ...products]);
+        setSelectedProduct(savedProduct);
+        setIsAdding(false);
+        setIsEditing(false);
+        setFormState(savedProduct);
+        setNotification({ type: 'success', message: 'Đã thêm sản phẩm mới thành công' });
+      } else {
+        setProducts(products.map((p) => (p.id === savedProduct!.id ? savedProduct! : p)));
+        setSelectedProduct(savedProduct);
+        setIsEditing(false);
+        setFormState(savedProduct);
+        setNotification({ type: 'success', message: 'Đã cập nhật sản phẩm thành công' });
+      }
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      setNotification({
+        type: 'error',
+        message: err.message || 'Lỗi khi lưu sản phẩm',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -199,7 +285,11 @@ export default function ProductsPage() {
     }
     setIsEditing(false);
     setFormState(selectedProduct!);
+    resetImageSelection();
+    setImagePreview(selectedProduct?.image_url || null);
   };
+
+  const displayImageUrl = imagePreviewUrl || formState.image_url || null;
 
   if (authLoading || (fetchLoading && products.length === 0)) {
     return (
@@ -213,7 +303,7 @@ export default function ProductsPage() {
     <div className="page-shell animate-page-enter min-w-0">
       <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="page-title text-2xl sm:text-4xl text-bark font-serif">Products</h1>
+          <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif leading-tight">Products</h1>
         </div>
         <button
           type="button"
@@ -373,22 +463,41 @@ export default function ProductsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                    Image URL
+                    Product image
                   </label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
-                    <input
-                      type="text"
-                      className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-6 text-bark focus:ring-2 focus:ring-sage/20"
-                      value={formState.image_url || ''}
-                      onChange={(e) => setFormState({ ...formState, image_url: e.target.value })}
-                      placeholder="https://..."
-                    />
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                    className="hidden"
+                    onChange={handleImageFileChange}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 px-4 py-3 bg-sage/15 border border-sage/35 text-sage-deep rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-sage/25 hover:border-sage/50 transition-all disabled:opacity-50 touch-manipulation min-h-[44px]"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {displayImageUrl ? 'Change image' : 'Upload image'}
+                    </button>
+                    {displayImageUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={isLoading}
+                        className="px-4 py-3 text-red-500 bg-red-50 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-red-100 transition-all disabled:opacity-50 touch-manipulation min-h-[44px]"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
+                  <p className="text-[10px] text-bark/40 px-2">JPEG, PNG, WebP, GIF, or AVIF — max 5 MB</p>
                 </div>
-                {formState.image_url && (
+                {displayImageUrl && (
                   <div className="h-40 rounded-2xl overflow-hidden bg-hemp/10">
-                    <img src={formState.image_url} alt="" className="w-full h-full object-cover" />
+                    <img src={displayImageUrl} alt="" className="w-full h-full object-cover" />
                   </div>
                 )}
                 <button

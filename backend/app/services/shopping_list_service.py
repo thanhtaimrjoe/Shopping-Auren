@@ -7,6 +7,7 @@ from app.models.tables import MEAL_PLAN_ITEMS, MEAL_PLANS, PRODUCTS, SHOPPING_IT
 from app.schemas.shopping_list import AddItemBody, CheckItemBody, CompleteListBody, GenerateListBody
 from app.services.meal_plan_service import PLACEHOLDER_WEEK_START
 from app.utils.db_errors import is_not_found, raise_from_supabase
+from app.constants.shopping_groups import SHOPPING_GROUP_MANUAL, SHOPPING_GROUP_PRODUCTS
 from app.utils.ingredients import normalize_ingredients_list
 
 
@@ -78,7 +79,7 @@ def items_from_snapshot(snapshot: list | None) -> list:
         {
             "id": f"snapshot-{index}",
             "name": row.get("name", ""),
-            "category": row.get("category", "other"),
+            "category": row.get("category", SHOPPING_GROUP_MANUAL),
             "source_type": row.get("source_type", "manual"),
             "source_id": None,
             "note": row.get("note"),
@@ -171,7 +172,7 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
         for ingredient in normalize_ingredients_list(meal.get("ingredients")):
             shopping_items_payload.append({
                 "name": ingredient,
-                "category": "other",
+                "category": meal_name,
                 "source_type": "meal",
                 "source_id": meal_id,
                 "note": f"Dùng cho món {meal_name}",
@@ -181,7 +182,7 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
     if body.product_ids:
         products_resp = (
             db.table(PRODUCTS)
-            .select("id, name, category")
+            .select("id, name")
             .in_("id", body.product_ids)
             .eq("user_id", user_id)
             .is_("deleted_at", "null")
@@ -190,7 +191,7 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
         for product in products_resp.data:
             shopping_items_payload.append({
                 "name": product["name"],
-                "category": product["category"],
+                "category": SHOPPING_GROUP_PRODUCTS,
                 "source_type": "product",
                 "source_id": product["id"],
                 "note": "Mua thêm",
@@ -254,7 +255,7 @@ def add_item(user_id: str, list_id: str, body: AddItemBody) -> dict:
     resp = db.table(SHOPPING_ITEMS).insert({
         "shopping_list_id": list_id,
         "name": body.name,
-        "category": body.category,
+        "category": body.category or SHOPPING_GROUP_MANUAL,
         "source_type": "manual",
         "is_checked": False,
     }).execute()

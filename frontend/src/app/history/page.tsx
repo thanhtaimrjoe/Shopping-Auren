@@ -7,6 +7,7 @@ import { ChevronRight, History, Loader2, X } from 'lucide-react';
 import { shoppingListsApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/cn';
+import { sortShoppingGroups } from '@/lib/shopping-groups';
 
 interface HistorySummary {
   id: string;
@@ -93,9 +94,6 @@ export default function HistoryPage() {
         <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping history
         </h1>
-        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
-          Completed lists from the last two weeks.
-        </p>
       </header>
 
       {history.length === 0 ? (
@@ -166,34 +164,46 @@ export default function HistoryPage() {
                 <p className="text-sm text-bark/50 mb-6">
                   {selected.checked_items}/{selected.total_items} checked
                 </p>
-                <ul className="space-y-2">
-                  {selected.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className={cn(
-                        'flex items-start gap-3 p-4 rounded-2xl',
-                        item.is_checked ? 'bg-hemp/20 opacity-70' : 'bg-hemp/10'
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            'font-medium block',
-                            item.is_checked && 'line-through text-bark/40'
-                          )}
-                        >
-                          {item.name}
-                        </span>
-                        {item.note ? (
-                          <span className="block text-xs text-bark/50 mt-1">{item.note}</span>
-                        ) : null}
-                      </div>
-                      <span className="text-[10px] uppercase tracking-widest text-bark/30 shrink-0">
-                        {item.category}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-8">
+                  {sortShoppingGroups(
+                    Array.from(new Set(selected.items.map((item) => item.category)))
+                  ).map((group) => {
+                    const groupItems = selected.items.filter((item) => item.category === group);
+                    if (groupItems.length === 0) return null;
+                    return (
+                      <section key={group}>
+                        <h3 className="text-xs font-bold text-bark/40 uppercase tracking-[0.3em] mb-3">
+                          {group}
+                        </h3>
+                        <ul className="space-y-2">
+                          {groupItems.map((item) => (
+                            <li
+                              key={item.id}
+                              className={cn(
+                                'flex items-start gap-3 p-4 rounded-2xl',
+                                item.is_checked ? 'bg-hemp/20 opacity-70' : 'bg-hemp/10'
+                              )}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <span
+                                  className={cn(
+                                    'font-medium block',
+                                    item.is_checked && 'line-through text-bark/40'
+                                  )}
+                                >
+                                  {item.name}
+                                </span>
+                                {item.note ? (
+                                  <span className="block text-xs text-bark/50 mt-1">{item.note}</span>
+                                ) : null}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    );
+                  })}
+                </div>
               </>
             )}
           </div>

@@ -36,7 +36,6 @@ def format_plan_item(row: dict) -> dict:
         "meal": {
             "id": meal.get("id"),
             "name": meal.get("name"),
-            "category": meal.get("category"),
             "ingredients": jsonb_to_text(meal.get("ingredients")),
         }
         if meal
@@ -47,7 +46,7 @@ def format_plan_item(row: dict) -> dict:
 def fetch_plan_items(plan_id: str) -> list:
     resp = (
         db.table(MEAL_PLAN_ITEMS)
-        .select("id, day_of_week, meals(id, name, category, ingredients)")
+        .select("id, day_of_week, meals(id, name, ingredients)")
         .eq("meal_plan_id", plan_id)
         .order("day_of_week")
         .execute()
@@ -60,7 +59,7 @@ def get_current_plan(user_id: str) -> dict:
         db.table(MEAL_PLANS)
         .select(
             "id, week_start_date, status, created_at, updated_at, "
-            "meal_plan_items(id, day_of_week, meals(id, name, category, ingredients))"
+            "meal_plan_items(id, day_of_week, meals(id, name, ingredients))"
         )
         .eq("user_id", user_id)
         .order("updated_at", desc=True)

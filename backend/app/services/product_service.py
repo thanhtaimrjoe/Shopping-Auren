@@ -5,38 +5,29 @@ from fastapi import HTTPException, status
 
 from app.core.supabase import supabase_admin as db
 from app.models.tables import PRODUCTS
-from app.schemas.product import ProductCreate, ProductUpdate, VALID_PRODUCT_CATEGORIES
+from app.schemas.product import ProductCreate, ProductUpdate
 from app.utils.db_errors import is_duplicate_name, is_not_found, raise_from_supabase
 
-_PRODUCT_COLUMNS = "id, name, category, image_url, created_at, updated_at"
+_PRODUCT_COLUMNS = "id, name, image_url, created_at, updated_at"
 
 
 def format_product(row: dict) -> dict:
     return {
         "id": row["id"],
         "name": row["name"],
-        "category": row["category"],
         "image_url": row.get("image_url"),
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
     }
 
 
-def list_products(user_id: str, *, category: Optional[str], search: Optional[str]) -> dict:
-    if category and category not in VALID_PRODUCT_CATEGORIES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid category. Must be one of: {', '.join(sorted(VALID_PRODUCT_CATEGORIES))}",
-        )
-
+def list_products(user_id: str, *, search: Optional[str]) -> dict:
     query = (
         db.table(PRODUCTS)
         .select(_PRODUCT_COLUMNS)
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
     )
-    if category:
-        query = query.eq("category", category)
     if search:
         query = query.ilike("name", f"%{search}%")
 
@@ -65,7 +56,6 @@ def create_product(user_id: str, body: ProductCreate) -> dict:
     insert_data = {
         "user_id": user_id,
         "name": body.name,
-        "category": body.category,
     }
     if body.image_url:
         insert_data["image_url"] = body.image_url
@@ -95,8 +85,6 @@ def update_product(user_id: str, product_id: str, body: ProductUpdate) -> dict:
     update_data: dict = {}
     if body.name is not None:
         update_data["name"] = body.name
-    if body.category is not None:
-        update_data["category"] = body.category
     if body.image_url is not None:
         update_data["image_url"] = body.image_url
     if not update_data:

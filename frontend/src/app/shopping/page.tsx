@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Search, CheckCircle2, MoreHorizontal, ShoppingBag, Filter,
+  Search, CheckCircle2, MoreHorizontal, ShoppingBag,
   Loader2, ListPlus, Plus, Trash2, X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import { twMerge } from 'tailwind-merge';
 import { shoppingListsApi, mealPlansApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { Toast, type ToastMessage } from '@/components/Toast';
+import { SHOPPING_GROUP_MANUAL, sortShoppingGroups } from '@/lib/shopping-groups';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,12 +35,6 @@ interface ShoppingList {
   progress: number;
 }
 
-const MANUAL_CATEGORIES = [
-  { value: 'daily', label: 'Daily' },
-  { value: 'consumable', label: 'Consumable' },
-  { value: 'other', label: 'Other' },
-] as const;
-
 export default function ShoppingPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const [list, setList] = useState<ShoppingList | null>(null);
@@ -51,7 +46,6 @@ export default function ShoppingPage() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<string>('other');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [weekFrom, setWeekFrom] = useState('');
@@ -183,7 +177,7 @@ export default function ShoppingPage() {
     try {
       const response = await shoppingListsApi.addItem(list.id, {
         name: newItemName.trim(),
-        category: newItemCategory,
+        category: SHOPPING_GROUP_MANUAL,
       });
       if (response.data.success) {
         const item = response.data.data.item;
@@ -199,7 +193,6 @@ export default function ShoppingPage() {
             : 0,
         });
         setNewItemName('');
-        setNewItemCategory('other');
         setIsAddSheetOpen(false);
         setToast({ type: 'success', message: 'アイテムを追加しました。' });
       }
@@ -235,7 +228,9 @@ export default function ShoppingPage() {
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-  const categories = Array.from(new Set(filteredItems.map((item) => item.category)));
+  const categories = sortShoppingGroups(
+    Array.from(new Set(filteredItems.map((item) => item.category)))
+  );
 
   if (authLoading || !user || (isLoading && !list)) {
     return (
@@ -253,9 +248,6 @@ export default function ShoppingPage() {
         <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping List
         </h1>
-        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
-          The essential elements for your weekly nourishment.
-        </p>
       </header>
 
       {!list ? (
@@ -335,14 +327,6 @@ export default function ShoppingPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button
-              type="button"
-              className="h-[56px] px-6 bg-cream rounded-2xl shadow-soft flex items-center gap-3 text-bark/60"
-              aria-hidden
-            >
-              <Filter className="h-5 w-5" />
-              <span className="text-sm font-medium">Categories</span>
-            </button>
           </div>
 
           <div className="space-y-12">
@@ -351,7 +335,7 @@ export default function ShoppingPage() {
                 <p className="text-bark/40 font-serif text-xl">No items found matching your search.</p>
               </div>
             ) : (
-              categories.sort().map((category) => {
+              categories.map((category) => {
                 const categoryItems = filteredItems.filter((item) => item.category === category);
                 if (categoryItems.length === 0) return null;
 
@@ -523,22 +507,6 @@ export default function ShoppingPage() {
                   onChange={(e) => setNewItemName(e.target.value)}
                   placeholder="Milk, eggs..."
                 />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                  Category
-                </label>
-                <select
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 appearance-none"
-                  value={newItemCategory}
-                  onChange={(e) => setNewItemCategory(e.target.value)}
-                >
-                  {MANUAL_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
               </div>
               <button
                 type="button"

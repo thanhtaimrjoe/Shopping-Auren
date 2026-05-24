@@ -5,7 +5,167 @@
 
 ---
 
-## [2026-05-24 12:00] - Remove meal suggestions; show dish notes on shopping list
+## [2026-05-24 09:15] - Spec rà soát & Production migration guide
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: 全US  
+**影響範囲**: Docs
+
+### 変更内容
+- `docs/spec/03_design/database_schema.md` を最新状態に同期：
+  - `meals.category` / `products.category` 削除済みとして更新
+  - `meals.deleted_at` / `products.deleted_at` Soft delete フィールド追記
+  - `shopping_lists.snapshot_json` / `week_from_date` / `week_to_date` 追記
+  - Supabase Storage `product-images` バケット情報追記
+  - `shopping_items.category` の使途変更（グループ表示に利用）記載
+- `docs/spec/05_tracking/progress.md` を最新状態に更新：
+  - 全 User Story 完了ステータス確認
+  - 最新実装機能テーブル追加（20260523 〜 20260524 の 4 migration）
+  - Production migration 適用が残タスクとして明記
+- Pending Production Migrations（下記 4 ファイルを `supabase db push` で適用が必要）：
+  1. `20260523120000_shopping_list_week_range.sql`
+  2. `20260524120000_add_shopping_list_snapshot.sql`
+  3. `20260524140000_product_images_storage.sql`
+  4. `20260524180000_drop_meals_products_category.sql`
+
+### 実装詳細
+- ファイル: `docs/spec/03_design/database_schema.md`
+- ファイル: `docs/spec/05_tracking/progress.md`
+- 変更理由: 直近実装との乖離をなくし、production migration 適用の根拠を明確化
+
+### テスト
+- [x] Spec ドキュメント確認完了
+- [ ] Production Supabase migration 適用（次のステップ）
+
+---
+
+## [2026-05-24 18:00] - Meal ingredients: dynamic fields
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-003  
+**影響範囲**: Frontend
+
+### 変更内容
+- Meals 編集の「Ingredients (one per line)」textarea を削除
+- 「Add ingredient」で 1 行ずつテキストフィールドを追加、複数行は削除ボタンで除去
+- 保存時は従来どおり改行区切り文字列で API に送信（バックエンド変更なし）
+
+### 実装詳細
+- ファイル: `frontend/src/app/meals/page.tsx`
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了（lint）
+- [ ] エラーハンドリング確認
+
+---
+
+## [2026-05-24 19:00] - Drop meals/products category; checklist group by meal
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: US-009, US-007  
+**影響範囲**: Frontend, Backend, Database
+
+### 変更内容
+- `meals.category` / `products.category` カラムを削除（API・UI から type 廃止）
+- 買い物リスト生成時、`shopping_items.category` に**料理名**を設定してチェックリストを料理ごとにグループ化
+- 追加商品は「Mua thêm」、手動追加は「Khác」セクション
+- Shopping / History の UI をグループ表示に統一
+
+### 実装詳細
+- Migration: `supabase/migrations/20260524180000_drop_meals_products_category.sql`
+- Backend: schemas/services, `shopping_groups.py`, `shopping_list_service.generate_list`
+- Frontend: `shopping-groups.ts`, `shopping/page.tsx`, `history/page.tsx`, meals/products payloads
+
+### テスト
+- [x] pytest 更新
+- [ ] 本番 DB に migration 適用
+
+### 備考
+- 既存の active リストは再 Generate でグループが料理名ベースに更新される
+
+---
+
+## [2026-05-24 17:30] - Revert modal cream; upload button contrast
+
+**担当**: AI Assistant  
+**タイプ**: Refactor  
+**関連US**: US-007  
+**影響範囲**: Frontend
+
+### 変更内容
+- モーダル背景を `bg-cream` に戻す（hemp 統一を revert）
+- Products の「Upload image」ボタンを sage 系ボーダー＋薄い背景で cream モーダル上で視認しやすく調整
+
+### 実装詳細
+- ファイル: 各 page モーダル、`frontend/src/app/products/page.tsx`
+
+### テスト
+- [x] 動作確認完了（visual）
+
+---
+
+## [2026-05-24 16:00] - Product image upload (Supabase Storage)
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-007  
+**影響範囲**: Frontend, Database
+
+### 変更内容
+- Products 編集フォームの「Image URL」テキスト入力を削除
+- 「Upload image」ボタンでファイル選択 → Save 時に Supabase Storage (`product-images`) へアップロード
+- 公開 URL を `products.image_url` に保存し、既存の `<img src={image_url}>` 表示ロジックを継続利用
+
+### 実装詳細
+- ファイル: `frontend/src/lib/product-image-upload.ts` — パス `products/{id}/{timestamp}-name.ext`、5MB・画像 MIME 検証
+- ファイル: `frontend/src/app/products/page.tsx` — ローカルプレビュー、`pendingImageFile`、作成後アップロード→`update`
+- ファイル: `supabase/migrations/20260524140000_product_images_storage.sql` — バケット・RLS（本人の product のみ INSERT/UPDATE/DELETE）
+- ファイル: `supabase/config.toml` — ローカル `product-images` バケット設定
+
+### テスト
+- [ ] Unit Test追加
+- [ ] 動作確認完了
+- [ ] エラーハンドリング確認
+
+### 備考
+- ローカル: マイグレーション適用に `supabase db reset` または `supabase migration up`
+- 本番 Supabase にも同一マイグレーションを適用すること
+
+---
+
+## [2026-05-24 14:00] - Product modal local toggle; page title consistency
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-009  
+**影響範囲**: Frontend
+
+### 変更内容
+- 「Thêm sản phẩm」モーダル: 商品クリックはローカル状態のみ更新（即時 API 呼び出しなし）
+- 「Xong」押下時に `POST /shopping-lists/generate` で `product_ids` を一括同期
+- 各メインページのタイトル下サブタイトル（説明文）を削除
+- 全ページタイトルの font-size を Shopping List と統一（`text-2xl sm:text-4xl md:text-5xl`）
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx` — `pendingProductIds` ローカル state、`handleProductModalDone` で generate 一括同期
+- ファイル: `frontend/src/app/shopping/page.tsx`, `history/page.tsx`, `settings/page.tsx` — 説明文削除
+- ファイル: `frontend/src/app/meals/page.tsx`, `products/page.tsx`, `page.tsx` — タイトル class 統一
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了（lint）
+- [x] エラーハンドリング確認
+
+### 備考
+- モーダルを X で閉じた場合は未保存の選択は破棄（再度開くとサーバー状態から初期化）
+- メインページの個別削除（×）は従来どおり即時 API
+
+---
+
 
 **担当**: AI Assistant  
 **タイプ**: Refactor / Feature  

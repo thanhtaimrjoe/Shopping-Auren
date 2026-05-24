@@ -11,11 +11,10 @@ router = APIRouter()
 
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_products(
-    category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    return product_service.list_products(user["id"], category=category, search=search)
+    return product_service.list_products(user["id"], search=search)
 
 
 @router.get("/{product_id}", status_code=status.HTTP_200_OK)

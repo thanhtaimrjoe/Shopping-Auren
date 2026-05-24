@@ -11,7 +11,6 @@ router = APIRouter()
 
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_meals(
-    category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     sort: str = Query("created_at"),
     order: str = Query("desc"),
@@ -21,7 +20,6 @@ async def get_meals(
 ):
     return meal_service.list_meals(
         user["id"],
-        category=category,
         search=search,
         sort=sort,
         order=order,

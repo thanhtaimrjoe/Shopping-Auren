@@ -26,23 +26,12 @@ class TestMealsAPI:
         response = client.post("/api/v1/meals", json=invalid_data, headers=auth_headers)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     
-    def test_create_meal_invalid_category(self, client, auth_headers):
-        """Test meal creation with invalid category."""
-        invalid_data = {
-            "name": "Test Meal",
-            "category": "invalid_category",
-            "ingredients": "Test ingredients"
-        }
-        response = client.post("/api/v1/meals", json=invalid_data, headers=auth_headers)
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    
     def test_meal_name_length_validation(self, client, auth_headers):
         """Test meal name length constraints."""
         # Name too long (>100 chars)
         long_name_data = {
             "name": "A" * 101,
-            "category": "japanese",
-            "ingredients": "Test"
+            "ingredients": "Test",
         }
         response = client.post("/api/v1/meals", json=long_name_data, headers=auth_headers)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -69,31 +58,13 @@ class TestMealsAPI:
     
     def test_get_meals_with_filters(self, client, auth_headers):
         """Test GET /meals with query parameters."""
-        # Test with category filter
-        response = client.get("/api/v1/meals?category=japanese", headers=auth_headers)
-        # Should return 200 or 401 depending on auth implementation
-        assert response.status_code in [status.HTTP_200_OK, status.HTTP_401_UNAUTHORIZED]
-        
-        # Test with search query
         response = client.get("/api/v1/meals?search=test", headers=auth_headers)
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_401_UNAUTHORIZED]
-    
-    def test_get_meals_invalid_category(self, client, auth_headers):
-        """Test GET /meals with invalid category filter."""
-        response = client.get("/api/v1/meals?category=invalid", headers=auth_headers)
-        # Should return 400 Bad Request for invalid category
-        assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED]
 
 
 class TestMealsDataValidation:
     """Test data validation for meals."""
-    
-    def test_valid_categories(self):
-        """Test that valid categories are accepted."""
-        valid_categories = ["japanese", "western", "chinese", "other"]
-        # This would be tested in integration tests with actual API calls
-        assert len(valid_categories) == 4
-    
+
     def test_ingredients_format(self):
         """Test ingredients format (newline-separated)."""
         ingredients = "Ingredient 1\nIngredient 2\nIngredient 3"

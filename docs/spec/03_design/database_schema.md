@@ -1,6 +1,7 @@
 # Database Schema — Shopping Memo
 
 **作成日**: 2026-05-09  
+**最終更新**: 2026-05-24  
 **プロジェクト**: Shopping Memo  
 **目的**: データベース設計とテーブル定義
 
@@ -56,40 +57,50 @@
 
 ### 2. meals（料理）
 
+> **2026-05-24**: `category` カラムは削除済み（migration `20260524180000_drop_meals_products_category.sql`）。
+
 | カラム名 | 型 | NULL | デフォルト | 説明 |
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | 料理ID（PK） |
 | user_id | UUID | NOT NULL | - | ユーザーID（FK） |
-| name | VARCHAR(100) | NOT NULL | - | 料理名 |
-| ingredients | JSONB | NOT NULL | '[]'::jsonb | 材料 danh sách |
-| category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（japanese/western/chinese/other） |
+| name | VARCHAR(100) | NOT NULL | - | 料理名（Unique per user, case-insensitive） |
+| ingredients | JSONB | NOT NULL | '[]'::jsonb | 材料リスト（文字列配列、改行区切りテキストで入出力） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
+| deleted_at | TIMESTAMP | NULL | - | 論理削除（Soft delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- INDEX: `user_id`
-- INDEX: `category`
+- UNIQUE INDEX: `lower(name)` per `user_id`
+- INDEX: `user_id, deleted_at`
 
 ---
 
 ### 3. products（雑貨）
+
+> **2026-05-24**: `category` カラムは削除済み（migration `20260524180000_drop_meals_products_category.sql`）。  
+> **2026-05-24**: `image_url` は Supabase Storage バケット `product-images` へアップロード後のURLを格納（migration `20260524140000_product_images_storage.sql`）。
 
 | カラム名 | 型 | NULL | デフォルト | 説明 |
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | 雑貨ID（PK） |
 | user_id | UUID | NOT NULL | - | ユーザーID（FK） |
 | name | VARCHAR(100) | NOT NULL | - | 雑貨名 |
-| image_url | TEXT | NULL | - | 画像URL |
-| category | VARCHAR(50) | NOT NULL | 'other' | カテゴリ（daily/consumable/other） |
+| image_url | TEXT | NULL | - | 画像URL（Supabase Storage `product-images` バケット） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
+| deleted_at | TIMESTAMP | NULL | - | 論理削除（Soft delete） |
 
 **インデックス**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- INDEX: `user_id`
+- INDEX: `user_id, deleted_at`
+
+**Storage**:
+- バケット名: `product-images`（public read）
+- パス: `products/{product_id}/{timestamp}-{filename}`
+- RLS: 自分の product のみ INSERT/UPDATE/DELETE 可
 
 ---
 
@@ -133,6 +144,9 @@
 
 ### 6. shopping_lists（買い物リスト）
 
+> **2026-05-23**: `week_from_date` / `week_to_date` を追加（migration `20260523120000_shopping_list_week_range.sql`）。  
+> **2026-05-24**: `snapshot_json` を追加（migration `20260524120000_add_shopping_list_snapshot.sql`）。
+
 | カラム名 | 型 | NULL | デフォルト | 説明 |
 |---------|-----|------|-----------|------|
 | id | UUID | NOT NULL | gen_random_uuid() | リストID（PK） |
@@ -142,6 +156,7 @@
 | week_from_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の開始日 |
 | week_to_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の終了日 |
 | status | VARCHAR(20) | NOT NULL | 'active' | ステータス（active/completed） |
+| snapshot_json | JSONB | NULL | - | 完了時のアイテムスナップショット（履歴用） |
 | created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
 | completed_at | TIMESTAMP | NULL | - | 完了日時 |
 
@@ -182,26 +197,14 @@
 
 ## マスターデータ
 
-### カテゴリマスター（Enum型で定義）
+> **2026-05-24**: `meals.category` / `products.category` は削除された。カテゴリ Enum は将来の参照用として文書のみ保持。
 
-#### meal_category（料理カテゴリ）
-```sql
-CREATE TYPE meal_category AS ENUM (
-    'japanese',   -- 和食
-    'western',    -- 洋食
-    'chinese',    -- 中華
-    'other'       -- その他
-);
-```
+### shopping_items.category の使途変更
 
-#### product_category（雑貨カテゴリ）
-```sql
-CREATE TYPE product_category AS ENUM (
-    'daily',      -- 日用品
-    'consumable', -- 消耗品
-    'other'       -- その他
-);
-```
+`shopping_items.category` は現在、買い物チェックリストのグループ表示に使用:
+- 料理由来アイテム: category = **料理名**（例: `Thịt kho tàu`）
+- 追加商品: category = `Mua thêm`
+- 手動追加: category = `Khác`
 
 #### item_source_type（アイテムソース）
 ```sql
@@ -336,5 +339,5 @@ USING (auth.uid() = user_id);
 ---
 
 **作成者**: Claude + Tai  
-**レビュー日**: 2026-05-09  
-**ステータス**: ✅ Draft
+**最終更新**: 2026-05-24 (AI Assistant — category drop, snapshot_json, product-images storage)  
+**ステータス**: ✅ Active

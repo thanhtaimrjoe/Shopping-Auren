@@ -5,11 +5,11 @@ from fastapi import HTTPException, status
 
 from app.core.supabase import supabase_admin as db
 from app.models.tables import MEAL_PLAN_ITEMS, MEALS
-from app.schemas.meal import MealCreate, MealUpdate, VALID_MEAL_CATEGORIES
+from app.schemas.meal import MealCreate, MealUpdate
 from app.utils.db_errors import is_duplicate_name, is_not_found, raise_from_supabase
 from app.utils.ingredients import jsonb_to_text, text_to_jsonb
 
-_MEAL_COLUMNS = "id, name, ingredients, category, created_at, updated_at"
+_MEAL_COLUMNS = "id, name, ingredients, created_at, updated_at"
 
 
 def format_meal(row: dict) -> dict:
@@ -17,7 +17,6 @@ def format_meal(row: dict) -> dict:
         "id": row["id"],
         "name": row["name"],
         "ingredients": jsonb_to_text(row.get("ingredients")),
-        "category": row["category"],
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
     }
@@ -26,27 +25,18 @@ def format_meal(row: dict) -> dict:
 def list_meals(
     user_id: str,
     *,
-    category: Optional[str],
     search: Optional[str],
     sort: str,
     order: str,
     limit: int,
     offset: int,
 ) -> dict:
-    if category and category not in VALID_MEAL_CATEGORIES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid category. Must be one of: {', '.join(sorted(VALID_MEAL_CATEGORIES))}",
-        )
-
     query = (
         db.table(MEALS)
         .select(_MEAL_COLUMNS, count="exact")
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
     )
-    if category:
-        query = query.eq("category", category)
     if search:
         query = query.ilike("name", f"%{search}%")
 
@@ -84,7 +74,6 @@ def create_meal(user_id: str, body: MealCreate) -> dict:
         "user_id": user_id,
         "name": body.name,
         "ingredients": text_to_jsonb(body.ingredients),
-        "category": body.category,
     }
     try:
         response = db.table(MEALS).insert(insert_data).execute()
@@ -113,8 +102,6 @@ def update_meal(user_id: str, meal_id: str, body: MealUpdate) -> dict:
         update_data["name"] = body.name
     if body.ingredients is not None:
         update_data["ingredients"] = text_to_jsonb(body.ingredients)
-    if body.category is not None:
-        update_data["category"] = body.category
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 

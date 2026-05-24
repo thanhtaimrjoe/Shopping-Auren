@@ -144,9 +144,6 @@ export default function SettingsPage() {
         <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Settings
         </h1>
-        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
-          Tailor your culinary planning experience to your personal rhythm.
-        </p>
       </header>
 
       <div className="bg-sage text-cream rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 md:p-12 mb-8 sm:mb-12 shadow-warm relative overflow-hidden">

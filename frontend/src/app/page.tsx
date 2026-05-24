@@ -59,6 +59,7 @@ export default function MealPlanPage() {
   const [extraProducts, setExtraProducts] = useState<any[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -204,38 +205,49 @@ export default function MealPlanPage() {
     }
   };
 
-  const handleAddProduct = async (product: any) => {
+  const openProductModal = () => {
+    const selectedIds = new Set(
+      productsDatabase
+        .filter((p) =>
+          extraProducts.some((ep) => ep.name.toLowerCase() === p.name.toLowerCase())
+        )
+        .map((p) => p.id as string)
+    );
+    setPendingProductIds(selectedIds);
+    setIsProductModalOpen(true);
+  };
+
+  const togglePendingProduct = (productId: string) => {
+    setPendingProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const handleProductModalDone = async () => {
     if (!currentPlanId) {
-      alert("Vui lòng thêm ít nhất 1 món ăn vào lịch trước khi thêm sản phẩm mua thêm!");
+      alert('Vui lòng thêm ít nhất 1 món ăn vào lịch trước khi thêm sản phẩm mua thêm!');
       return;
     }
+
     setIsProductsLoading(true);
     try {
-      // Add product to existing shopping list or generate a new one
-      try {
-        const listResp = await shoppingListsApi.getCurrent();
-        if (listResp.data.success) {
-          const listId = listResp.data.data.shopping_list.id;
-          await shoppingListsApi.addItem(listId, {
-            name: product.name,
-            category: product.category
-          });
-          fetchProductsAndShoppingList();
-        }
-      } catch (err: any) {
-        if (err.response?.status === 404) {
-          // generate
-          const genResp = await shoppingListsApi.generate({ 
-            meal_plan_id: currentPlanId,
-            product_ids: [product.id]
-          });
-          if (genResp.data.success) {
-            fetchProductsAndShoppingList();
-          }
-        }
-      }
+      const productIds = Array.from(pendingProductIds);
+      await shoppingListsApi.generate({
+        meal_plan_id: currentPlanId,
+        product_ids: productIds,
+      });
+      await fetchProductsAndShoppingList();
+      setIsProductModalOpen(false);
+      showNotification('success', 'Đã cập nhật sản phẩm mua thêm');
     } catch (error) {
-      console.error('Failed to add product to shopping list:', error);
+      console.error('Failed to sync extra products:', error);
+      showNotification('error', 'Không thể cập nhật sản phẩm mua thêm');
     } finally {
       setIsProductsLoading(false);
     }
@@ -343,12 +355,9 @@ export default function MealPlanPage() {
       )}
 
       <header className="mb-6 sm:mb-10">
-        <h3 className="page-title text-2xl sm:text-3xl md:text-4xl text-bark font-serif mb-3 sm:mb-4 leading-tight">
+        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Meal plan
-        </h3>
-        <p className="text-base sm:text-lg text-bark/60 max-w-2xl leading-relaxed">
-          Plan meals for each day of the week, then generate your shopping list.
-        </p>
+        </h1>
       </header>
 
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
@@ -482,7 +491,7 @@ export default function MealPlanPage() {
         <div className="flex flex-col xs:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
           <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Mua thêm (Products)</h3>
           <button 
-            onClick={() => setIsProductModalOpen(true)}
+            onClick={openProductModal}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-sage text-cream rounded-xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all touch-manipulation min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
@@ -590,10 +599,7 @@ export default function MealPlanPage() {
           >
             <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em] mb-1">Thư viện sản phẩm</h3>
-                  <p className="text-sm text-bark/40">Chọn các sản phẩm bạn muốn mua thêm</p>
-                </div>
+                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
                 <button 
                   onClick={() => setIsProductModalOpen(false)}
                   className="p-2 hover:bg-hemp/50 rounded-full transition-all"
@@ -607,14 +613,12 @@ export default function MealPlanPage() {
               {productsDatabase.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                   {productsDatabase.map((p, idx) => {
-                    const isSelected = extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase());
+                    const isSelected = pendingProductIds.has(p.id);
                     return (
                       <button
                         key={idx}
-                        onClick={() => {
-                          if (!isSelected) handleAddProduct(p);
-                        }}
-                        disabled={isSelected || isProductsLoading}
+                        type="button"
+                        onClick={() => togglePendingProduct(p.id)}
                         className={`p-2 sm:p-3 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[120px] sm:min-h-[150px] touch-manipulation ${
                           isSelected 
                             ? 'bg-sage text-cream shadow-md scale-100 opacity-90' 
@@ -636,11 +640,6 @@ export default function MealPlanPage() {
                             <CheckCircle2 className="h-5 w-5" />
                           </div>
                         )}
-                        {isProductsLoading && !isSelected && (
-                          <div className="absolute top-3 right-3 text-sage">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </div>
-                        )}
                       </button>
                     );
                   })}
@@ -654,9 +653,12 @@ export default function MealPlanPage() {
 
             <div className="p-4 md:p-6 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
               <button 
-                onClick={() => setIsProductModalOpen(false)}
-                className="px-8 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft"
+                type="button"
+                onClick={handleProductModalDone}
+                disabled={isProductsLoading}
+                className="px-8 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft disabled:opacity-50 flex items-center gap-2"
               >
+                {isProductsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Xong
               </button>
             </div>

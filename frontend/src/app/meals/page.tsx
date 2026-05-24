@@ -25,16 +25,28 @@ interface Meal {
   id: string;
   name: string;
   ingredients: string;
-  category?: string;
   created_at: string;
   updated_at: string;
 }
 
 const ITEMS_PER_PAGE = 18;
-const DEFAULT_CATEGORY = 'other';
+
+function ingredientLinesFromText(ingredients?: string): string[] {
+  if (!ingredients?.trim()) return [];
+  return ingredients.split('\n').map((s) => s.trim()).filter(Boolean);
+}
+
+function ingredientFieldsFromText(ingredients?: string): string[] {
+  const lines = ingredientLinesFromText(ingredients);
+  return lines.length > 0 ? lines : [''];
+}
+
+function ingredientLinesToText(lines: string[]): string {
+  return lines.map((line) => line.trim()).filter(Boolean).join('\n');
+}
 
 function ingredientPreview(ingredients: string, max = 2) {
-  const lines = ingredients.split('\n').map((s) => s.trim()).filter(Boolean);
+  const lines = ingredientLinesFromText(ingredients);
   if (lines.length === 0) return 'No ingredients listed';
   if (lines.length <= max) return lines.join(' · ');
   return `${lines.slice(0, max).join(' · ')} +${lines.length - max} more`;
@@ -58,6 +70,7 @@ export default function MealsPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [formState, setFormState] = useState<Partial<Meal>>({});
+  const [ingredientFields, setIngredientFields] = useState<string[]>(['']);
 
   const modalOpen = isAdding || selectedMeal !== null;
 
@@ -120,6 +133,7 @@ export default function MealsPage() {
     setIsAdding(false);
     setIsEditing(false);
     setFormState({});
+    setIngredientFields(['']);
   };
 
   const openMeal = (meal: Meal) => {
@@ -127,6 +141,7 @@ export default function MealsPage() {
     setIsAdding(false);
     setIsEditing(false);
     setFormState(meal);
+    setIngredientFields(ingredientFieldsFromText(meal.ingredients));
   };
 
   const handleAddNew = () => {
@@ -134,6 +149,28 @@ export default function MealsPage() {
     setIsEditing(true);
     setSelectedMeal(null);
     setFormState({ name: '', ingredients: '' });
+    setIngredientFields(['']);
+  };
+
+  const startEditingMeal = () => {
+    if (!selectedMeal) return;
+    setIsEditing(true);
+    setIngredientFields(ingredientFieldsFromText(selectedMeal.ingredients));
+  };
+
+  const updateIngredientField = (index: number, value: string) => {
+    setIngredientFields((prev) => prev.map((line, i) => (i === index ? value : line)));
+  };
+
+  const addIngredientField = () => {
+    setIngredientFields((prev) => [...prev, '']);
+  };
+
+  const removeIngredientField = (index: number) => {
+    setIngredientFields((prev) => {
+      if (prev.length <= 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSave = async () => {
@@ -144,8 +181,7 @@ export default function MealsPage() {
 
     const payload = {
       name: formState.name.trim(),
-      ingredients: formState.ingredients || '',
-      category: formState.category || DEFAULT_CATEGORY,
+      ingredients: ingredientLinesToText(ingredientFields),
     };
 
     setIsLoading(true);
@@ -205,6 +241,7 @@ export default function MealsPage() {
     }
     setIsEditing(false);
     setFormState(selectedMeal!);
+    setIngredientFields(ingredientFieldsFromText(selectedMeal?.ingredients));
   };
 
   if (authLoading || (fetchLoading && meals.length === 0)) {
@@ -219,7 +256,7 @@ export default function MealsPage() {
     <div className="page-shell animate-page-enter min-w-0">
       <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="page-title text-2xl sm:text-4xl text-bark font-serif">Meals</h1>
+          <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif leading-tight">Meals</h1>
         </div>
         <button
           type="button"
@@ -336,7 +373,7 @@ export default function MealsPage() {
                   <>
                     <button
                       type="button"
-                      onClick={() => setIsEditing(true)}
+                      onClick={startEditingMeal}
                       className="p-3 bg-hemp/20 text-bark hover:bg-hemp/30 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -374,17 +411,41 @@ export default function MealsPage() {
                     placeholder="Meal name"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                    Ingredients (one per line)
+                    Ingredients
                   </label>
-                  <textarea
-                    rows={6}
-                    className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20 resize-none"
-                    value={formState.ingredients || ''}
-                    onChange={(e) => setFormState({ ...formState, ingredients: e.target.value })}
-                    placeholder={'Beef\nOnion'}
-                  />
+                  <div className="space-y-2">
+                    {ingredientFields.map((value, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          className="flex-1 bg-hemp/10 border-0 rounded-2xl py-3 px-5 text-bark focus:ring-2 focus:ring-sage/20"
+                          value={value}
+                          onChange={(e) => updateIngredientField(index, e.target.value)}
+                          placeholder={`Ingredient ${index + 1}`}
+                        />
+                        {ingredientFields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeIngredientField(index)}
+                            className="p-3 text-bark/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+                            aria-label="Remove ingredient"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addIngredientField}
+                    className="flex items-center gap-2 px-4 py-3 bg-sage/15 border border-sage/35 text-sage-deep rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-sage/25 hover:border-sage/50 transition-all touch-manipulation min-h-[44px]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add ingredient
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -402,12 +463,9 @@ export default function MealsPage() {
                   <h4 className="text-xs font-bold text-bark uppercase tracking-[0.2em] flex items-center gap-2">
                     <Utensils className="h-4 w-4 text-sage" /> Ingredients
                   </h4>
-                  {selectedMeal.ingredients ? (
+                  {ingredientLinesFromText(selectedMeal.ingredients).length > 0 ? (
                     <ul className="space-y-2">
-                      {selectedMeal.ingredients
-                        .split('\n')
-                        .filter(Boolean)
-                        .map((ing, i) => (
+                      {ingredientLinesFromText(selectedMeal.ingredients).map((ing, i) => (
                           <li
                             key={i}
                             className="flex items-center gap-3 p-3 bg-hemp/10 rounded-xl text-sm text-bark/80"

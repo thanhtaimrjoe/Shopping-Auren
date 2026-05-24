@@ -46,7 +46,6 @@ def sample_meal_data():
     return {
         "name": "Test Meal",
         "ingredients": "Ingredient 1\nIngredient 2\nIngredient 3",
-        "category": "japanese"
     }
 
 
@@ -55,6 +54,5 @@ def sample_product_data():
     """Sample product data for testing."""
     return {
         "name": "Test Product",
-        "category": "daily",
-        "image_url": "https://example.com/image.jpg"
+        "image_url": "https://example.com/image.jpg",
     }
