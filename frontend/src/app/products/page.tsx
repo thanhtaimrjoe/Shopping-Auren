@@ -218,34 +218,36 @@ export default function ProductsPage() {
         setNotification({ type: 'error', message: 'Lỗi khi lưu sản phẩm' });
         return;
       }
+      
+      let finalProduct: Product = savedProduct;
 
       if (pendingImageFile) {
-        const imageUrl = await uploadProductImage(savedProduct.id, pendingImageFile);
-        const imageResponse = await productsApi.update(savedProduct.id, {
-          name: savedProduct.name,
+        const imageUrl = await uploadProductImage(finalProduct.id, pendingImageFile);
+        const imageResponse = await productsApi.update(finalProduct.id, {
+          name: finalProduct.name,
           image_url: imageUrl,
         });
         if (imageResponse.data.success) {
-          savedProduct = imageResponse.data.data.product;
+          finalProduct = imageResponse.data.data.product;
         }
         setPendingImageFile(null);
-        setImagePreview(savedProduct.image_url || null);
+        setImagePreview(finalProduct.image_url || null);
       } else {
-        setImagePreview(savedProduct.image_url || null);
+        setImagePreview(finalProduct.image_url || null);
       }
 
       if (isAdding) {
-        setProducts([savedProduct, ...products]);
-        setSelectedProduct(savedProduct);
+        setProducts([finalProduct, ...products]);
+        setSelectedProduct(finalProduct);
         setIsAdding(false);
         setIsEditing(false);
-        setFormState(savedProduct);
+        setFormState(finalProduct);
         setNotification({ type: 'success', message: 'Đã thêm sản phẩm mới thành công' });
       } else {
-        setProducts(products.map((p) => (p.id === savedProduct!.id ? savedProduct! : p)));
-        setSelectedProduct(savedProduct);
+        setProducts(products.map((p) => (p.id === finalProduct.id ? finalProduct : p)));
+        setSelectedProduct(finalProduct);
         setIsEditing(false);
-        setFormState(savedProduct);
+        setFormState(finalProduct);
         setNotification({ type: 'success', message: 'Đã cập nhật sản phẩm thành công' });
       }
     } catch (error: unknown) {

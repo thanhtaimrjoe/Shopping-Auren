@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-24 20:30] - Fix CI build & Migration documentation
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / Docs  
+**関連US**: None  
+**影響範囲**: Frontend / Database
+
+### 変更内容
+- Fixed Vercel build error (TypeScript type narrowing issue with `savedProduct`) in `frontend/src/app/products/page.tsx`.
+- Investigated Supabase CI migration mismatch.
+
+### 実装詳細
+- ファイル: `frontend/src/app/products/page.tsx`
+- 変更理由: CI failed due to `savedProduct` possibly being null in the image upload logic branch.
+- 技術的な決定: Refactored logic to declare a non-null `finalProduct` variable right after the null check to ensure TypeScript correctly narrows the type for all subsequent operations.
+
+### テスト
+- [x] Unit Test追加 (N/A)
+- [x] 動作確認完了 (Local `npm run build` passes successfully)
+- [x] エラーハンドリング確認 (N/A)
+
+### 備考
+- **Supabase CI Error Fix**: The error `Remote migration versions not found in local migrations directory` means your production database's `supabase_migrations.schema_migrations` table contains a version timestamp that doesn't exist in the local `supabase/migrations/` folder. To resolve this, run this in your production Supabase SQL Editor:
+  ```sql
+  SELECT * FROM supabase_migrations.schema_migrations;
+  -- Then delete any rows whose version does not exist in your local supabase/migrations/ folder:
+  -- DELETE FROM supabase_migrations.schema_migrations WHERE version = 'MISSING_VERSION';
+  ```
+
+---
+
 ## [2026-05-24 09:15] - Spec rà soát & Production migration guide
 
 **担当**: AI Assistant  
