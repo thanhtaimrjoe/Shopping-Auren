@@ -3,6 +3,7 @@ import { Outfit, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { RegisterSW } from "@/components/RegisterSW";
 import { AuthProvider } from "@/context/AuthContext";
 
 const outfit = Outfit({ 
@@ -19,13 +20,26 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Shopping Memo | Meal Planner",
   description: "Plan your meals and generate shopping lists",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Shopping Memo",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f5f0e8",
+  themeColor: "#10B981",
 };
 
 export default function RootLayout({
@@ -36,6 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen min-h-[100dvh]`}>
+        <RegisterSW />
         <AuthProvider>
           <Sidebar />
           <MobileBottomNav />

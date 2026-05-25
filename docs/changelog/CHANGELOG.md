@@ -5,6 +5,41 @@
 
 ---
 
+## [2026-05-25 19:08] - PWA mobile install support
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-009, US-012  
+**影響範囲**: Frontend
+
+### 変更内容
+- Added Web App Manifest so Shopping Memo can be installed from iOS/Android browsers.
+- Added a lightweight Service Worker for app-shell caching and PWA installability.
+- Added branded PWA icons for Android and iOS home screen usage.
+- Registered the Service Worker from the Next.js root layout.
+
+### 実装詳細
+- ファイル: `frontend/public/manifest.json`
+- ファイル: `frontend/public/sw.js`
+- ファイル: `frontend/src/components/RegisterSW.tsx`
+- ファイル: `frontend/src/app/layout.tsx`
+- ファイル: `frontend/public/icons/icon-192x192.png`
+- ファイル: `frontend/public/icons/icon-512x512.png`
+- ファイル: `frontend/public/icons/apple-touch-icon.png`
+- ファイル: `scripts/generate_pwa_icons.py`
+- 変更理由: Android/iOS users can launch Shopping Memo like a mobile app without separate native repos.
+- 技術的な決定: Used a custom Service Worker instead of a Next PWA package to avoid Next.js 16 compatibility risk.
+
+### テスト
+- [ ] Unit Test追加 (N/A)
+- [x] 動作確認完了 (`npm run build`)
+- [x] エラーハンドリング確認 (Service Worker registration failure logs safely)
+
+### 備考
+- Local browser verification: use Chrome DevTools Application tab or mobile Safari "Add to Home Screen" after deployment.
+
+---
+
 ## [2026-05-24 20:30] - Fix CI build & Migration documentation
 
 **担当**: AI Assistant  
