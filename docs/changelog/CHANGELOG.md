@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-05-26 15:10] - Local dev with production env (no Docker)
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: None  
+**影響範囲**: Docs, Scripts
+
+### 変更内容
+- Added `docs/LOCAL-PRODUCTION.md` for running frontend locally against hosted Supabase + Render API.
+- Added `frontend/.env.production.local.example`, `backend/.env.production.local.example`.
+- Added `scripts/run-local-production.ps1` to start Next.js with existing `.env.local`.
+- Updated `README.md` with link to production-local workflow.
+- Switched `backend/.env.local` template away from Docker `127.0.0.1:54321` (service role / JWT must be filled from Supabase Dashboard).
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了 (Render `/health`, frontend dev)
+- [ ] エラーハンドリング確認
+
+---
+
 ## [2026-05-26 14:35] - Login password visibility toggle
 
 **担当**: AI Assistant  

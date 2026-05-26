@@ -101,6 +101,14 @@ Shopping-Auren/
 
 ## 🚀 How to Run (Cách chạy dự án)
 
+### Local + production Supabase/API (no Docker)
+
+Xem **[docs/LOCAL-PRODUCTION.md](./docs/LOCAL-PRODUCTION.md)** — chạy `npm run dev` trên máy, dùng Supabase + API hosted (không cần `supabase start`).
+
+```powershell
+.\scripts\run-local-production.ps1
+```
+
 ### Local Supabase (Docker) — recommended for dev
 
 See **[MIGRATION-PLAN.md](./MIGRATION-PLAN.md)** for the full workflow.
