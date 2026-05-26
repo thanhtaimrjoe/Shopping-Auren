@@ -161,9 +161,12 @@ npm run dev
 ```
 *Frontend sẽ chạy tại: http://localhost:3000*
 
-### 3. Android app (Capacitor)
+### 3. Mobile apps (Capacitor)
 
-Xem **[docs/MOBILE-ANDROID.md](./docs/MOBILE-ANDROID.md)** — build APK từ cùng frontend Next.js.
+| Platform | Doc | Brand assets |
+|----------|-----|----------------|
+| Android | [docs/MOBILE-ANDROID.md](./docs/MOBILE-ANDROID.md) | [workspace/](./workspace/) |
+| iOS (macOS) | [docs/MOBILE-IOS.md](./docs/MOBILE-IOS.md) | `workspace/ios/AppIcon.appiconset/` |
 
 ```bash
 cd frontend

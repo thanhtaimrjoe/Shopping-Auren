@@ -15,7 +15,7 @@ export function CapacitorNative() {
     const init = async () => {
       try {
         await StatusBar.setStyle({ style: Style.Light });
-        await StatusBar.setBackgroundColor({ color: "#10B981" });
+        await StatusBar.setBackgroundColor({ color: "#4a5c3f" });
       } catch {
         // Status bar APIs are Android-focused; ignore on unsupported platforms.
       }

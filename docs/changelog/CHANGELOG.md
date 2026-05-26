@@ -5,6 +5,96 @@
 
 ---
 
+## [2026-05-26 19:45] - workspace/ brand assets + iOS docs + APK rebuild
+
+**担当**: AI Assistant  
+**タイプ**: Chore / Docs  
+**関連US**: US-009  
+**影響範囲**: Mobile, Docs
+
+### 変更内容
+- Renamed brand folder to `workspace/` (lowercase); removed from `.gitignore` for Mac iOS workflow.
+- Organized: `workspace/ios/AppIcon.appiconset/`, `workspace/android/`, `workspace/marketing/`.
+- Added `workspace/README.md`, `docs/MOBILE-IOS.md`; updated icon script paths.
+- Regenerated PWA/Android icons; built APK with correct launcher from `workspace/`.
+
+### 実装詳細
+- APK: `frontend/dist/android/shopping-memo-debug.apk` (~7.23 MB)
+
+### テスト
+- [x] `generate_pwa_icons.py` + `build-android-apk.ps1` succeeded
+- [ ] iOS: `npx cap add ios` on Mac (user)
+
+---
+
+## [2026-05-26 19:00] - Fix app icons: use Workspace/ export assets
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-009  
+**影響範囲**: Frontend, Mobile, Docs
+
+### 変更内容
+- Icon generator now reads `Workspace/Assets.xcassets/AppIcon.appiconset/1024.png` (correct app icon), not the marketing spec sheet image.
+- Android launchers copied from `Workspace/android/mipmap-*` when present.
+- Regenerated PWA icons, favicon, and Capacitor mipmaps.
+
+### 実装詳細
+- ファイル: `scripts/generate_pwa_icons.py`, `docs/MOBILE-ANDROID.md`
+
+### テスト
+- [x] `python scripts/generate_pwa_icons.py` succeeded
+- [ ] Rebuild APK (`scripts/build-android-apk.ps1`)
+
+---
+
+## [2026-05-26 18:30] - Olive brand icons + UI color palette refresh
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-009  
+**影響範囲**: Frontend, Mobile, Docs
+
+### 変更内容
+- Replaced PWA / favicon / Apple touch icons with olive basket + scales artwork.
+- Regenerated Android `ic_launcher*` mipmaps from the same source.
+- Updated brand CSS tokens: olive green primary, warm beige background, plum text, terracotta clay, gold accents.
+- Updated `manifest.json` and viewport `theme_color` to olive (`#4a5c3f`).
+- Sidebar, login, and nav use in-app icon instead of stock photo.
+
+### 実装詳細
+- ファイル: `scripts/generate_pwa_icons.py`, `frontend/public/icons/*`, `frontend/public/favicon.ico`
+- ファイル: `frontend/src/app/globals.css`, `layout.tsx`, `Sidebar.tsx`, `login/page.tsx`
+- ファイル: `frontend/android/app/src/main/res/mipmap-*/ic_launcher*.png`
+
+### テスト
+- [ ] Unit Test追加
+- [x] Icon generation script ran successfully
+- [ ] APK rebuild after `cap:sync:android`
+
+---
+
+## [2026-05-26 17:05] - Production Android APK rebuild (perf + login password toggle)
+
+**担当**: AI Assistant  
+**タイプ**: Chore  
+**関連US**: US-009  
+**影響範囲**: Mobile
+
+### 変更内容
+- Rebuilt Capacitor bundle from `main` (password visibility, parallel API init, auth `INITIAL_SESSION`).
+- Exported debug APK with production `NEXT_PUBLIC_*` from `frontend/.env.local`.
+
+### 実装詳細
+- Script: `scripts/build-android-apk.ps1`
+- Output: `frontend/dist/android/shopping-memo-debug.apk`, `shopping-memo-production.apk` (~4.67 MB)
+
+### テスト
+- [x] `npm run cap:sync:android` + `assembleDebug` succeeded
+- [ ] Install on device and smoke test login + meal plan load
+
+---
+
 ## [2026-05-26 16:20] - Faster initial API load (parallel fetch + auth + meals query)
 
 **担当**: AI Assistant  

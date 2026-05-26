@@ -64,6 +64,11 @@ export default function LoginPage() {
     <div className="fixed inset-0 flex items-center justify-center bg-cream p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] z-[60] overflow-y-auto">
       <div className="max-w-md w-full bg-white rounded-[1.75rem] sm:rounded-[2.5rem] shadow-warm p-6 sm:p-8 md:p-12 my-auto">
         <div className="text-center mb-8 sm:mb-10">
+          <img
+            src="/icons/icon-192x192.png"
+            alt="Shopping Memo"
+            className="h-16 w-16 mx-auto mb-4 rounded-2xl shadow-warm ring-2 ring-gold/25"
+          />
           <h1 className="text-3xl sm:text-4xl font-serif text-bark mb-2">Welcome</h1>
           <p className="text-bark/60">Sign in to manage your culinary rhythm</p>
         </div>

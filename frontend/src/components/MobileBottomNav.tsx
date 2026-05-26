@@ -32,7 +32,7 @@ export function MobileBottomNav() {
                 href={href}
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-colors touch-manipulation',
-                  isActive ? 'text-sage-deep' : 'text-bark/45 active:bg-hemp/40'
+                  isActive ? 'text-sage-deep' : 'text-bark/45 active:bg-hemp/50'
                 )}
               >
                 <Icon className={cn('h-5 w-5 shrink-0', isActive && 'stroke-[2.5px]')} />

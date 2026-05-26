@@ -1,45 +1,49 @@
 @import "tailwindcss";
 
+/* Brand palette: olive stability, warm beige harmony, terracotta energy, plum depth, gold accents */
 :root {
-  --background: 42 30% 92%; /* Hemp */
-  --foreground: 24 8% 28%; /* Bark */
+  --background: 40 32% 91%; /* Warm beige (hemp) */
+  --foreground: 330 18% 22%; /* Plum (bark text) */
 
-  --primary: 100 8% 56%; /* Sage */
-  --primary-foreground: 40 33% 97%; /* Cream */
+  --primary: 88 22% 38%; /* Olive green (sage) */
+  --primary-foreground: 42 45% 97%; /* Cream */
 
-  --secondary: 22 38% 75%; /* Clay */
-  --secondary-foreground: 24 8% 28%;
+  --secondary: 24 48% 62%; /* Terracotta (clay) */
+  --secondary-foreground: 330 18% 22%;
 
-  --card: 40 33% 97%; /* Cream */
-  --card-foreground: 24 8% 28%;
+  --card: 42 45% 97%; /* Cream */
+  --card-foreground: 330 18% 22%;
 
-  --border: 22 25% 80%;
+  --border: 88 14% 78%;
   --radius: 1.5rem;
 
-  --shadow-soft: 0 4px 30px -10px hsl(24 8% 28% / 0.08);
-  --shadow-warm: 0 20px 50px -15px hsl(24 20% 25% / 0.12);
+  --shadow-soft: 0 4px 30px -10px hsl(330 18% 22% / 0.08);
+  --shadow-warm: 0 20px 50px -15px hsl(88 22% 22% / 0.14);
 }
 
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  
+
   --color-primary: hsl(var(--primary));
   --color-on-primary: hsl(var(--primary-foreground));
-  
-  --color-sage: hsl(100 8% 56%);
-  --color-sage-deep: hsl(100 12% 42%);
-  --color-clay: hsl(22 38% 75%);
-  --color-hemp: hsl(42 30% 92%);
-  --color-cream: hsl(40 33% 97%);
-  --color-bark: hsl(24 8% 28%);
-  
+
+  --color-sage: hsl(88 22% 38%);
+  --color-sage-deep: hsl(88 26% 28%);
+  --color-clay: hsl(24 48% 62%);
+  --color-hemp: hsl(40 32% 91%);
+  --color-cream: hsl(42 45% 97%);
+  --color-bark: hsl(330 18% 22%);
+  --color-plum: hsl(330 22% 28%);
+  --color-gold: hsl(45 52% 58%);
+  --color-olive: hsl(88 22% 38%);
+
   --font-sans: var(--font-outfit), system-ui, sans-serif;
   --font-serif: var(--font-fraunces), Georgia, serif;
-  
+
   --radius-2xl: 1.5rem;
   --radius-3xl: 2.5rem;
-  
+
   --shadow-soft: var(--shadow-soft);
   --shadow-warm: var(--shadow-warm);
 }
@@ -58,7 +62,6 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-/* 16px inputs prevent iOS/Android zoom on focus (Galaxy S24, etc.) */
 @media (max-width: 640px) {
   input,
   select,
@@ -73,7 +76,7 @@ body {
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: hsl(24 8% 28% / 0.2) transparent;
+  scrollbar-color: hsl(330 18% 22% / 0.2) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -82,11 +85,10 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: hsl(24 8% 28% / 0.15);
+  background: hsl(330 18% 22% / 0.15);
   border-radius: 999px;
 }
 
-/* Page transitions */
 @keyframes page-enter {
   0% { opacity: 0; transform: translateY(10px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -114,12 +116,10 @@ body {
   animation: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Utility: page content clears fixed header + bottom nav on phones */
 .page-shell {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
-/* Main page titles: breathing room below heading, away from top edge on desktop */
 .page-title {
   padding-bottom: 0.5rem;
 }

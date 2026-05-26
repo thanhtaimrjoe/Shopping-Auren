@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f5f0e8",
-  "theme_color": "#10B981",
+  "background_color": "#ebe5d8",
+  "theme_color": "#4a5c3f",
   "categories": ["food", "productivity", "shopping"],
   "lang": "en",
   "icons": [
@@ -22,6 +22,11 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
     }
   ]
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "shopping-memo-v1";
+const CACHE_NAME = "shopping-memo-v2-olive";
 const APP_SHELL = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

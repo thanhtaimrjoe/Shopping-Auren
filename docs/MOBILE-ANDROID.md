@@ -72,11 +72,24 @@ Sau mỗi thay đổi frontend cần chạy lại `cap:sync:android` (hoặc `bu
 - Trình duyệt / PWA: Service Worker vẫn bật (`RegisterSW`).
 - App Android native: Service Worker **tắt**; shell dùng WebView + plugin Status Bar / Splash Screen.
 
+## Icon & màu thương hiệu
+
+Sau khi đổi logo hoặc palette, chạy từ repo root:
+
+```bash
+python scripts/generate_pwa_icons.py
+```
+
+Tạo PWA icons, `favicon.ico`, và `android/.../mipmap-*/ic_launcher*.png` từ **`workspace/ios/AppIcon.appiconset/1024.png`** (và `workspace/android/` cho launcher).
+
+Xem [workspace/README.md](../workspace/README.md). iOS trên Mac: [MOBILE-IOS.md](./MOBILE-IOS.md).
+
 ## Phát hành (APK / AAB)
 
 1. Đặt `.env.local` trỏ production (HTTPS).
-2. `npm run cap:sync:android`
-3. Android Studio → **Build → Generate Signed Bundle / APK**
+2. `python scripts/generate_pwa_icons.py` (nếu vừa đổi icon)
+3. `npm run cap:sync:android`
+4. Android Studio → **Build → Generate Signed Bundle / APK**
 
 ## iOS (sau này)
 
