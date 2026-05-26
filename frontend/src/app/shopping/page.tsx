@@ -58,28 +58,27 @@ export default function ShoppingPage() {
     if (!user) return;
     setIsLoading(true);
 
-    try {
-      const planResp = await mealPlansApi.getCurrent();
-      if (planResp.data.success) {
-        setCurrentMealPlanId(planResp.data.data.meal_plan?.id || null);
-      }
-    } catch {
+    const [planResult, listResult] = await Promise.allSettled([
+      mealPlansApi.getCurrent(),
+      shoppingListsApi.getCurrent(),
+    ]);
+
+    if (planResult.status === 'fulfilled' && planResult.value.data.success) {
+      setCurrentMealPlanId(planResult.value.data.data.meal_plan?.id || null);
+    } else {
       setCurrentMealPlanId(null);
     }
 
-    try {
-      const response = await shoppingListsApi.getCurrent();
-      if (response.data.success) {
-        setList(response.data.data.shopping_list);
-      }
-    } catch (error: unknown) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
+    if (listResult.status === 'fulfilled' && listResult.value.data.success) {
+      setList(listResult.value.data.data.shopping_list);
+    } else if (listResult.status === 'rejected') {
+      const status = (listResult.reason as { response?: { status?: number } })?.response?.status;
       if (status === 404) {
         setList(null);
       }
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   }, [user]);
 
   useEffect(() => {

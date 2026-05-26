@@ -30,10 +30,15 @@ def list_meals(
     order: str,
     limit: int,
     offset: int,
+    include_total: bool = False,
 ) -> dict:
+    select_kw: dict = {}
+    if include_total:
+        select_kw["count"] = "exact"
+
     query = (
         db.table(MEALS)
-        .select(_MEAL_COLUMNS, count="exact")
+        .select(_MEAL_COLUMNS, **select_kw)
         .eq("user_id", user_id)
         .is_("deleted_at", "null")
     )
@@ -46,7 +51,10 @@ def list_meals(
 
     response = query.execute()
     meals = [format_meal(row) for row in (response.data or [])]
-    total = response.count if response.count is not None else len(meals)
+    if include_total and response.count is not None:
+        total = response.count
+    else:
+        total = len(meals)
     return {
         "success": True,
         "data": {"meals": meals, "total": total, "limit": limit, "offset": offset},

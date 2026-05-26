@@ -76,26 +76,58 @@ export default function MealPlanPage() {
     }
   }, [user, authLoading, router]);
 
+  const applyMealPlanResponse = useCallback((response: { data: { success?: boolean; data?: { meal_plan?: MealPlanResponse } } }) => {
+    if (!response.data.success) return;
+    const plan = (response.data.data?.meal_plan || {}) as MealPlanResponse;
+    setCurrentPlanId(plan.id || null);
+    const transformed: Record<number, string[]> = {};
+    if (Array.isArray(plan.meals)) {
+      plan.meals.forEach((item: MealPlanItem) => {
+        const dayIndex = Number(item.day_of_week);
+        const mealName = item.meal?.name || item.name;
+        if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealName) return;
+        transformed[dayIndex] = [...(transformed[dayIndex] || []), mealName];
+      });
+    }
+    setSelectedMeals(transformed);
+  }, []);
+
   const fetchProductsAndShoppingList = useCallback(async () => {
     if (!user) return;
     try {
-      const prodResp = await productsApi.getAll();
+      const [prodResp, listResp] = await Promise.all([
+        productsApi.getAll(),
+        shoppingListsApi.getCurrent(),
+      ]);
       if (prodResp.data.success) {
         setProductsDatabase(prodResp.data.data.products);
       }
-      const listResp = await shoppingListsApi.getCurrent();
       if (listResp.data.success) {
-        // Filter out items that are products
         const items = listResp.data.data.shopping_list.items;
-        const products = items.filter((item: any) => item.source_type === 'product' || item.source_type === 'manual');
+        const products = items.filter(
+          (item: { source_type?: string }) =>
+            item.source_type === 'product' || item.source_type === 'manual'
+        );
         setExtraProducts(products);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number } };
+      if (err.response?.status === 404) {
+        try {
+          const prodResp = await productsApi.getAll();
+          if (prodResp.data.success) {
+            setProductsDatabase(prodResp.data.data.products);
+          }
+          setExtraProducts([]);
+        } catch (inner) {
+          console.error('Failed to fetch products after empty shopping list', inner);
+        }
+        return;
+      }
       console.error('Failed to fetch products or shopping list', error);
     }
   }, [user]);
 
-  // Fetch meals for the modal
   const fetchMeals = useCallback(async () => {
     if (!user) return;
     setFetchLoading(true);
@@ -104,8 +136,9 @@ export default function MealPlanPage() {
       if (response.data.success) {
         setMealDatabase(response.data.data.meals);
       }
-    } catch (error: any) {
-      if (error.message !== 'Network Error') {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message !== 'Network Error') {
         console.error('Failed to fetch meals:', error);
       }
     } finally {
@@ -113,44 +146,87 @@ export default function MealPlanPage() {
     }
   }, [user]);
 
-  // Fetch current meal plan
   const fetchMealPlan = useCallback(async () => {
     if (!user) return;
     try {
       const response = await mealPlansApi.getCurrent();
-      if (response.data.success) {
-        const plan = (response.data.data.meal_plan || {}) as MealPlanResponse;
-        setCurrentPlanId(plan.id || null);
-        const transformed: Record<number, string[]> = {};
-        if (Array.isArray(plan.meals)) {
-          plan.meals.forEach((item: MealPlanItem) => {
-            const dayIndex = Number(item.day_of_week);
-            const mealName = item.meal?.name || item.name;
-            if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealName) return;
-            transformed[dayIndex] = [...(transformed[dayIndex] || []), mealName];
-          });
-        }
-        setSelectedMeals(transformed);
-      }
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+      applyMealPlanResponse(response);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 404) {
         setCurrentPlanId(null);
         setSelectedMeals({});
         return;
       }
-      if (error.message !== 'Network Error') {
+      if (err.message !== 'Network Error') {
         console.error('Failed to fetch meal plan:', error);
       }
     }
-  }, [user]);
+  }, [user, applyMealPlanResponse]);
+
+  const loadInitialData = useCallback(async () => {
+    if (!user) return;
+    setFetchLoading(true);
+
+    const [mealsResult, planResult, productsResult, listResult] = await Promise.allSettled([
+      mealsApi.getAll(),
+      mealPlansApi.getCurrent(),
+      productsApi.getAll(),
+      shoppingListsApi.getCurrent(),
+    ]);
+
+    if (mealsResult.status === 'fulfilled' && mealsResult.value.data.success) {
+      setMealDatabase(mealsResult.value.data.data.meals);
+    } else if (mealsResult.status === 'rejected') {
+      const err = mealsResult.reason as { message?: string };
+      if (err.message !== 'Network Error') {
+        console.error('Failed to fetch meals:', mealsResult.reason);
+      }
+    }
+
+    if (planResult.status === 'fulfilled') {
+      applyMealPlanResponse(planResult.value);
+    } else {
+      const err = planResult.reason as { response?: { status?: number }; message?: string };
+      if (err.response?.status === 404) {
+        setCurrentPlanId(null);
+        setSelectedMeals({});
+      } else if (err.message !== 'Network Error') {
+        console.error('Failed to fetch meal plan:', planResult.reason);
+      }
+    }
+
+    if (productsResult.status === 'fulfilled' && productsResult.value.data.success) {
+      setProductsDatabase(productsResult.value.data.data.products);
+    } else if (productsResult.status === 'rejected') {
+      console.error('Failed to fetch products:', productsResult.reason);
+    }
+
+    if (listResult.status === 'fulfilled' && listResult.value.data.success) {
+      const items = listResult.value.data.data.shopping_list.items;
+      setExtraProducts(
+        items.filter(
+          (item: { source_type?: string }) =>
+            item.source_type === 'product' || item.source_type === 'manual'
+        )
+      );
+    } else if (listResult.status === 'rejected') {
+      const err = listResult.reason as { response?: { status?: number } };
+      if (err.response?.status !== 404) {
+        console.error('Failed to fetch shopping list:', listResult.reason);
+      } else {
+        setExtraProducts([]);
+      }
+    }
+
+    setFetchLoading(false);
+  }, [user, applyMealPlanResponse]);
 
   useEffect(() => {
     if (!authLoading && user) {
-      fetchMeals();
-      fetchMealPlan();
-      fetchProductsAndShoppingList();
+      loadInitialData();
     }
-  }, [fetchMeals, fetchMealPlan, fetchProductsAndShoppingList, authLoading, user]);
+  }, [loadInitialData, authLoading, user]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {

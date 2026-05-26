@@ -38,6 +38,17 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
+@app.on_event("startup")
+def warm_auth_jwks_cache() -> None:
+    """Prefetch Supabase JWKS so the first authenticated request is not blocked."""
+    try:
+        from app.core.jwt_verify import _fetch_jwks
+
+        _fetch_jwks()
+    except Exception as exc:
+        print(f"WARN: JWKS warmup skipped: {exc}", file=sys.stderr)
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "version": "0.1.0"}

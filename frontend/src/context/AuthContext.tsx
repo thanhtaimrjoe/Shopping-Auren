@@ -20,39 +20,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn('Auth session initialization error:', error.message);
-          // If refresh token is invalid, clear the session
-          if (error.message.includes('refresh_token_not_found') || error.message.includes('Refresh Token Not Found')) {
-            await supabase.auth.signOut();
-          }
-        }
-        setSession(session);
-        setUser(session?.user ?? null);
-        setApiAccessToken(session?.access_token ?? null, session?.expires_at);
-      } catch (e) {
-        console.error('Unexpected auth initialization error:', e);
-      } finally {
+    let initialResolved = false;
+
+    const applySession = (nextSession: Session | null) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setApiAccessToken(nextSession?.access_token ?? null, nextSession?.expires_at);
+    };
+
+    const finishInitialLoad = () => {
+      if (!initialResolved) {
+        initialResolved = true;
         setLoading(false);
       }
     };
 
-    initAuth();
+    // INITIAL_SESSION uses the cached session immediately; avoid blocking on getSession()
+    // which may wait for a refresh-token round trip to Supabase Auth.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      applySession(nextSession);
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setApiAccessToken(session?.access_token ?? null, session?.expires_at);
-      setLoading(false);
+      if (event === 'INITIAL_SESSION') {
+        finishInitialLoad();
+      }
     });
+
+    const fallbackTimer = window.setTimeout(async () => {
+      if (initialResolved) return;
+      try {
+        const { data: { session: fallbackSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('Auth session fallback error:', error.message);
+          if (
+            error.message.includes('refresh_token_not_found') ||
+            error.message.includes('Refresh Token Not Found')
+          ) {
+            await supabase.auth.signOut();
+          }
+        }
+        applySession(fallbackSession);
+      } catch (e) {
+        console.error('Unexpected auth fallback error:', e);
+      } finally {
+        finishInitialLoad();
+      }
+    }, 2500);
 
     return () => {
       subscription.unsubscribe();
+      window.clearTimeout(fallbackTimer);
     };
   }, []);
 

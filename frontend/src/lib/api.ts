@@ -122,8 +122,12 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+/** Default meal list params: higher limit, skip slow exact COUNT on init. */
+const MEALS_LIST_DEFAULTS = { limit: 200, include_total: false } as const;
+
 export const mealsApi = {
-  getAll: (params?: Record<string, unknown>) => api.get('/meals', { params }),
+  getAll: (params?: Record<string, unknown>) =>
+    api.get('/meals', { params: { ...MEALS_LIST_DEFAULTS, ...params } }),
   getById: (id: string) => api.get(`/meals/${id}`),
   create: (data: unknown) => api.post('/meals', data),
   update: (id: string, data: unknown) => api.put(`/meals/${id}`, data),

@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-05-26 16:20] - Faster initial API load (parallel fetch + auth + meals query)
+
+**担当**: AI Assistant  
+**タイプ**: Performance  
+**関連US**: US-001, US-005, US-006, US-012  
+**影響範囲**: Frontend, Backend, API
+
+### 変更内容
+- Meal plan page: load meals, meal plan, products, and shopping list in parallel (`Promise.allSettled`) instead of 3 sequential flows.
+- Products + shopping list on meal plan page: parallel `Promise.all`.
+- Shopping page: meal plan + current list fetched in parallel.
+- Auth: use `INITIAL_SESSION` from `onAuthStateChange` first; avoid blocking UI on `getSession()` refresh round-trip (fallback after 2.5s).
+- Meals list API: `include_total=false` by default (skips slow PostgREST `count=exact`); frontend requests `limit=200`.
+- Backend: warm JWKS cache on startup for faster first authenticated request.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`, `frontend/src/app/shopping/page.tsx`, `frontend/src/context/AuthContext.tsx`, `frontend/src/lib/api.ts`
+- ファイル: `backend/app/services/meal_service.py`, `backend/app/api/v1/meals.py`, `backend/app/main.py`
+- 変更理由: Init felt slow due to sequential API calls, optional exact COUNT, and auth waiting on token refresh / cold JWKS.
+
+### テスト
+- [x] pytest (`test_meals`, `test_auth`)
+- [ ] 動作確認完了 (manual on localhost)
+- [ ] エラーハンドリング確認
+
+### 備考
+- Fast load after login can also be Render warm instance + valid cached session (no refresh). Slow first hit after idle may still occur on free-tier hosting.
+
+---
+
 ## [2026-05-26 15:10] - Local dev with production env (no Docker)
 
 **担当**: AI Assistant  

@@ -16,6 +16,10 @@ async def get_meals(
     order: str = Query("desc"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    include_total: bool = Query(
+        False,
+        description="When true, runs an exact COUNT query (slower on large tables).",
+    ),
     user: dict = Depends(get_current_user),
 ):
     return meal_service.list_meals(
@@ -25,6 +29,7 @@ async def get_meals(
         order=order,
         limit=limit,
         offset=offset,
+        include_total=include_total,
     )
 
 
