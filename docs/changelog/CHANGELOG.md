@@ -5,6 +5,26 @@
 
 ---
 
+## [2026-05-26 20:30] - Supabase CI/CD baseline migration documentation
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: None  
+**影響範囲**: Database / CI-CD
+
+### 変更内容
+- Documented the fix for Supabase CI/CD migration conflict (`relation "meals" already exists`).
+- Detailed the causes (drift between manual baseline and CLI schema migration log) and provided instructions for CLI repair and SQL Editor baselining.
+
+### 実装詳細
+- ファイル: `docs/changelog/CHANGELOG.md` (this file)
+- 変更理由: Clear instructions to resolve SQLSTATE 42P07 during Supabase CLI db push on production database in CI/CD pipeline.
+
+### テスト
+- [x] Spec & migration logic verified
+
+---
+
 ## [2026-05-26 19:45] - workspace/ brand assets + iOS docs + APK rebuild
 
 **担当**: AI Assistant  
