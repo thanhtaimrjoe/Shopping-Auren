@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-05-26 14:35] - Login password visibility toggle
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-001  
+**影響範囲**: Frontend
+
+### 変更内容
+- Added show/hide password toggle button on the login password input.
+- Switched password field type dynamically between `password` and `text`.
+- Added eye/eye-off icon feedback for current visibility state.
+
+### 実装詳細
+- ファイル: `frontend/src/app/login/page.tsx`
+- 変更理由: Improve login UX by allowing users to verify typed passwords on mobile/desktop.
+- 技術的な決定: Implemented local `showPassword` state and accessible toggle button with `aria-label`.
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了
+- [ ] エラーハンドリング確認
+
+### 備考
+- Toggle only affects visual display in the input; authentication flow remains unchanged.
+
+---
+
 ## [2026-05-26 08:45] - Production Android APK (fixed Supabase anon key)
 
 **担当**: AI Assistant  
