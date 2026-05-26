@@ -153,6 +153,17 @@ npm run dev
 ```
 *Frontend sẽ chạy tại: http://localhost:3000*
 
+### 3. Android app (Capacitor)
+
+Xem **[docs/MOBILE-ANDROID.md](./docs/MOBILE-ANDROID.md)** — build APK từ cùng frontend Next.js.
+
+```bash
+cd frontend
+cp .env.mobile.example .env.local   # chỉnh URL production hoặc 10.0.2.2 cho emulator
+npm run cap:sync:android
+npm run cap:open:android            # Run trong Android Studio
+```
+
 ---
 
 ## 🛠 Tech Stack🚀 セットアップ

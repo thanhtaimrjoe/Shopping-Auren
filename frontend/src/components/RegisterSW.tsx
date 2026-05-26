@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 
 export function RegisterSW() {
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Shopping Memo</string>
+    <string name="title_activity_main">Shopping Memo</string>
+    <string name="package_name">com.shoppingmemo.app</string>
+    <string name="custom_url_scheme">com.shoppingmemo.app</string>
+</resources>

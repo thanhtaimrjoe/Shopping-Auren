@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { RegisterSW } from "@/components/RegisterSW";
+import { CapacitorNative } from "@/components/CapacitorNative";
 import { AuthProvider } from "@/context/AuthContext";
 
 const outfit = Outfit({ 
@@ -51,6 +52,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} ${fraunces.variable} antialiased flex min-h-screen min-h-[100dvh]`}>
         <RegisterSW />
+        <CapacitorNative />
         <AuthProvider>
           <Sidebar />
           <MobileBottomNav />

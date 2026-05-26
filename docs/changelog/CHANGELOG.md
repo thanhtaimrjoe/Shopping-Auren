@@ -5,6 +5,114 @@
 
 ---
 
+## [2026-05-26 08:45] - Production Android APK (fixed Supabase anon key)
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix  
+**関連US**: US-009  
+**影響範囲**: Frontend, Mobile
+
+### 変更内容
+- Fixed `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `frontend/.env.local` (JWT `ref` now matches project `akyxznfvwogxhcwocukj`).
+- Rebuilt Capacitor static bundle and exported `frontend/dist/android/shopping-memo-production.apk`.
+
+### 実装詳細
+- Root cause: previous anon key encoded wrong project ref (`ayyx` vs `akyx`) → Supabase `invalid api_key` on login.
+- Production API: `https://shopping-auren.onrender.com/api/v1`
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了 (mobile build + Gradle assembleDebug)
+- [ ] エラーハンドリング確認 (login on device — user to verify)
+
+---
+
+## [2026-05-25 22:30] - Android app shell (Capacitor)
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-009, US-012  
+**影響範囲**: Frontend, Docs
+
+### 変更内容
+- Added Capacitor 8 Android platform wrapping the Next.js UI in a native WebView.
+- Added conditional static export (`CAPACITOR_BUILD=true`) so Vercel `next build` stays unchanged.
+- Added npm scripts: `build:mobile`, `cap:sync:android`, `cap:open:android`, `cap:run:android`.
+- Disabled Service Worker registration inside the native shell; kept PWA behavior in browsers.
+- Added Android cleartext network config for local API/Supabase during development.
+- Documented workflow in `docs/MOBILE-ANDROID.md` and `frontend/.env.mobile.example`.
+
+### 実装詳細
+- ファイル: `frontend/capacitor.config.ts`, `frontend/android/`, `frontend/src/components/CapacitorNative.tsx`
+- ファイル: `frontend/next.config.ts`, `frontend/package.json`, `docs/MOBILE-ANDROID.md`
+- 変更理由: User requested native Android (and future iOS) from the existing web app.
+- 技術的な決定: Capacitor + static export; `appId` `com.shoppingmemo.app`, `webDir` `out`.
+
+### テスト
+- [ ] Unit Test追加
+- [x] 動作確認完了 (`npm run build:mobile` static export OK, `npx cap add android` OK)
+- [ ] エラーハンドリング確認 (device run requires Android Studio on developer machine)
+
+### 備考
+- iOS: install `@capacitor/ios` on macOS when ready (`npx cap add ios`).
+- Release builds should use HTTPS `NEXT_PUBLIC_*` URLs in `.env.local` before `cap:sync`.
+
+---
+
+## [2026-05-25 21:15] - Local Supabase CLI & Database setup
+
+**担当**: AI Assistant  
+**タイプ**: Chore / Fix  
+**関連US**: None  
+**影響範囲**: Database, Local Environment
+
+### 変更内容
+- Installed Supabase CLI globally via NPM.
+- Fixed data inconsistency in `supabase/seed.sql` (removed extra category columns in `meals` and `products` tables).
+- Started local Supabase stack (Docker) and initialized database with migrations and production-like seed data.
+- Verified database connectivity and data counts.
+
+### 実装詳細
+- ファイル: `supabase/seed.sql`
+- 変更 lý do: `supabase start` failed due to column count mismatch in seed data.
+- 技術的な決定: Fixed the seed data manually to match the current schema where `category` columns were dropped.
+
+### テスト
+- [x] 動作確認完了 (Supabase CLI installed, `supabase start` successful, meals count verified: 45)
+
+---
+
+## [2026-05-25 21:00] - Local environment setup
+
+**担当**: AI Assistant  
+**タイプ**: Docs / Chore  
+**関連US**: None  
+**影響範囲**: Project root, Frontend, Backend
+
+### 変更内容
+- Set up local development environment for Backend (FastAPI) and Frontend (Next.js).
+- Created virtual environment for Backend and installed dependencies from `requirements.txt`.
+- Installed Frontend dependencies via `npm install`.
+- Configured local environment files (`.env`, `.env.local`) for both Backend and Frontend.
+- Verified Backend health check endpoint.
+
+### 実装詳細
+- ファイル: `backend/.env`, `backend/.env.local`
+- ファイル: `frontend/.env.local`
+- 変更理由: To enable local development and testing.
+- 技術的な決定: Followed the instructions in `README.md` and `MIGRATION-PLAN.md`.
+
+### テスト
+- [ ] Unit Test追加 (N/A)
+- [x] 動作確認完了 (Backend health check: OK, Frontend server: Running)
+- [x] エラーハンドリング確認 (N/A)
+
+### 備考
+- Local Supabase (Docker) setup requires Supabase CLI which is not yet installed in the environment.
+- Users can run `supabase start` if they have the CLI and Docker Desktop.
+
+---
+
 ## [2026-05-25 19:08] - PWA mobile install support
 
 **担当**: AI Assistant  
