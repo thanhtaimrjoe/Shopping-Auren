@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-05-27 07:35] - Update brand app icon set & iOS/Android target sync (v1.0)
+
+**担当**: AI Assistant  
+**タイプ**: Feature / Mobile  
+**関連US**: US-009  
+**影響範囲**: Frontend, Mobile, Workspace
+
+### 変更内容
+- **New App Icon Set Integration**: Replaced existing Android launcher and iOS app icon sets in `workspace/` with the new custom assets copied from `Downloads/AppIcon`.
+- **Xcode AppIcon Sync**: Updated all iOS project `.appiconset` files including `Contents.json` and resolutions up to 1024px.
+- **PWA/Android Launcher Generation**: Executed the `generate_pwa_icons.py` brand generator utilizing Pillow to update HTML PWA icons, favicons, and Android launcher mipmaps.
+- **Capacitor Mobile Sync**: Ran `npm run cap:sync:ios` to compile the updated bundle and synchronize with Xcode, targeted at Version 1.0 (build 1).
+
+### 実装詳細
+- フォルダ: `workspace/ios/AppIcon.appiconset`, `workspace/android/`
+- ファイル: `frontend/ios/App/App/Assets.xcassets/AppIcon.appiconset/*`
+- 変更理由: Standardize a fresh brand visual identity across native iOS, Android, and mobile web platforms.
+- 技術的な決定: Automated mipmap and PWA asset scaling from 1024px source.
+
+### テスト
+- [x] PWA asset generation ran successfully
+- [x] iOS platform asset sync completed successfully
+
+---
+
 ## [2026-05-27 07:05] - iOS/Android Capacitor CORS fix & Rebuild iOS bundle
 
 **担当**: AI Assistant  
