@@ -28,6 +28,8 @@ app.add_middleware(
         "http://localhost:3000",   # Next.js dev
         "https://shopping-memo.vercel.app",
         "https://shopping-auren.vercel.app",  # Actual Production URL
+        "capacitor://localhost",               # iOS Capacitor
+        "http://localhost",                    # Android Capacitor
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -5,6 +5,62 @@
 
 ---
 
+## [2026-05-27 07:05] - iOS/Android Capacitor CORS fix & Rebuild iOS bundle
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / Mobile  
+**関連US**: US-009  
+**影響範囲**: Frontend, Backend, Mobile, API
+
+### 変更内容
+- **Backend CORS Fix**: Added `capacitor://localhost` (iOS) and `http://localhost` (Android) to allowed CORS origins in `backend/app/main.py` so the native mobile clients can query the FastAPI Render server without being blocked by CORS.
+- Verified `NEXT_PUBLIC_API_URL` configuration in `frontend/.env.local` pointing correctly to `https://shopping-auren.onrender.com/api/v1` for standard endpoints, while `/health` remains top-level.
+- Rebuilt Next.js production static assets (`npm run build:mobile`) with the compiled environment variables.
+- Synced the updated web bundle into the native iOS shell container using `npx cap sync ios` so Xcode can export the new `.ipa` with correct configurations.
+
+### 実装詳細
+- ファイル: `backend/app/main.py`
+- ファイル: `frontend/.env.local`
+- 変更理由: iOS app auth worked because it queries Supabase directly, but business logic APIs failed because the Render backend blocked `capacitor://localhost` origin (CORS violation).
+- 技術的な決定: Allowed standard Capacitor origins in FastAPI CORS middleware and re-synced the static client bundle.
+
+### テスト
+- [x] Web assets compilation succeeded
+- [x] Capacitor iOS sync completed successfully
+- [x] Backend CORS origin updated in source code
+
+---
+
+## [2026-05-26 20:50] - iOS app platform initialization via Capacitor
+
+**担当**: AI Assistant  
+**タイプ**: Feature / Mobile  
+**関連US**: US-009  
+**影響範囲**: Frontend, Mobile
+
+### 変更内容
+- Installed `@capacitor/ios` (v8.3.4) as dependency in `frontend/package.json`.
+- Configured convenient iOS run and sync scripts in `package.json`:
+  - `npm run cap:sync:ios` - Build static site and sync with iOS shell.
+  - `npm run cap:open:ios` - Open native iOS project in Xcode.
+  - `npm run cap:run:ios` - Build, sync, and run the app in iOS simulator.
+- Initialized Capacitor iOS platform shell (`npx cap add ios`), creating `frontend/ios/` directory.
+- Updated `frontend/.env.local` with production credentials (Supabase URL, Anon Key, and corrected Render base API URL ending in `/api/v1`).
+- Performed mobile static build and synced assets/plugins cleanly into the iOS shell container with production environment variables compiled in.
+- Bypassed strict node engine constraint in `@capacitor/cli` inside the local workspace to ensure compatibility with active Node v20.20.2 environment.
+
+### 実装詳細
+- ファイル: `frontend/package.json`
+- 変更理由: Enable native iOS compilation and deployment of the Shopping Memo application.
+- 技術的な決定: Standardized iOS plugin versions (v8) with existing Android setup and static Next.js compilation logic.
+
+### テスト
+- [x] Node packages installation verified
+- [x] Next.js mobile static build (`npm run build:mobile`) verified
+- [x] Capacitor platform add (`npx cap add ios`) and sync (`npm run cap:sync:ios`) executed successfully
+
+---
+
 ## [2026-05-26 20:30] - Supabase CI/CD baseline migration documentation
 
 **担当**: AI Assistant  
