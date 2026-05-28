@@ -129,3 +129,33 @@ body {
     padding-bottom: 3rem;
   }
 }
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+button, [role="button"], a {
+  @apply focus:outline-none;
+}
+
+/* Focus visible styles for better accessibility */
+:focus-visible {
+  @apply ring-2 ring-sage/30 outline-none;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply ring-2 ring-sage/30 border-transparent outline-none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  @apply bg-sage text-cream;
+}

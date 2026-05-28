@@ -30,19 +30,19 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile: compact top bar (nav is in MobileBottomNav) */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-cream/90 backdrop-blur-md border-b border-bark/10 px-4 pt-[env(safe-area-inset-top)]">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-cream/95 backdrop-blur-md border-b border-bark/10 px-4 pt-[env(safe-area-inset-top)]">
         <div className="h-14 flex items-center gap-2.5 min-w-0">
-          <div className="h-9 w-9 rounded-lg overflow-hidden shadow-soft shrink-0 ring-1 ring-gold/30">
+          <div className="h-9 w-9 rounded-lg overflow-hidden shadow-soft shrink-0 ring-1 ring-gold/30 flex-shrink-0">
             <img
               src="/icons/icon-192x192.png"
-              alt="Shopping Memo"
+              alt="Shopping Memo logo"
               className="w-full h-full object-cover"
             />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-serif font-semibold text-bark truncate">Shopping Memo</p>
             {user?.email && (
-              <p className="text-[10px] text-bark/45 truncate">{user.email}</p>
+              <p className="text-[10px] text-bark/45 truncate" title={user.email}>{user.email}</p>
             )}
           </div>
         </div>
@@ -51,17 +51,17 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[260px] bg-cream border-r border-bark/10 z-30 flex-col">
         <div className="flex items-center gap-3 p-6 lg:p-8 border-b border-bark/5">
-          <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 shadow-soft ring-1 ring-gold/30">
+          <div className="h-10 w-10 rounded-xl overflow-hidden shrink-0 shadow-soft ring-1 ring-gold/30 flex-shrink-0">
             <img
               src="/icons/icon-192x192.png"
-              alt="Shopping Memo"
+              alt="Shopping Memo logo"
               className="w-full h-full object-cover"
             />
           </div>
           <h1 className="text-lg text-bark font-serif font-semibold tracking-tight">Shopping Memo</h1>
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-1">
+        <nav className="flex-1 px-4 py-8 space-y-1" aria-label="Main navigation">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -70,9 +70,10 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'group relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200',
+                  'group relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sage/30 focus:bg-sage/5',
                   isActive ? 'bg-olive/10 text-sage-deep' : 'text-bark/50 hover:bg-hemp/50 hover:text-bark'
                 )}
+                aria-current={isActive ? 'page' : undefined}
               >
                 {isActive && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gold rounded-r-full" />
@@ -102,8 +103,9 @@ export function Sidebar() {
             <button
               type="button"
               onClick={() => signOut()}
-              className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100 touch-manipulation"
+              className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100 touch-manipulation focus:outline-none focus:ring-2 focus:ring-red-300/30 min-h-[40px] min-w-[40px] flex items-center justify-center"
               aria-label="Sign out"
+              title="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </button>

@@ -31,11 +31,12 @@ export function MobileBottomNav() {
               <Link
                 href={href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-colors touch-manipulation',
-                  isActive ? 'text-sage-deep' : 'text-bark/45 active:bg-hemp/50'
+                  'flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-sage/30 focus:bg-sage/5',
+                  isActive ? 'text-sage-deep bg-sage/5' : 'text-bark/45 hover:bg-hemp/50 active:bg-hemp/50'
                 )}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <Icon className={cn('h-5 w-5 shrink-0', isActive && 'stroke-[2.5px]')} />
+                <Icon className={cn('h-5 w-5 shrink-0 transition-all', isActive && 'stroke-[2.5px]')} />
                 <span className="text-[10px] font-semibold tracking-wide">{label}</span>
               </Link>
             </li>

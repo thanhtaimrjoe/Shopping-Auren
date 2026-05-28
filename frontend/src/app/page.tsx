@@ -408,7 +408,10 @@ export default function MealPlanPage() {
   if (authLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-sage" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-sage" />
+          <p className="text-sm text-bark/60">Loading your meal plan...</p>
+        </div>
       </div>
     );
   }
@@ -417,15 +420,17 @@ export default function MealPlanPage() {
     <div className="page-shell pb-4 sm:pb-12 animate-page-enter min-w-0">
       {/* Notifications */}
       {notification && (
-        <div className={cn(
-          "fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto",
-          notification.type === 'success'
-            ? 'bg-sage text-cream'
-            : notification.type === 'info'
-              ? 'bg-bark text-cream'
-              : 'bg-red-500 text-cream'
-        )}>
-          {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <X className="h-5 w-5" />}
+        <div
+          role="alert"
+          className={cn(
+            "fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto",
+            notification.type === 'success'
+              ? 'bg-sage text-cream'
+              : notification.type === 'info'
+                ? 'bg-bark text-cream'
+                : 'bg-red-500 text-cream'
+          )}>
+          {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5 flex-shrink-0" /> : <X className="h-5 w-5 flex-shrink-0" />}
           <span className="font-bold text-xs uppercase tracking-widest">{notification.message}</span>
         </div>
       )}
@@ -600,15 +605,15 @@ export default function MealPlanPage() {
 
       {/* Modal Popup */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close" onClick={() => setIsModalOpen(false)} />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsModalOpen(false)} />
           <div 
             ref={modalRef}
             className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-lg shadow-warm animate-scale-in overflow-hidden max-h-[min(90dvh,640px)] flex flex-col pb-[env(safe-area-inset-bottom)]"
           >
             <div className="p-5 sm:p-8 border-b border-bark/5 shrink-0">
               <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.2em] sm:tracking-[0.3em]">Chọn món ăn</h3>
+                <h3 id="meal-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.2em] sm:tracking-[0.3em]">Chọn món ăn</h3>
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -668,14 +673,14 @@ export default function MealPlanPage() {
 
       {/* Product Modal Popup */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close" onClick={() => setIsProductModalOpen(false)} />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsProductModalOpen(false)} />
           <div 
             className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)]"
           >
             <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
+                <h3 id="product-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
                 <button 
                   onClick={() => setIsProductModalOpen(false)}
                   className="p-2 hover:bg-hemp/50 rounded-full transition-all"
@@ -685,7 +690,7 @@ export default function MealPlanPage() {
               </div>
             </div>
             
-            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar">
+            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar" role="region" aria-label="Available products">
               {productsDatabase.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                   {productsDatabase.map((p, idx) => {
