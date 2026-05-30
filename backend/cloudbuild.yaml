@@ -1,0 +1,64 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:${SHORT_SHA}'
+      - '.'
+    dir: 'backend'
+
+  # Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+    dir: 'backend'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/run'
+    args:
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - '${_REGION}'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},SUPABASE_JWT_SECRET=${_SUPABASE_JWT_SECRET},APP_ENV=production'
+      - '--set-secrets'
+      - 'SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--timeout'
+      - '60'
+      - '--max-instances'
+      - '100'
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:${SHORT_SHA}'
+
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: 'ALLOW_LOOSE'
+
+substitutions:
+  _REGION: 'asia-southeast1'
+  _SERVICE_NAME: 'shopping-memo-backend'
+  _SUPABASE_URL: 'https://akyxznfvwogxhcwocukj.supabase.co'
+  _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+  _SUPABASE_JWT_SECRET: 'super-secret-jwt-token-change-me-in-production'
+
+tags:
+  - 'shopping-memo'
+  - 'backend'
+  - '${SHORT_SHA}'

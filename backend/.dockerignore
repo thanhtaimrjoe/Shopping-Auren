@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+venv
+.env
+.env.local
+.env.production.local
+.git
+.gitignore
+README.md
+tests
+migrations
+.pytest_cache
+*.db

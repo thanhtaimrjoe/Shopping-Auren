@@ -1,0 +1,20 @@
+# This file specifies files that should NOT be included in the Cloud Build upload.
+# If you create your own .gcloudignore file, it takes precedence over .gitignore.
+# Uncomment any of the example patterns below as needed.
+
+# Files at the root directory
+/venv
+*.pyc
+__pycache__
+.pytest_cache
+.env
+.env.local
+.env.production.local
+.git
+.gitignore
+
+# Test and documentation files
+/tests
+README.md
+migrations/
+*.db

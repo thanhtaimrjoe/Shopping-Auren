@@ -1,0 +1,187 @@
+╔═════════════════════════════════════════════════════════════════════════════╗
+║                  GCP DEPLOYMENT CHECKLIST - Shopping Memo                   ║
+║                          Project ID: shopping-497906                         ║
+║                            Region: asia-southeast1                           ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+
+PHASE 1: PREREQUISITES
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Install gcloud CLI: https://cloud.google.com/sdk/docs/install
+  ☐ Authenticate: gcloud auth login
+  ☐ Set default project: gcloud config set project shopping-497906
+  ☐ Get Supabase credentials ready:
+    • Service Role Key (from Supabase Dashboard)
+    • Anon Key
+    • JWT Secret
+
+PHASE 2: AUTOMATED SETUP (5 minutes)
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Run automated setup:
+    ./setup-gcp.sh shopping-497906
+    
+    This will automatically:
+    ✓ Enable required GCP APIs (Cloud Run, Cloud Build, Artifact Registry)
+    ✓ Create Artifact Registry repository
+    ✓ Configure Cloud Build service account permissions
+    ✓ Display next steps
+
+PHASE 3: CREATE SECRET IN SECRET MANAGER
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Get Supabase Service Role Key from:
+    https://app.supabase.com/project/akyxznfvwogxhcwocukj/settings/api
+  
+  ☐ Create secret:
+    echo -n 'YOUR_SERVICE_ROLE_KEY' | gcloud secrets create supabase-service-role-key \
+      --replication-policy=automatic \
+      --data-file=- \
+      --project=shopping-497906
+  
+  ☐ Verify secret created:
+    gcloud secrets list --project=shopping-497906
+
+PHASE 4: CONFIGURE CREDENTIALS
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Run credentials setup script:
+    ./setup-credentials.sh
+    
+    This will interactively:
+    1. Prompt for SUPABASE_URL
+    2. Prompt for SUPABASE_ANON_KEY
+    3. Prompt for SUPABASE_JWT_SECRET
+    4. Prompt for SUPABASE_SERVICE_ROLE_KEY
+    5. Update backend/cloudbuild.yaml
+    6. Create/update Secret Manager secret
+
+  ☐ Verify cloudbuild.yaml updated:
+    grep "_SUPABASE" backend/cloudbuild.yaml
+
+PHASE 5: DEPLOY TO GCP CLOUD RUN
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Deploy:
+    gcloud builds submit --config backend/cloudbuild.yaml --project=shopping-497906
+  
+  ☐ Wait for build to complete (2-5 minutes)
+  
+  ☐ Monitor build progress:
+    gcloud builds list --project=shopping-497906
+    gcloud builds log BUILD_ID --stream
+
+PHASE 6: VERIFY DEPLOYMENT
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Get service URL:
+    gcloud run services describe shopping-memo-backend \
+      --region=asia-southeast1 \
+      --format='value(status.url)' \
+      --project=shopping-497906
+  
+  ☐ Test health endpoint (replace URL):
+    curl https://shopping-memo-backend-xxxxx-asia-southeast1.a.run.app/health
+    
+    Expected response:
+    {"status":"ok","version":"0.1.0"}
+  
+  ☐ Check Cloud Run logs:
+    gcloud logging read "resource.type=cloud_run_revision" --limit 20
+
+PHASE 7: UPDATE FRONTEND
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Save GCP service URL (from Phase 6)
+  
+  ☐ Update frontend/.env.local:
+    NEXT_PUBLIC_API_URL=https://shopping-memo-backend-xxxxx-asia-southeast1.a.run.app
+  
+  ☐ Update backend/app/main.py CORS origins:
+    Add your GCP service URL to allow_origins list
+  
+  ☐ Redeploy backend:
+    gcloud builds submit --config backend/cloudbuild.yaml --project=shopping-497906
+  
+  ☐ Test API calls from frontend
+
+PHASE 8: OPTIONAL - CONTINUOUS DEPLOYMENT
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Connect GitHub repository (Cloud Build → Repositories)
+  ☐ Create build trigger for automatic deployment on push
+  ☐ Verify automatic deployment works on next commit
+
+═════════════════════════════════════════════════════════════════════════════
+
+QUICK COMMANDS REFERENCE
+─────────────────────────────────────────────────────────────────────────────
+
+Deploy:
+  gcloud builds submit --config backend/cloudbuild.yaml --project=shopping-497906
+
+View service URL:
+  gcloud run services describe shopping-memo-backend --region=asia-southeast1 \
+    --format='value(status.url)' --project=shopping-497906
+
+View recent builds:
+  gcloud builds list --project=shopping-497906 --limit 10
+
+Stream build logs:
+  gcloud builds log BUILD_ID --stream --project=shopping-497906
+
+View service logs:
+  gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=shopping-memo-backend" \
+    --limit 50 --format json
+
+Check service status:
+  gcloud run services describe shopping-memo-backend --region=asia-southeast1 \
+    --project=shopping-497906
+
+Update service configuration:
+  gcloud run services update shopping-memo-backend \
+    --min-instances=1 --max-instances=100 \
+    --region=asia-southeast1 --project=shopping-497906
+
+═════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING
+─────────────────────────────────────────────────────────────────────────────
+
+Problem: Build fails with "Secret not found"
+Solution: Check Secret Manager exists
+  gcloud secrets list --project=shopping-497906
+
+Problem: Service won't start
+Solution: Check service logs
+  gcloud logging read "resource.type=cloud_run_revision" --limit 50
+
+Problem: API returns 403 / CORS error
+Solution: Update allow_origins in backend/app/main.py and redeploy
+
+Problem: Service too slow
+Solution: Increase CPU/memory in cloudbuild.yaml or --min-instances
+
+═════════════════════════════════════════════════════════════════════════════
+
+DOCUMENTATION
+─────────────────────────────────────────────────────────────────────────────
+  📄 QUICKSTART_GCP.md          → Quick reference (this file focuses on actions)
+  📄 GCP_DEPLOYMENT_GUIDE.md    → Comprehensive guide with detailed explanations
+  📄 DEPLOYMENT_SUMMARY.md      → Overview and architecture
+  📄 setup-gcp.sh               → Automated GCP infrastructure setup
+  📄 setup-credentials.sh       → Interactive credentials configuration
+  🐳 backend/Dockerfile        → Container definition
+  🔨 backend/cloudbuild.yaml   → CI/CD pipeline
+
+═════════════════════════════════════════════════════════════════════════════
+
+COST ESTIMATION
+─────────────────────────────────────────────────────────────────────────────
+  • Free tier: 2M invocations/month
+  • Beyond: $0.40 per 1M invocations
+  • Estimated cost: <$1/month for low traffic, $5-15 for 1M requests/month
+
+═════════════════════════════════════════════════════════════════════════════
+
+Questions? See GCP_DEPLOYMENT_GUIDE.md for detailed documentation.
+
+Created: 2026-05-30
+Project: Shopping Memo
+Region: asia-southeast1
+Service: shopping-memo-backend
+Project ID: shopping-497906
+
+═════════════════════════════════════════════════════════════════════════════
