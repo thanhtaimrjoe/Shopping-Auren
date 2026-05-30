@@ -4,9 +4,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+      - 'asia-southeast1-docker.pkg.dev/shopping-497906/shopping-memo/backend:latest'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:${SHORT_SHA}'
+      - 'asia-southeast1-docker.pkg.dev/shopping-497906/shopping-memo/backend:$BUILD_ID'
       - '.'
     dir: 'backend'
 
@@ -14,51 +14,37 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
-    dir: 'backend'
+      - 'asia-southeast1-docker.pkg.dev/shopping-497906/shopping-memo/backend:latest'
 
   # Deploy to Cloud Run
-  - name: 'gcr.io/cloud-builders/run'
+  - name: 'gcr.io/cloud-builders/gcloud'
     args:
+      - 'run'
       - 'deploy'
-      - '${_SERVICE_NAME}'
+      - 'shopping-memo-backend'
       - '--image'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
+      - 'asia-southeast1-docker.pkg.dev/shopping-497906/shopping-memo/backend:latest'
+      - '--region'
+      - 'asia-southeast1'
       - '--platform'
       - 'managed'
-      - '--region'
-      - '${_REGION}'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},SUPABASE_JWT_SECRET=${_SUPABASE_JWT_SECRET},APP_ENV=production'
+      - 'SUPABASE_URL=https://akyxznfvwogxhcwocukj.supabase.co,SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreXh6bmZ2d29neGhjd29jdWtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NTM1ODYsImV4cCI6MjA5MDIyOTU4Nn0.w_hwdPW-_OuBBc4OU-Hi3nq-0kuD3Hy2IyTH8jlmS9w,SUPABASE_JWT_SECRET=fmzXffg+8+EtOm8o54Fa2EdnV6PYEsT0l+l5XcaPKPaSLq5Pz8MiDdKxCYij+GD7dqtUxL5oYW0dizQSO+Zldg==,APP_ENV=production'
       - '--set-secrets'
-      - 'SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest'
+      - 'SUPABASE_SERVICE_ROLE_KEY=supabase:latest'
       - '--memory'
-      - '512Mi'
+      - '256Mi'
       - '--cpu'
-      - '1'
+      - '0.5'
       - '--timeout'
       - '60'
       - '--max-instances'
-      - '100'
+      - '20'
 
 images:
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:latest'
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/shopping-memo/backend:${SHORT_SHA}'
+  - 'asia-southeast1-docker.pkg.dev/shopping-497906/shopping-memo/backend:latest'
 
 options:
   machineType: 'N1_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
-  substitution_option: 'ALLOW_LOOSE'
-
-substitutions:
-  _REGION: 'asia-southeast1'
-  _SERVICE_NAME: 'shopping-memo-backend'
-  _SUPABASE_URL: 'https://akyxznfvwogxhcwocukj.supabase.co'
-  _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
-  _SUPABASE_JWT_SECRET: 'super-secret-jwt-token-change-me-in-production'
-
-tags:
-  - 'shopping-memo'
-  - 'backend'
-  - '${SHORT_SHA}'
