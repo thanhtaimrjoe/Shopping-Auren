@@ -27,7 +27,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",   # Next.js dev
         "https://shopping-memo.vercel.app",
-        "https://shopping-auren.vercel.app",  # Actual Production URL
+        "https://shopping-auren.vercel.app",  # Production URL
+        "https://shopping-auren-vynasta9920.vercel.app",  # Actual Vercel deployment
         "https://shopping-memo-backend-oefakwrmdq-as.a.run.app",  # GCP Cloud Run backend
         "capacitor://localhost",               # iOS Capacitor
         "http://localhost",                    # Android Capacitor
