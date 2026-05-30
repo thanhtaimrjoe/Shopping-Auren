@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-05-30 10:00] - GCP Cloud Run Backend Deployment & Frontend Integration
+
+**担当**: AI Assistant  
+**タイプ**: Deployment / Infrastructure  
+**関連US**: All (Production Ready)  
+**影響範囲**: Backend, Frontend, DevOps, API
+
+### 変更内容
+- **Backend Deployment**: FastAPI backend deployed to GCP Cloud Run (`shopping-memo-backend-oefakwrmdq-as.a.run.app`)
+- **Frontend Deployment**: Next.js frontend deployed to Vercel (`https://shopping-auren.vercel.app`)
+- **CORS Configuration**: Updated backend CORS middleware to allow Vercel frontend origin
+- **Environment Integration**: Frontend configured with production backend URL and Supabase credentials
+- **Health Check**: Verified backend health endpoint and API connectivity
+
+### 実装詳細
+- ファイル: `backend/Dockerfile` — GCP Cloud Run deployment configuration
+- ファイル: `backend/app/main.py` — CORS middleware updated for production origin
+- ファイル: `frontend/.env.production.local.example` — Production environment template
+- ファイル: `frontend/src/lib/test-connection.ts` — Backend connectivity verification
+- 変更理由: Move application from staging to production environment
+- 技術的な決定: Used GCP Cloud Run for backend (auto-scaling, managed service) and Vercel for frontend (optimal Next.js hosting)
+
+### テスト
+- [x] Backend health check: `/health` returns 200 OK
+- [x] Frontend loads successfully from Vercel
+- [x] API connectivity verified between frontend and backend
+- [x] CORS headers properly configured
+- [x] Environment variables correctly set in both services
+
+### 備考
+- Production URLs:
+  - Frontend: https://shopping-auren.vercel.app
+  - Backend: https://shopping-memo-backend-oefakwrmdq-as.a.run.app
+  - Region: us-central1
+- Database: Supabase (hosted, production instance)
+- Status: Production Ready
+
+---
+
 ## [2026-05-28 14:30] - Frontend UI/UX Audit & Improvements
 
 **担当**: AI Assistant  
