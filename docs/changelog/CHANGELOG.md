@@ -16,16 +16,18 @@
 - Added a root `Dockerfile` so Cloud Run / Cloud Build triggers that scan the repository root can find a valid build file.
 - Configured the root Dockerfile to build the FastAPI backend from `backend/`.
 - Set the container default `PORT` to `8080` for Cloud Run source-trigger compatibility.
+- Added root `cloudbuild.yaml` with `CLOUD_LOGGING_ONLY` logging for custom service account triggers.
 
 ### 実装詳細
 - ファイル: `Dockerfile`
+- ファイル: `cloudbuild.yaml`
 - 変更理由: Cloud Run trigger failed with "We could not find a valid build file" because build files were only present under service subdirectories.
 - 技術的な決定: Keep the canonical backend Dockerfile under `backend/`, and add a root Dockerfile shim for repository-root trigger auto-detection without duplicating runtime secrets in build config.
 
 ### テスト
 - [ ] Unit Test追加（deployment config only; no unit test needed）
-- [ ] 動作確認完了（commit/push後にCloud Run triggerで確認）
-- [ ] エラーハンドリング確認（Cloud Build failure path under review）
+- [x] 動作確認完了（root Dockerfile local build successful）
+- [ ] エラーハンドリング確認（commit/push後にCloud Run triggerで確認）
 
 ### 備考
 - If the trigger is configured for the frontend service, use `frontend/cloudbuild.yaml` as the build config path instead of this root backend Dockerfile.
