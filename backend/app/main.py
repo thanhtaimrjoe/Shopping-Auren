@@ -29,6 +29,8 @@ app.add_middleware(
         "https://shopping-memo.vercel.app",
         "https://shopping-auren.vercel.app",  # Production URL
         "https://shopping-auren-vynasta9920.vercel.app",  # Actual Vercel deployment
+        "https://shopping-memo-frontend-oefakwrmdq-as.a.run.app",  # GCP Cloud Run frontend
+        "https://shopping-memo-frontend-1080272924140.asia-southeast1.run.app",  # GCP Cloud Run canonical frontend URL
         "https://shopping-memo-backend-oefakwrmdq-as.a.run.app",  # GCP Cloud Run backend
         "capacitor://localhost",               # iOS Capacitor
         "http://localhost",                    # Android Capacitor

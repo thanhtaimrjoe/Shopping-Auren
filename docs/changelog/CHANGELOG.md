@@ -34,6 +34,96 @@
 
 ---
 
+## [2026-05-30 22:36] - Production UX Review Notes
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: All frontend screens, All API workflows  
+**影響範囲**: Documentation, Frontend, Backend
+
+### 変更内容
+- Added a production review note with findings from the live FE/BE smoke review.
+- Documented recommended follow-up fixes for auth UX, API docs exposure, backend root response, and demo account setup.
+- Listed authenticated workflows that still need review after a seeded test account is available.
+- Expanded the review after authenticated testing with production test data and shopping-list workflow findings.
+
+### 実装詳細
+- ファイル: `docs/production-review-2026-05-30.md`
+- 変更理由: Preserve production review findings in the repo so another AI/developer can turn them into fixes.
+- 技術的な決定: Keep the review outside `docs/spec/` to avoid changing approved product specifications.
+
+### テスト
+- [x] Unit Test追加（documentation-only change; no unit test needed）
+- [x] 動作確認完了（Markdown file added and changelog updated）
+- [x] エラーハンドリング確認（not applicable for documentation-only change）
+
+### 備考
+- Authenticated review used the user-provided production account, but credentials were not written to repo files.
+- Production test data was created with the `Codex Test` prefix for later cleanup.
+
+---
+
+## [2026-05-30 21:51] - GCP Frontend CORS Allowlist Fix
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / Deployment  
+**関連US**: All (Production Ready)  
+**影響範囲**: Backend, Frontend, API
+
+### 変更内容
+- Added the GCP Cloud Run frontend URL to the FastAPI CORS allowlist.
+- Verified backend preflight behavior for browser API calls from the Cloud Run frontend origin.
+- Added root `.gcloudignore` to prevent oversized Cloud Build source uploads.
+
+### 実装詳細
+- ファイル: `backend/app/main.py`
+- ファイル: `.gcloudignore`
+- 変更理由: Browser API calls from the newly deployed Cloud Run frontend were blocked by backend CORS preflight checks.
+- 技術的な決定: Keep explicit CORS origins and add only the production frontend Cloud Run host.
+
+### テスト
+- [x] Unit Test追加（CORS/config-only change; no unit test needed）
+- [x] 動作確認完了（backend Cloud Build deploy, CORS preflight 200, browser console checked）
+- [x] エラーハンドリング確認（unauthenticated API returns 401 with CORS headers instead of browser CORS failure）
+
+### 備考
+- Initial preflight returned `HTTP 400 Disallowed CORS origin` for `https://shopping-memo-frontend-oefakwrmdq-as.a.run.app`.
+- First backend rebuild attempt failed because Cloud Build was submitted from the wrong source root; rerun from repository root succeeded.
+
+---
+
+## [2026-05-30 21:37] - GCP Cloud Run Frontend Deployment Config
+
+**担当**: AI Assistant  
+**タイプ**: Deployment / Infrastructure  
+**関連US**: All (Production Ready)  
+**影響範囲**: Frontend, DevOps
+
+### 変更内容
+- Added Cloud Run container build support for the Next.js frontend.
+- Added frontend Cloud Build pipeline targeting GCP project `shopping-497906`.
+- Configured frontend production builds to use Next.js standalone output for container deployment.
+- Added Docker ignore rules to keep local env files, build output, and native mobile projects out of the frontend image context.
+
+### 実装詳細
+- ファイル: `frontend/next.config.ts`
+- ファイル: `frontend/Dockerfile`
+- ファイル: `frontend/.dockerignore`
+- ファイル: `frontend/cloudbuild.yaml`
+- 変更理由: Replace Vercel frontend hosting with GCP Cloud Run deployment.
+- 技術的な決定: Use Cloud Run in `asia-southeast1` with Artifact Registry repository `shopping-memo` and service `shopping-memo-frontend`.
+
+### テスト
+- [x] Unit Test追加（config-only change; no unit test needed）
+- [x] 動作確認完了（`npm run build`, Cloud Build deploy, Cloud Run HTTP 200）
+- [x] エラーハンドリング確認（initial Cloud Run 403 resolved by adding `roles/run.invoker` for `allUsers`）
+
+### 備考
+- `NEXT_PUBLIC_*` values are passed at image build time because Next.js embeds public environment variables in the client bundle.
+- Supabase anon key remains a public browser key, but local `.env*` files are excluded from the Docker build context.
+
+---
+
 ## [2026-05-30 10:00] - GCP Cloud Run Backend Deployment & Frontend Integration
 
 **担当**: AI Assistant  
