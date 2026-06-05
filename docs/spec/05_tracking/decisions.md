@@ -34,6 +34,13 @@
 - **削除**: MVP では `deleted_at` による **Soft Delete** を継続（meal plan 参照ガード付き）。Hard Delete への移行は将来タスク。
 - **履歴**: `shopping_lists.snapshot_json` に完了時スナップショットを保存（US-014）。
 
+#### 追記 (2026-06-05): Shopping History Item Delete for Test Workflows
+1. History は引き続き completed list の snapshot 表示を優先する。
+2. テスト workflow で誤って残った item を消せるように、History detail modal から個別 item 削除を許可する。
+3. Completed list の item を削除する場合、DB の `shopping_items` row だけでなく `shopping_lists.snapshot_json` 内の該当 item も同期削除する。
+4. Item を全て削除しても completed list 自体は残す。リスト全体を消す場合は `DELETE /shopping-lists/{list_id}` を使う。
+5. 削除操作は list owner のみ許可し、削除前に UI で確認ダイアログを表示する。
+
 ---
 
 ## 決定事項一覧

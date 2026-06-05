@@ -195,9 +195,9 @@
 | **URL** | `/history` |
 | **目的** | 過去の買い物履歴表示 |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - 完了リスト一覧（完了 from-to 日付範囲を表示）<br>- 各リストの詳細表示（モーダル）<br>- チェック済み/未チェック表示<br>- 履歴一覧からリスト全体を削除（ゴミ箱アイコン + 確認ダイアログ） |
+| **主要機能** | - 完了リスト一覧（完了 from-to 日付範囲を表示）<br>- 各リストの詳細表示（モーダル）<br>- チェック済み/未チェック表示<br>- 履歴一覧からリスト全体を削除（ゴミ箱アイコン + 確認ダイアログ）<br>- History detail modal can delete individual items for test workflows（item row trash icon + confirmation dialog）<br>- After item delete, update the detail modal plus summary `total_items` / `checked_items` counts |
 | **遷移先** | - 詳細: 展開表示 |
-| **API** | GET `/api/v1/shopping-lists/history?weeks=2`<br>DELETE `/api/v1/shopping-lists/{list_id}` |
+| **API** | GET `/api/v1/shopping-lists/history?weeks=2`<br>GET `/api/v1/shopping-lists/{list_id}`<br>DELETE `/api/v1/shopping-lists/{list_id}`<br>DELETE `/api/v1/shopping-lists/{list_id}/items/{item_id}` |
 
 ---
 

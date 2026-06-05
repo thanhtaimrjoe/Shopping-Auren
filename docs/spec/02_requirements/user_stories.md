@@ -263,11 +263,16 @@
 - [ ] 履歴一覧から完了した買い物リスト全体を削除できる（テストワークフロー用）
 - [ ] 削除前に確認ダイアログが表示される
 - [ ] 削除後、履歴一覧から当該リストが消える
+- [ ] Shopping History detail modal can delete an individual item for test workflows.
+- [ ] History item delete shows a confirmation dialog before deleting.
+- [ ] After deleting a history item, the detail view, `total_items`, and `checked_items` are updated.
+- [ ] If all items are deleted from a completed history list, the history list itself remains visible with `total_items = 0`.
 
 #### 技術要件
 - `POST /api/v1/shopping-lists/{list_id}/complete` — body: `{ week_from_date, week_to_date }`
 - GET `/api/v1/shopping-lists/history?weeks=2`
 - `DELETE /api/v1/shopping-lists/{list_id}` — 完了リストのみ削除可能（`shopping_items` は CASCADE 削除）
+- `DELETE /api/v1/shopping-lists/{list_id}/items/{item_id}` — deletes an item from either an active list or completed/history list. For completed lists, `snapshot_json` must be synchronized.
 
 ---
 

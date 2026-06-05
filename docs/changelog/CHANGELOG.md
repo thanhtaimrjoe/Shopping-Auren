@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-06-05 20:38] - Shopping History Item Delete Spec
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: US-014  
+**影響範囲**: Frontend, Backend, API, Documentation
+
+### 変更内容
+- Added Shopping History detail item delete to US-014 for test workflows.
+- Updated History screen spec to include item-level delete controls inside the detail modal.
+- Updated API spec so `DELETE /shopping-lists/{list_id}/items/{item_id}` can delete items from completed/history lists.
+- Documented completed-list `snapshot_json` synchronization requirements.
+
+### 実装詳細
+- ファイル: `docs/spec/02_requirements/user_stories.md`
+- ファイル: `docs/spec/03_design/screen_list.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- ファイル: `docs/spec/05_tracking/decisions.md`
+- 変更理由: Test workflows need to remove individual items from Shopping History, not only view history or delete the whole completed list.
+- 技術的な決定: Keep completed list rows when deleting all items; list-level deletion remains a separate explicit action.
+
+### テスト
+- [ ] Unit Test追加（documentation-only change; implementation pending）
+- [ ] 動作確認完了（documentation-only change）
+- [ ] エラーハンドリング確認（implementation pending: owner check, 404, snapshot sync）
+
+### 備考
+- Current implementation still needs backend/frontend changes; existing History detail modal is read-only.
+
+---
+
 ## [2026-06-05 19:00] - Shopping History List Delete
 
 **担当**: AI Assistant  

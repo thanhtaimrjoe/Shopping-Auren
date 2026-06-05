@@ -712,9 +712,23 @@ No Content
 
 **Headers**: `Authorization: Bearer <token>`
 
-**説明**: アクティブな買い物リストから手動アイテム等を削除する。完了済みリストからは削除不可（409）。
+**説明**: Deletes an item from a shopping list. Active lists use this for normal checklist cleanup. Completed/history lists also allow item-level delete for test workflows.
+
+**Completed list behavior**:
+- `status = completed` lists allow item delete only for the list owner.
+- Delete the matching `shopping_items` row.
+- If `snapshot_json` exists, remove the same item from `snapshot_json.items` so History detail does not keep rendering stale snapshot data.
+- Recalculate `total_items` / `checked_items` from the remaining items or snapshot.
+- If all items are deleted, keep the `shopping_lists` row; deleting the whole completed list remains the responsibility of `DELETE /shopping-lists/{list_id}`.
 
 **Response** (204): No Content
+
+**Errors**:
+| ステータス | 説明 |
+|-----------|------|
+| 401 | Unauthorized |
+| 404 | list or item not found, or the list/item belongs to another user |
+| 409 | State conflict that requires list-level delete instead of item-level delete |
 
 ---
 
