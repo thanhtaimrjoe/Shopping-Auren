@@ -3,6 +3,9 @@ Unit tests for Shopping Lists API endpoints.
 """
 import pytest
 from fastapi import status
+from pydantic import ValidationError
+
+from app.schemas.shopping_list import GenerateListBody
 
 
 class TestShoppingListsAPI:
@@ -64,3 +67,43 @@ class TestShoppingListsAPI:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
         ]
+
+
+class TestGenerateListDraftValidation:
+    def test_generate_body_accepts_final_draft_items(self):
+        body = GenerateListBody(
+            meal_plan_id="00000000-0000-0000-0000-000000000000",
+            items=[
+                {
+                    "name": "Potato",
+                    "category": "Curry",
+                    "source_type": "meal",
+                    "source_id": "11111111-1111-1111-1111-111111111111",
+                    "note": "Dùng cho món Curry",
+                },
+                {
+                    "name": "Tissue",
+                    "category": "Mua thêm",
+                    "source_type": "product",
+                    "source_id": "22222222-2222-2222-2222-222222222222",
+                    "note": None,
+                },
+            ],
+        )
+
+        assert len(body.items or []) == 2
+        assert body.items[0].source_type == "meal"
+        assert body.items[1].source_type == "product"
+
+    def test_generate_body_rejects_invalid_draft_item_source_type(self):
+        with pytest.raises(ValidationError):
+            GenerateListBody(
+                meal_plan_id="00000000-0000-0000-0000-000000000000",
+                items=[
+                    {
+                        "name": "Potato",
+                        "category": "Curry",
+                        "source_type": "unknown",
+                    }
+                ],
+            )

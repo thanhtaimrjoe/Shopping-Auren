@@ -6,11 +6,37 @@ import { mealsApi, mealPlansApi, productsApi, shoppingListsApi } from '@/lib/api
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { SHOPPING_GROUP_MANUAL, SHOPPING_GROUP_PRODUCTS } from '@/lib/shopping-groups';
 
 interface Meal {
   id: string;
   name: string;
   ingredients?: string[] | string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  image_url?: string | null;
+}
+
+interface ExtraProductItem {
+  id: string;
+  name: string;
+  category?: string;
+  source_type?: 'product' | 'manual' | string;
+  source_id?: string | null;
+  note?: string | null;
+}
+
+interface DraftShoppingItem {
+  draft_id: string;
+  name: string;
+  category: string;
+  source_type: 'meal' | 'product' | 'manual';
+  source_id: string | null;
+  note: string | null;
+  included: boolean;
 }
 
 interface MealPlanItem {
@@ -40,6 +66,27 @@ const DAY_LABELS = [
 
 const DAY_INDICES = [0, 1, 2, 3, 4, 5, 6] as const;
 
+function parseIngredients(rawIngredients?: string[] | string): string[] {
+  if (!rawIngredients) return [];
+  if (Array.isArray(rawIngredients)) {
+    return rawIngredients.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  try {
+    const parsed = JSON.parse(rawIngredients);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean);
+    }
+    return [String(parsed).trim()].filter(Boolean);
+  } catch {
+    return rawIngredients.split('\n').map((item) => item.trim()).filter(Boolean);
+  }
+}
+
+function createDraftId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function MealPlanPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -55,11 +102,16 @@ export default function MealPlanPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
   
   // Extra products state
-  const [productsDatabase, setProductsDatabase] = useState<any[]>([]);
-  const [extraProducts, setExtraProducts] = useState<any[]>([]);
+  const [productsDatabase, setProductsDatabase] = useState<Product[]>([]);
+  const [extraProducts, setExtraProducts] = useState<ExtraProductItem[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [draftItems, setDraftItems] = useState<DraftShoppingItem[]>([]);
+  const [draftMealSearch, setDraftMealSearch] = useState('');
+  const [draftProductSearch, setDraftProductSearch] = useState('');
+  const [isDraftSubmitting, setIsDraftSubmitting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,24 +198,6 @@ export default function MealPlanPage() {
     }
   }, [user]);
 
-  const fetchMealPlan = useCallback(async () => {
-    if (!user) return;
-    try {
-      const response = await mealPlansApi.getCurrent();
-      applyMealPlanResponse(response);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number }; message?: string };
-      if (err.response?.status === 404) {
-        setCurrentPlanId(null);
-        setSelectedMeals({});
-        return;
-      }
-      if (err.message !== 'Network Error') {
-        console.error('Failed to fetch meal plan:', error);
-      }
-    }
-  }, [user, applyMealPlanResponse]);
-
   const loadInitialData = useCallback(async () => {
     if (!user) return;
     setFetchLoading(true);
@@ -224,20 +258,28 @@ export default function MealPlanPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      loadInitialData();
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) void loadInitialData();
+      });
+      return () => {
+        cancelled = true;
+      };
     }
   }, [loadInitialData, authLoading, user]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsModalOpen(false);
+      if (event.key !== 'Escape') return;
+      setIsModalOpen(false);
+      setIsDraftModalOpen(false);
     }
-    if (isModalOpen) {
+    if (isModalOpen || isDraftModalOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      searchInputRef.current?.focus();
+      if (isModalOpen) searchInputRef.current?.focus();
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen]);
+  }, [isModalOpen, isDraftModalOpen]);
 
   const openModal = (dayIndex: number) => {
     setActiveDayIndex(dayIndex);
@@ -278,6 +320,137 @@ export default function MealPlanPage() {
     const response = await mealPlansApi.save(payload);
     if (response.data?.success) {
       setCurrentPlanId(response.data.data.meal_plan?.id || null);
+    }
+  };
+
+  const findMealByName = useCallback(
+    (mealName: string) => mealDatabase.find((entry) => entry.name === mealName),
+    [mealDatabase]
+  );
+
+  const buildDraftItems = useCallback((): DraftShoppingItem[] => {
+    const mealItems = Object.entries(selectedMeals).flatMap(([dayKey, mealNames]) =>
+      mealNames.flatMap((mealName, mealIndex) => {
+        const meal = findMealByName(mealName);
+        if (!meal) return [];
+
+        return parseIngredients(meal.ingredients).map((ingredient, ingredientIndex) => ({
+          draft_id: createDraftId(`meal-${dayKey}-${mealIndex}-${ingredientIndex}`),
+          name: ingredient,
+          category: meal.name,
+          source_type: 'meal' as const,
+          source_id: meal.id,
+          note: `Dùng cho món ${meal.name}`,
+          included: true,
+        }));
+      })
+    );
+
+    const productItems = extraProducts.map((item, index) => {
+      const matchedProduct = productsDatabase.find(
+        (product) => product.name.toLowerCase() === item.name.toLowerCase()
+      );
+      const sourceType: DraftShoppingItem['source_type'] =
+        item.source_type === 'manual' ? 'manual' : 'product';
+
+      return {
+        draft_id: createDraftId(`extra-${index}`),
+        name: item.name,
+        category: sourceType === 'product' ? SHOPPING_GROUP_PRODUCTS : item.category || SHOPPING_GROUP_MANUAL,
+        source_type: sourceType,
+        source_id: sourceType === 'product' ? item.source_id || matchedProduct?.id || null : null,
+        note: item.note ?? (sourceType === 'product' ? 'Mua thêm' : null),
+        included: true,
+      };
+    });
+
+    return [...mealItems, ...productItems];
+  }, [extraProducts, findMealByName, productsDatabase, selectedMeals]);
+
+  const openDraftModal = () => {
+    if (!currentPlanId) return;
+    setDraftItems(buildDraftItems());
+    setDraftMealSearch('');
+    setDraftProductSearch('');
+    setIsDraftModalOpen(true);
+  };
+
+  const updateDraftItem = (draftId: string, patch: Partial<DraftShoppingItem>) => {
+    setDraftItems((items) =>
+      items.map((item) => (item.draft_id === draftId ? { ...item, ...patch } : item))
+    );
+  };
+
+  const removeDraftItem = (draftId: string) => {
+    setDraftItems((items) => items.filter((item) => item.draft_id !== draftId));
+  };
+
+  const addMealToDraft = (meal: Meal) => {
+    const ingredients = parseIngredients(meal.ingredients);
+    if (ingredients.length === 0) {
+      showNotification('info', 'Món này chưa có nguyên liệu');
+      return;
+    }
+
+    setDraftItems((items) => [
+      ...items,
+      ...ingredients.map((ingredient, index) => ({
+        draft_id: createDraftId(`draft-meal-${meal.id}-${index}`),
+        name: ingredient,
+        category: meal.name,
+        source_type: 'meal' as const,
+        source_id: meal.id,
+        note: `Dùng cho món ${meal.name}`,
+        included: true,
+      })),
+    ]);
+    showNotification('success', `Đã thêm ${meal.name} vào draft`);
+  };
+
+  const addProductToDraft = (product: Product) => {
+    setDraftItems((items) => [
+      ...items,
+      {
+        draft_id: createDraftId(`draft-product-${product.id}`),
+        name: product.name,
+        category: SHOPPING_GROUP_PRODUCTS,
+        source_type: 'product',
+        source_id: product.id,
+        note: 'Mua thêm',
+        included: true,
+      },
+    ]);
+  };
+
+  const handleCreateChecklistFromDraft = async () => {
+    if (!currentPlanId) return;
+
+    const finalItems = draftItems
+      .filter((item) => item.included && item.name.trim())
+      .map((item) => ({
+        name: item.name.trim(),
+        category: item.category.trim() || SHOPPING_GROUP_MANUAL,
+        source_type: item.source_type,
+        source_id: item.source_id,
+        note: item.note?.trim() || null,
+      }));
+
+    setIsDraftSubmitting(true);
+    try {
+      const resp = await shoppingListsApi.generate({
+        meal_plan_id: currentPlanId,
+        items: finalItems,
+      });
+      if (resp.data.success) {
+        showNotification('success', 'Đã tạo checklist mua sắm');
+        await fetchProductsAndShoppingList();
+        setIsDraftModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to create checklist from draft:', error);
+      showNotification('error', 'Không thể tạo checklist mua sắm');
+    } finally {
+      setIsDraftSubmitting(false);
     }
   };
 
@@ -371,9 +544,10 @@ export default function MealPlanPage() {
       await persistMealPlan(nextSelectedMeals);
       setSelectedMeals(nextSelectedMeals);
       showNotification('success', currentMeals.includes(mealName) ? 'Đã xóa món ăn' : 'Đã thêm món ăn');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to toggle meal:', error);
-      const errorMsg = error.response?.data?.detail || error.message || 'Lỗi không xác định';
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
+      const errorMsg = err.response?.data?.detail || err.message || 'Lỗi không xác định';
       showNotification('error', `Không thể cập nhật món ăn: ${errorMsg}`);
     } finally {
       setIsLoading(false);
@@ -394,9 +568,10 @@ export default function MealPlanPage() {
 
       setSelectedMeals(nextSelectedMeals);
       showNotification('success', 'Đã xóa món ăn');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update meal plan:', error);
-      const errorMsg = error.response?.data?.detail || error.message || 'Lỗi không xác định';
+      const err = error as { response?: { data?: { detail?: string } }; message?: string };
+      const errorMsg = err.response?.data?.detail || err.message || 'Lỗi không xác định';
       showNotification('error', `Không thể xóa món ăn: ${errorMsg}`);
     }
   };
@@ -404,6 +579,16 @@ export default function MealPlanPage() {
   const filteredMeals = mealDatabase.filter(meal => 
     meal.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredDraftMeals = mealDatabase.filter((meal) =>
+    meal.name.toLowerCase().includes(draftMealSearch.toLowerCase())
+  );
+
+  const filteredDraftProducts = productsDatabase.filter((product) =>
+    product.name.toLowerCase().includes(draftProductSearch.toLowerCase())
+  );
+
+  const includedDraftCount = draftItems.filter((item) => item.included && item.name.trim()).length;
 
   if (authLoading) {
     return (
@@ -444,30 +629,7 @@ export default function MealPlanPage() {
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div className="w-full sm:w-auto">
           <button
-            onClick={async () => {
-              if (!currentPlanId) return;
-              setIsLoading(true);
-              try {
-                // Get product IDs from products that are already in the shopping list
-                const productIds = productsDatabase
-                  .filter(p => extraProducts.some(ep => ep.name.toLowerCase() === p.name.toLowerCase()))
-                  .map(p => p.id);
-                
-                const resp = await shoppingListsApi.generate({ 
-                  meal_plan_id: currentPlanId,
-                  product_ids: productIds
-                });
-                if (resp.data.success) {
-                  showNotification('success', 'Đã tạo danh sách mua sắm mới');
-                  fetchProductsAndShoppingList();
-                }
-              } catch (error) {
-                console.error('Failed to generate shopping list:', error);
-                showNotification('error', 'Không thể tạo danh sách mua sắm');
-              } finally {
-                setIsLoading(false);
-              }
-            }}
+            onClick={openDraftModal}
             disabled={!currentPlanId || isLoading}
             className="w-full sm:w-auto justify-center px-4 py-3 bg-bark text-cream rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-bark/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation min-h-[44px]"
           >
@@ -498,24 +660,7 @@ export default function MealPlanPage() {
                   dayMeals.map((mealName, mIdx) => {
                     const mealDetails = mealDatabase.find(m => m.name === mealName);
                     
-                    // Robust parsing of ingredients
-                    let ingredients: string[] = [];
-                    const rawIngredients = mealDetails?.ingredients;
-                    
-                    if (rawIngredients) {
-                      if (Array.isArray(rawIngredients)) {
-                        ingredients = rawIngredients;
-                      } else if (typeof rawIngredients === 'string') {
-                        try {
-                          // Try parsing as JSON first
-                          const parsed = JSON.parse(rawIngredients);
-                          ingredients = Array.isArray(parsed) ? parsed : [parsed];
-                        } catch (e) {
-                          // If not JSON, split by newline as fallback
-                          ingredients = rawIngredients.split('\n').map(i => i.trim()).filter(i => i !== '');
-                        }
-                      }
-                    }
+                    const ingredients = parseIngredients(mealDetails?.ingredients);
 
                     return (
                       <div key={mIdx} className="group/meal flex flex-col bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">
@@ -559,7 +704,7 @@ export default function MealPlanPage() {
               
               <div className="mt-6 pt-4 border-t border-bark/5">
                 <p className="text-[10px] text-bark/40 italic leading-relaxed">
-                  "Let food be thy medicine and medicine be thy food."
+                  &quot;Let food be thy medicine and medicine be thy food.&quot;
                 </p>
               </div>
             </div>
@@ -666,6 +811,184 @@ export default function MealPlanPage() {
                   Không tìm thấy món ăn nào trong thư viện
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shopping List Draft Modal */}
+      {isDraftModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-4" role="dialog" aria-modal="true" aria-labelledby="draft-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsDraftModalOpen(false)} />
+          <div className="relative bg-cream rounded-t-[2rem] lg:rounded-[2.5rem] w-full max-w-6xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(94dvh,820px)] pb-[env(safe-area-inset-bottom)]">
+            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 id="draft-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.25em]">Tạo shopping list</h3>
+                  <p className="mt-1 text-xs text-bark/50">{includedDraftCount} items selected</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDraftModalOpen(false)}
+                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/50 rounded-full transition-all touch-manipulation"
+                  aria-label="Close draft modal"
+                >
+                  <X className="h-5 w-5 text-bark/40" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-5">
+                <section className="min-w-0">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.22em] text-bark/60">Draft items</h4>
+                    {draftItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setDraftItems((items) => items.map((item) => ({ ...item, included: true })))}
+                        className="text-[10px] font-bold uppercase tracking-widest text-sage-deep hover:text-bark"
+                      >
+                        Select all
+                      </button>
+                    )}
+                  </div>
+
+                  {draftItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {draftItems.map((item) => (
+                        <div key={item.draft_id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 items-start bg-hemp/10 border border-bark/5 rounded-2xl p-3">
+                          <label className="pt-3 flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={item.included}
+                              onChange={(event) => updateDraftItem(item.draft_id, { included: event.target.checked })}
+                              className="h-5 w-5 rounded border-bark/20 text-sage focus:ring-sage"
+                              aria-label={`Include ${item.name}`}
+                            />
+                          </label>
+                          <div className="min-w-0 space-y-2">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(event) => updateDraftItem(item.draft_id, { name: event.target.value })}
+                              className="w-full bg-cream border border-bark/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-bark focus:outline-none focus:ring-2 focus:ring-sage/20"
+                              aria-label="Draft item name"
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-sage-deep bg-sage/10 px-2 py-1 rounded-lg">
+                                {item.category}
+                              </span>
+                              {item.note && (
+                                <span className="text-[10px] text-bark/45 truncate max-w-full">{item.note}</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeDraftItem(item.draft_id)}
+                            className="h-10 w-10 flex items-center justify-center hover:bg-red-50 text-red-500 rounded-full transition-all touch-manipulation"
+                            aria-label={`Remove ${item.name}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-40 flex items-center justify-center border-2 border-dashed border-bark/10 rounded-2xl">
+                      <p className="text-sm text-bark/35 italic">Draft đang trống. Thêm món hoặc sản phẩm để tạo checklist.</p>
+                    </div>
+                  )}
+                </section>
+
+                <aside className="space-y-4 min-w-0">
+                  <section className="bg-hemp/10 border border-bark/5 rounded-2xl p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-bark/60">Thêm món vào list</h4>
+                      <Plus className="h-4 w-4 text-sage-deep" />
+                    </div>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/25" />
+                      <input
+                        type="text"
+                        value={draftMealSearch}
+                        onChange={(event) => setDraftMealSearch(event.target.value)}
+                        placeholder="Tìm món..."
+                        className="w-full bg-cream border border-bark/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-2 custom-scrollbar">
+                      {filteredDraftMeals.length > 0 ? (
+                        filteredDraftMeals.map((meal) => (
+                          <button
+                            type="button"
+                            key={meal.id}
+                            onClick={() => addMealToDraft(meal)}
+                            className="w-full text-left px-3 py-2.5 rounded-xl bg-cream hover:bg-sage/10 text-sm font-medium text-bark transition-all"
+                          >
+                            {meal.name}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="py-6 text-center text-xs text-bark/35 italic">Không tìm thấy món.</p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="bg-hemp/10 border border-bark/5 rounded-2xl p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-bark/60">Thêm sản phẩm vào list</h4>
+                      <ShoppingBag className="h-4 w-4 text-sage-deep" />
+                    </div>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/25" />
+                      <input
+                        type="text"
+                        value={draftProductSearch}
+                        onChange={(event) => setDraftProductSearch(event.target.value)}
+                        placeholder="Tìm sản phẩm..."
+                        className="w-full bg-cream border border-bark/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-2 custom-scrollbar">
+                      {filteredDraftProducts.length > 0 ? (
+                        filteredDraftProducts.map((product) => (
+                          <button
+                            type="button"
+                            key={product.id}
+                            onClick={() => addProductToDraft(product)}
+                            className="w-full text-left px-3 py-2.5 rounded-xl bg-cream hover:bg-sage/10 text-sm font-medium text-bark transition-all"
+                          >
+                            {product.name}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="py-6 text-center text-xs text-bark/35 italic">Không tìm thấy sản phẩm.</p>
+                      )}
+                    </div>
+                  </section>
+                </aside>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 border-t border-bark/5 bg-cream flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsDraftModalOpen(false)}
+                className="px-5 py-3 rounded-xl border border-bark/10 text-bark text-xs font-bold uppercase tracking-widest hover:bg-hemp/40 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateChecklistFromDraft}
+                disabled={isDraftSubmitting || includedDraftCount === 0}
+                className="px-6 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDraftSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Tạo checklist
+              </button>
             </div>
           </div>
         </div>

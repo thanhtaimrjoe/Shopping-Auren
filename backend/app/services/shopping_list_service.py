@@ -156,47 +156,59 @@ def generate_list(user_id: str, body: GenerateListBody) -> dict:
 
     plan = plan_resp.data
 
-    items_resp = (
-        db.table(MEAL_PLAN_ITEMS)
-        .select("meals!inner(id, name, ingredients)")
-        .eq("meal_plan_id", body.meal_plan_id)
-        .is_("meals.deleted_at", "null")
-        .execute()
-    )
-
     shopping_items_payload: list[dict] = []
-    for row in items_resp.data:
-        meal = row.get("meals") or {}
-        meal_name = meal.get("name", "Unknown meal")
-        meal_id = meal.get("id")
-        for ingredient in normalize_ingredients_list(meal.get("ingredients")):
+
+    if body.items is not None:
+        for item in body.items:
             shopping_items_payload.append({
-                "name": ingredient,
-                "category": meal_name,
-                "source_type": "meal",
-                "source_id": meal_id,
-                "note": f"Dùng cho món {meal_name}",
+                "name": item.name,
+                "category": item.category,
+                "source_type": item.source_type,
+                "source_id": item.source_id,
+                "note": item.note,
                 "is_checked": False,
             })
-
-    if body.product_ids:
-        products_resp = (
-            db.table(PRODUCTS)
-            .select("id, name")
-            .in_("id", body.product_ids)
-            .eq("user_id", user_id)
-            .is_("deleted_at", "null")
+    else:
+        items_resp = (
+            db.table(MEAL_PLAN_ITEMS)
+            .select("meals!inner(id, name, ingredients)")
+            .eq("meal_plan_id", body.meal_plan_id)
+            .is_("meals.deleted_at", "null")
             .execute()
         )
-        for product in products_resp.data:
-            shopping_items_payload.append({
-                "name": product["name"],
-                "category": SHOPPING_GROUP_PRODUCTS,
-                "source_type": "product",
-                "source_id": product["id"],
-                "note": "Mua thêm",
-                "is_checked": False,
-            })
+
+        for row in items_resp.data:
+            meal = row.get("meals") or {}
+            meal_name = meal.get("name", "Unknown meal")
+            meal_id = meal.get("id")
+            for ingredient in normalize_ingredients_list(meal.get("ingredients")):
+                shopping_items_payload.append({
+                    "name": ingredient,
+                    "category": meal_name,
+                    "source_type": "meal",
+                    "source_id": meal_id,
+                    "note": f"Dùng cho món {meal_name}",
+                    "is_checked": False,
+                })
+
+        if body.product_ids:
+            products_resp = (
+                db.table(PRODUCTS)
+                .select("id, name")
+                .in_("id", body.product_ids)
+                .eq("user_id", user_id)
+                .is_("deleted_at", "null")
+                .execute()
+            )
+            for product in products_resp.data:
+                shopping_items_payload.append({
+                    "name": product["name"],
+                    "category": SHOPPING_GROUP_PRODUCTS,
+                    "source_type": "product",
+                    "source_id": product["id"],
+                    "note": "Mua thêm",
+                    "is_checked": False,
+                })
 
     db.table(SHOPPING_LISTS).delete().eq("user_id", user_id).eq("status", "active").execute()
 

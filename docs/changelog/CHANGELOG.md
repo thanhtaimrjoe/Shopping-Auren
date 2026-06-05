@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-06-05 16:45] - Shopping List Draft Modal Implementation
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-011  
+**影響範囲**: Frontend, Backend, API
+
+### 変更内容
+- Implemented the Meal Plan "Generate Shopping List" draft modal before checklist creation.
+- Added draft item include/edit/delete controls plus "Thêm món vào list" and "Thêm sản phẩm vào list" actions.
+- Extended `POST /shopping-lists/generate` to accept optional final draft `items`.
+- Added schema validation tests for draft generate payloads.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- ファイル: `backend/app/schemas/shopping_list.py`
+- ファイル: `backend/app/services/shopping_list_service.py`
+- ファイル: `backend/tests/test_shopping_lists.py`
+- 変更理由: Implement the approved US-011 draft review flow before replacing the active shopping checklist.
+- 技術的な決定: Keep backward compatibility by preserving the old meal-plan/product-id generation path when `items` is omitted.
+
+### テスト
+- [x] Unit Test追加 (`backend/tests/test_shopping_lists.py`)
+- [x] 動作確認完了 (`npm run build`, targeted page lint, shopping list tests)
+- [x] エラーハンドリング確認（invalid draft `source_type` validation test）
+
+### 備考
+- Frontend confirmation sends final draft items as the source of truth for checklist creation.
+- Full frontend lint still reports pre-existing errors in generated iOS build artifacts and unrelated pages; `src/app/page.tsx` has no lint errors.
+
+---
+
 ## [2026-06-05 16:36] - Shopping List Draft Modal Spec
 
 **担当**: AI Assistant  
