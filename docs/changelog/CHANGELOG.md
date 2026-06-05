@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-06-05 21:20] - Frontend Cloud Build Context Fix
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / DevOps  
+**関連US**: All (Deployment)  
+**影響範囲**: Frontend, DevOps
+
+### 変更内容
+- Fixed the frontend Cloud Build config to build `frontend/Dockerfile` explicitly.
+- Changed the Docker build context from repository root `.` to `frontend`.
+- Prevented the frontend trigger from accidentally building the root/backend Dockerfile as the frontend image.
+
+### 実装詳細
+- ファイル: `frontend/cloudbuild.yaml`
+- 変更理由: The new frontend trigger failed at Cloud Run deploy because the image was built from the repository root Dockerfile instead of the frontend Dockerfile.
+- 技術的な決定: Use `-f frontend/Dockerfile frontend` so the trigger works regardless of Cloud Build's default working directory.
+
+### テスト
+- [ ] Unit Test追加（deployment config only; no unit test needed）
+- [ ] 動作確認完了（pending: confirm Cloud Build trigger succeeds after push）
+- [x] エラーハンドリング確認（Cloud Run failure identified as wrong Docker build context）
+
+### 備考
+- Previous failed build pushed a backend-shaped image to the frontend Artifact Registry tag; the next successful trigger should overwrite `frontend:latest`.
+
+---
+
 ## [2026-06-05 21:13] - Weekly Plan Quote Removal
 
 **担当**: AI Assistant  
