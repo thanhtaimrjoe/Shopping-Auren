@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-06-05 21:04] - Frontend Cloud Build Trigger Setup
+
+**担当**: Tai + AI Assistant  
+**タイプ**: Docs / DevOps  
+**関連US**: All (Deployment)  
+**影響範囲**: Frontend, DevOps, Documentation
+
+### 変更内容
+- Recorded that Tai created a new GitHub-connected Cloud Build trigger for the frontend deployment.
+- Trigger is intended to build from `frontend/cloudbuild.yaml` on pushes to `main`.
+- Trigger should deploy the frontend Cloud Run service after frontend-related changes are pushed.
+
+### 実装詳細
+- ファイル: `docs/changelog/CHANGELOG.md`
+- 変更理由: Track the new frontend CI/CD trigger setup so PM/BrSE can verify deployment flow.
+- 技術的な決定: Keep backend and frontend Cloud Build triggers separate because the repository has separate root/backend and `frontend/cloudbuild.yaml` configs.
+
+### テスト
+- [ ] Unit Test追加（DevOps documentation only; no unit test needed）
+- [ ] 動作確認完了（pending: confirm GitHub/GCP trigger runs after this push）
+- [ ] エラーハンドリング確認（pending: confirm trigger reports failure details if build/deploy fails）
+
+### 備考
+- This changelog-only push is expected to help verify whether the new trigger reacts to repository updates.
+
+---
+
 ## [2026-06-05 20:38] - Shopping History Item Delete Spec
 
 **担当**: AI Assistant  
