@@ -167,8 +167,8 @@
 | **URL** | `/` (hoặc `/meal-plan`) |
 | **目的** | Lập kế hoạch ăn uống hàng tuần |
 | **アクセス権限** | 認証済みユーザー |
-| **主要機能** | - 7日スロット表示（月〜日、日付・週ナビなし）<br>- Hiển thị tối đa 3 món ăn mỗi ngày<br>- Hiển thị nguyên liệu trên card ngày<br>- Nút "Thêm món" / "Generate Shopping List" / "Thêm sản phẩm"<br>- **料理提案（gợi ý món）UIなし**<br>- **日付・タイムラインUIなし**（週の from-to は買い物完了時のみ） |
-| **遷移先** | - Generate Shopping List: Hiển thị thông báo thành công và chuyển hướng (hoặc cập nhật) sang trang Shopping List |
+| **主要機能** | - 7日スロット表示（月〜日、日付・週ナビなし）<br>- Hiển thị tối đa 3 món ăn mỗi ngày<br>- Hiển thị nguyên liệu trên card ngày<br>- Nút "Thêm món" / "Generate Shopping List" / "Thêm sản phẩm"<br>- Khi nhấn "Generate Shopping List", mở modal "Tạo shopping list" để review/modify draft item trước khi tạo checklist<br>- Modal có "Thêm món vào list", "Thêm sản phẩm vào list", sửa/xóa/chọn item, và button chính "Tạo checklist"<br>- **料理提案（gợi ý món）UIなし**<br>- **日付・タイムラインUIなし**（週の from-to は買い物完了時のみ） |
+| **遷移先** | - Generate Shopping List: mở modal draft<br>- Tạo checklist thành công: Hiển thị thông báo và chuyển hướng (hoặc cập nhật) sang trang Shopping List |
 | **API** | GET `/api/v1/meal-plans/current`<br>POST `/api/v1/meal-plans`<br>PUT `/api/v1/meal-plans/{plan_id}`<br>POST `/api/v1/shopping-lists/generate` |
 
 ---
@@ -182,7 +182,7 @@
 | **目的** | 買い物リストの表示・チェック |
 | **アクセス権限** | 認証済みユーザー |
 | **主要機能** | - アイテムリスト表示（カテゴリ別）<br>- 各食材行の下に `note`（例: `Dùng cho món …`）を表示<br>- チェックボックス<br>- 手動アイテム追加<br>- **「Finish shopping」押下後**、週の from-to 日付入力ポップアップ → 履歴に保存 |
-| **遷移先** | - 完了保存後: リストは非アクティブ化（履歴へ） |
+| **遷移先** | - Meal Plan modal の "Tạo checklist" で作成された active checklist を表示<br>- 完了保存後: リストは非アクティブ化（履歴へ） |
 | **API** | GET `/api/v1/shopping-lists/current`<br>PATCH `/api/v1/shopping-lists/{list_id}/items/{item_id}`<br>POST `/api/v1/shopping-lists/{list_id}/items` |
 
 ---

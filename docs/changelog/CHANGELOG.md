@@ -5,6 +5,67 @@
 
 ---
 
+## [2026-06-05 16:36] - Shopping List Draft Modal Spec
+
+**担当**: AI Assistant  
+**タイプ**: Docs  
+**関連US**: US-011  
+**影響範囲**: Frontend, Backend, API, Documentation
+
+### 変更内容
+- Updated US-011 to require a draft modal before creating the shopping checklist.
+- Added modal controls for modifying draft items, adding meals, and adding products.
+- Updated API spec so `POST /shopping-lists/generate` can accept final draft `items`.
+- Added a Decision Log addendum for the confirmed generate flow.
+
+### 実装詳細
+- ファイル: `docs/spec/02_requirements/user_stories.md`
+- ファイル: `docs/spec/03_design/screen_list.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- ファイル: `docs/spec/05_tracking/decisions.md`
+- 変更理由: User confirmed the Generate Shopping List flow should open a review/modify modal before checklist creation.
+- 技術的な決定: Keep the existing replace-on-generate behavior, but move replacement to the final "Tạo checklist" confirmation step.
+
+### テスト
+- [x] Unit Test追加（documentation-only change; no unit test needed）
+- [x] 動作確認完了（spec references updated）
+- [x] エラーハンドリング確認（API error spec updated from conflict to invalid draft payload）
+
+### 備考
+- Implementation is still pending.
+
+---
+
+## [2026-06-05 16:03] - Render Backend Blueprint
+
+**担当**: AI Assistant  
+**タイプ**: Deployment  
+**関連US**: All (Production Ready)  
+**影響範囲**: Backend, DevOps
+
+### 変更内容
+- Added a Render Blueprint for deploying the FastAPI backend as a Docker web service.
+- Configured the service to build from the root Dockerfile and use `/health` for health checks.
+- Declared required Supabase secret environment variables with `sync: false`.
+
+### 実装詳細
+- ファイル: `render.yaml`
+- 変更理由: Recreate the deleted Render backend service with reproducible infrastructure configuration.
+- 技術的な決定: Use Docker runtime because the backend targets Python 3.13 and the existing root Dockerfile already builds the backend safely from the monorepo.
+
+### テスト
+- [ ] Unit Test追加（deployment config only; no unit test needed）
+- [x] 動作確認完了（Render service created and `/health` returned 200）
+- [x] エラーハンドリング確認（initial deploy reached `live` without build/update failure）
+
+### 備考
+- Render service: `shopping-auren-backend`
+- Service URL: `https://shopping-auren-backend.onrender.com`
+- Initial deploy: `dep-d8h95nf7f7vs73c9djeg` from commit `87f5219d520c6f90b72733e008e318de51cb1834`
+- Supabase credentials were set on Render via API from the local backend environment file and were not written to repository files.
+
+---
+
 ## [2026-05-31 10:56] - Root Cloud Run Trigger Dockerfile
 
 **担当**: AI Assistant  

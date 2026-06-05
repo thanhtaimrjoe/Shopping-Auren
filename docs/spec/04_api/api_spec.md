@@ -504,15 +504,43 @@ No Content
 
 **Headers**: `Authorization: Bearer <token>`
 
-**Description**: Xóa danh sách mua sắm cũ của tuần (nếu có) và tạo mới dựa trên Meal Plan hiện tại. Mỗi nguyên liệu của món ăn sẽ là một bản ghi `shopping_item` riêng biệt.
+**Description**: Xóa active shopping list cũ của tuần (nếu có) và tạo checklist mới. Frontend mở modal draft trước khi gọi endpoint này; nếu request có `items`, backend tạo checklist theo draft đã chỉnh. Nếu không có `items`, backend có thể fallback generate từ Meal Plan hiện tại và `product_ids`.
 
 **Request Body**:
 ```json
 {
   "meal_plan_id": "uuid",
-  "product_ids": ["uuid1", "uuid2"]
+  "product_ids": ["uuid1", "uuid2"],
+  "items": [
+    {
+      "name": "じゃがいも",
+      "category": "Thịt kho tàu",
+      "source_type": "meal",
+      "source_id": "meal-uuid",
+      "note": "Dùng cho món Thịt kho tàu"
+    },
+    {
+      "name": "Khăn giấy",
+      "category": "Mua thêm",
+      "source_type": "product",
+      "source_id": "product-uuid",
+      "note": null
+    }
+  ]
 }
 ```
+
+**Request Fields**:
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| meal_plan_id | uuid | Yes | Checklist の元になる Meal Plan |
+| product_ids | uuid[] | No | Draft生成 fallback 用の追加 product ID |
+| items | array | No | Modal で user が編集・確定した final draft items。指定された場合、この配列を checklist の正とする |
+| items[].name | string | Yes | Checklist item name |
+| items[].category | string | Yes | 表示グループ。meal由来は料理名、product由来は `Mua thêm`、manualは `Khác` |
+| items[].source_type | string | Yes | `meal` / `product` / `manual` |
+| items[].source_id | uuid/null | No | 元 meal/product ID。manual item は null |
+| items[].note | string/null | No | meal由来は `Dùng cho món [Tên món]` |
 
 **Response** (201):
 ```json
@@ -547,7 +575,7 @@ No Content
 **Errors**:
 - `401`: Unauthorized
 - `404`: Meal plan not found
-- `409`: Shopping list already exists for this week
+- `422`: Invalid draft item payload
 
 ---
 

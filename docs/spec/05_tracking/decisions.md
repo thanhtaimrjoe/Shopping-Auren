@@ -409,8 +409,8 @@ def deduplicate_items(items):
 **ステータス**: ✅ Approved
 
 #### 決定内容
-1. **Chỉ generate khi nhấn nút**: Không tự động tạo danh sách mua sắm khi lưu Meal Plan.
-2. **Cơ chế Replace**: Khi nhấn nút "Generate Shopping List", hệ thống sẽ xóa danh sách mua sắm cũ của tuần đó và tạo mới hoàn toàn.
+1. **Chỉ generate khi xác nhận**: Không tự động tạo danh sách mua sắm khi lưu Meal Plan; nút "Generate Shopping List" chỉ mở draft modal.
+2. **Cơ chế Replace**: Khi nhấn "Tạo checklist" trong draft modal, hệ thống sẽ xóa active shopping list cũ của tuần đó và tạo mới hoàn toàn.
 3. **Chi tiết nguyên liệu**: Mỗi nguyên liệu từ `meals.ingredients` sẽ tạo thành 1 bản ghi riêng trong `shopping_items`.
 4. **Thêm cột note**: Lưu trữ thông tin `"Dùng cho món [Tên món]"` để người dùng dễ theo dõi nguồn gốc nguyên liệu.
 
@@ -421,7 +421,18 @@ def deduplicate_items(items):
 #### 影響範囲
 - Database: Thêm cột `note` vào `shopping_items`.
 - API: Endpoint `/shopping-lists/generate`.
-- Frontend: Nút "Generate Shopping List" trên trang Meal Plan.
+- Frontend: Nút "Generate Shopping List" trên trang Meal Plan và draft modal "Tạo shopping list".
+
+#### 追記 (2026-06-05): Draft Modal Before Checklist Creation
+1. Khi nhấn "Generate Shopping List", hệ thống mở modal draft thay vì tạo checklist ngay.
+2. Modal cho phép review/modify item, xóa item, chọn/bỏ chọn item, thêm meal bằng "Thêm món vào list", và thêm product bằng "Thêm sản phẩm vào list".
+3. Chỉ khi nhấn "Tạo checklist", hệ thống mới replace active list cũ và tạo checklist từ final draft.
+4. API `/shopping-lists/generate` nhận optional `items[]`; khi có `items[]`, backend dùng danh sách này làm source of truth cho checklist.
+
+#### 理由
+1. User có thể kiểm soát checklist trước khi đi mua sắm, tránh tạo nhầm item.
+2. Giữ cơ chế replace cũ nhưng chuyển thời điểm replace sang sau bước confirm.
+3. Cho phép thêm meal/product phát sinh ngay trong flow tạo checklist mà không phải rời Meal Plan.
 
 ---
 

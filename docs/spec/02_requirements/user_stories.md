@@ -195,20 +195,23 @@
 
 ### US-011: Tạo danh sách mua sắm thủ công (Generate)
 **As a** ユーザー  
-**I want to** Nhấn nút để tạo danh sách mua sắm từ Meal Plan  
-**So that** Kiểm soát được thời điểm tạo danh sách và biết rõ nguyên liệu dùng cho món nào
+**I want to** Xem và chỉnh sửa danh sách nháp trước khi tạo checklist mua sắm từ Meal Plan  
+**So that** Kiểm soát được item nào sẽ xuất hiện trong checklist và biết rõ nguyên liệu dùng cho món nào
 
 #### 受け入れ基準
 - [ ] Có nút "Generate Shopping List" trên trang Meal Plan.
-- [ ] Khi nhấn nút, hệ thống xóa danh sách cũ (nếu có) và tạo danh sách mới hoàn toàn.
-- [ ] Mỗi nguyên liệu từ các món ăn trong kế hoạch sẽ trở thành một dòng riêng biệt trong danh sách.
+- [ ] Khi nhấn nút, hệ thống mở modal "Tạo shopping list" thay vì tạo checklist ngay.
+- [ ] Modal hiển thị các draft item được sinh từ Meal Plan hiện tại; mỗi nguyên liệu từ món ăn là một dòng riêng.
+- [ ] Trong modal, người dùng có thể sửa tên item, xóa item, hoặc chọn/bỏ chọn item sẽ đưa vào checklist.
 - [ ] Mỗi dòng nguyên liệu có ghi chú "Dùng cho món [Tên món]".
-- [ ] Danh sách bao gồm cả các sản phẩm mua thêm (Products) đã chọn.
-- [ ] Hiển thị thông báo sau khi tạo thành công.
+- [ ] Modal có button "Thêm món vào list" để thêm meal và append ingredients của meal đó vào draft.
+- [ ] Modal có button "Thêm sản phẩm vào list" để thêm product vào draft.
+- [ ] Chỉ khi người dùng nhấn "Tạo checklist", hệ thống mới xóa active list cũ (nếu có) và tạo checklist mới từ draft đã chỉnh.
+- [ ] Hiển thị thông báo sau khi tạo checklist thành công.
 
 #### 技術要件
 - POST `/api/v1/shopping-lists/generate`
-- Logic: Delete existing list for the week -> Create new list -> Map each ingredient to a separate shopping item with notes.
+- Logic: Build draft from Meal Plan -> User modifies draft in modal -> Confirm -> Delete existing active list for the week -> Create new list from final draft items.
 
 ---
 
