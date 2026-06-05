@@ -335,7 +335,7 @@ def get_history(user_id: str, weeks: int) -> dict:
         db.table(SHOPPING_LISTS)
         .select(
             "id, week_from_date, week_to_date, week_start_date, status, completed_at, "
-            "shopping_items(is_checked)"
+            "snapshot_json, shopping_items(is_checked)"
         )
         .eq("user_id", user_id)
         .eq("status", "completed")
@@ -346,7 +346,11 @@ def get_history(user_id: str, weeks: int) -> dict:
 
     history: list[dict] = []
     for row in resp.data or []:
-        items_raw = row.pop("shopping_items", None) or []
+        snapshot = row.pop("snapshot_json", None)
+        if snapshot:
+            items_raw = snapshot
+        else:
+            items_raw = row.pop("shopping_items", None) or []
         total_items = len(items_raw)
         checked_items = sum(1 for item in items_raw if item.get("is_checked"))
 
@@ -384,3 +388,13 @@ def delete_item(user_id: str, list_id: str, item_id: str) -> None:
     if shopping_list["status"] == "completed":
         raise HTTPException(status_code=409, detail="Cannot remove items from a completed shopping list")
     db.table(SHOPPING_ITEMS).delete().eq("id", item_id).eq("shopping_list_id", list_id).execute()
+
+
+def delete_list(user_id: str, list_id: str) -> None:
+    shopping_list = verify_list_owner(list_id, user_id)
+    if shopping_list["status"] != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Only completed shopping lists can be deleted from history",
+        )
+    db.table(SHOPPING_LISTS).delete().eq("id", list_id).eq("user_id", user_id).execute()

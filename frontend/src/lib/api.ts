@@ -147,6 +147,7 @@ export const shoppingListsApi = {
   getHistory: (params?: Record<string, unknown>) =>
     api.get('/shopping-lists/history', { params }),
   getById: (listId: string) => api.get(`/shopping-lists/${listId}`),
+  delete: (listId: string) => api.delete(`/shopping-lists/${listId}`),
   generate: (data: unknown) => api.post('/shopping-lists/generate', data),
   updateItem: (listId: string, itemId: string, data: unknown) =>
     api.patch(`/shopping-lists/${listId}/items/${itemId}`, data),

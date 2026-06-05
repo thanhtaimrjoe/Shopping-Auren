@@ -55,6 +55,16 @@ class TestShoppingListsAPI:
             status.HTTP_404_NOT_FOUND,
         ]
 
+    def test_delete_item_requires_auth(self, client):
+        fake_id = "00000000-0000-0000-0000-000000000000"
+        response = client.delete(f"/api/v1/shopping-lists/{fake_id}/items/snapshot-0")
+        assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+
+    def test_delete_list_requires_auth(self, client):
+        fake_id = "00000000-0000-0000-0000-000000000000"
+        response = client.delete(f"/api/v1/shopping-lists/{fake_id}")
+        assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+
     def test_complete_invalid_week_range(self, client, auth_headers):
         fake_id = "00000000-0000-0000-0000-000000000000"
         response = client.post(

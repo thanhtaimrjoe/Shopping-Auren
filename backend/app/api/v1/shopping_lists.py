@@ -28,6 +28,15 @@ async def get_shopping_list(
     return shopping_list_service.get_list_detail(user["id"], list_id)
 
 
+@router.delete("/{list_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_shopping_list(
+    list_id: str,
+    user: dict = Depends(get_current_user),
+):
+    shopping_list_service.delete_list(user["id"], list_id)
+    return None
+
+
 @router.post("/generate", status_code=status.HTTP_201_CREATED)
 async def generate_list(body: GenerateListBody, user: dict = Depends(get_current_user)):
     return shopping_list_service.generate_list(user["id"], body)

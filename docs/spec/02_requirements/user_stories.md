@@ -260,10 +260,14 @@
 - [ ] 各履歴には「買い物完了」時に入力した週の開始日〜終了日（from-to）が表示される
 - [ ] 各リストの詳細を見られる
 - [ ] チェック済み/未チェックが分かる
+- [ ] 履歴一覧から完了した買い物リスト全体を削除できる（テストワークフロー用）
+- [ ] 削除前に確認ダイアログが表示される
+- [ ] 削除後、履歴一覧から当該リストが消える
 
 #### 技術要件
 - `POST /api/v1/shopping-lists/{list_id}/complete` — body: `{ week_from_date, week_to_date }`
 - GET `/api/v1/shopping-lists/history?weeks=2`
+- `DELETE /api/v1/shopping-lists/{list_id}` — 完了リストのみ削除可能（`shopping_items` は CASCADE 削除）
 
 ---
 

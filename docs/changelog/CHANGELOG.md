@@ -5,6 +5,41 @@
 
 ---
 
+## [2026-06-05 19:00] - Shopping History List Delete
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-014  
+**影響範囲**: Frontend, Backend, API, Docs
+
+### 変更内容
+- Added delete support for completed shopping lists on the History page (outer list cards, not individual items).
+- New endpoint `DELETE /shopping-lists/{list_id}` — only `status=completed` lists can be removed.
+- History UI: trash icon on each card + confirmation dialog; detail modal stays read-only.
+- Reverted mistaken completed-list item delete behavior on `DELETE .../items/{item_id}`.
+
+### 実装詳細
+- ファイル: `frontend/src/app/history/page.tsx`
+- ファイル: `frontend/src/lib/api.ts`
+- ファイル: `backend/app/api/v1/shopping_lists.py`
+- ファイル: `backend/app/services/shopping_list_service.py`
+- ファイル: `backend/tests/test_shopping_lists.py`
+- ファイル: `docs/spec/02_requirements/user_stories.md`
+- ファイル: `docs/spec/03_design/screen_list.md`
+- ファイル: `docs/spec/04_api/api_spec.md`
+- 変更理由: Test workflows need to remove entire completed lists from history, not edit items inside them.
+- 技術的な決定: Hard-delete `shopping_lists` row; `shopping_items` cascade via FK. Active lists return 409.
+
+### テスト
+- [x] Unit Test追加 (`test_delete_list_requires_auth`)
+- [x] 動作確認完了（backend Docker rebuild）
+- [x] エラーハンドリング確認（active list → 409）
+
+### 備考
+- History summary still prefers `snapshot_json` for item counts when present.
+
+---
+
 ## [2026-06-05 16:45] - Shopping List Draft Modal Implementation
 
 **担当**: AI Assistant  

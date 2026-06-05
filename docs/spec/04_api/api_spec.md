@@ -706,7 +706,40 @@ No Content
 
 ---
 
-### 5.6 買い物履歴取得（Nice to Have）
+### 5.6 アイテム削除
+
+**Endpoint**: `DELETE /shopping-lists/{list_id}/items/{item_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**説明**: アクティブな買い物リストから手動アイテム等を削除する。完了済みリストからは削除不可（409）。
+
+**Response** (204): No Content
+
+---
+
+### 5.7 完了リスト削除（履歴）
+
+**Endpoint**: `DELETE /shopping-lists/{list_id}`
+
+**Headers**: `Authorization: Bearer <token>`
+
+**説明**:
+- Shopping History 画面から完了済みリスト全体を削除する（テストワークフロー用）
+- `status = completed` のリストのみ削除可能
+- 紐づく `shopping_items` は DB の `ON DELETE CASCADE` で同時削除される
+
+**Response** (204): No Content
+
+**Errors**:
+| ステータス | 説明 |
+|-----------|------|
+| 404 | リストが存在しない、または他ユーザーのリスト |
+| 409 | アクティブなリストは削除不可 |
+
+---
+
+### 5.8 買い物履歴取得（Nice to Have）
 
 **Endpoint**: `GET /shopping-lists/history`
 

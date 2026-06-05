@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
-import { ChevronRight, History, Loader2, X } from 'lucide-react';
+import { AlertCircle, ChevronRight, History, Loader2, Trash2, X } from 'lucide-react';
 import { shoppingListsApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/cn';
 import { sortShoppingGroups } from '@/lib/shopping-groups';
+import { Toast } from '@/components/Toast';
 
 interface HistorySummary {
   id: string;
@@ -44,6 +45,9 @@ export default function HistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<HistoryDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deletingListId, setDeletingListId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchHistory = useCallback(async () => {
     if (!user) return;
@@ -80,6 +84,24 @@ export default function HistoryPage() {
     }
   };
 
+  const handleDeleteList = async (listId: string) => {
+    setDeletingListId(listId);
+    try {
+      await shoppingListsApi.delete(listId);
+      setHistory((prev) => prev.filter((entry) => entry.id !== listId));
+      if (selected?.id === listId) {
+        setSelected(null);
+      }
+      setShowDeleteConfirm(null);
+      setToast({ type: 'success', message: 'Shopping list removed from history.' });
+    } catch (error) {
+      console.error('Failed to delete shopping list:', error);
+      setToast({ type: 'error', message: 'Could not remove list. Please try again.' });
+    } finally {
+      setDeletingListId(null);
+    }
+  };
+
   if (authLoading || !user || isLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
@@ -90,6 +112,8 @@ export default function HistoryPage() {
 
   return (
     <div className="page-shell animate-page-enter min-w-0">
+      {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
+
       <header className="mb-6 sm:mb-10">
         <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
           Shopping history
@@ -110,28 +134,76 @@ export default function HistoryPage() {
       ) : (
         <div className="space-y-4 max-w-2xl">
           {history.map((entry) => (
-            <button
+            <div
               key={entry.id}
-              type="button"
-              onClick={() => openDetail(entry.id)}
-              className="w-full bg-cream rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 shadow-soft flex items-center justify-between gap-4 text-left touch-manipulation min-h-[56px] hover:shadow-warm transition-shadow"
+              className="bg-cream rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-6 shadow-soft flex items-center gap-3 hover:shadow-warm transition-shadow"
             >
-              <div>
-                <p className="font-serif text-lg text-bark">
-                  {format(parseISO(entry.week_from_date), 'MMM d, yyyy')}
-                  {' — '}
-                  {format(parseISO(entry.week_to_date), 'MMM d, yyyy')}
-                </p>
-                <p className="text-sm text-bark/50 mt-1">
-                  {entry.checked_items}/{entry.total_items} items ·{' '}
-                  {entry.completed_at
-                    ? format(parseISO(entry.completed_at), 'MMM d, yyyy')
-                    : 'Completed'}
-                </p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-bark/30 shrink-0" />
-            </button>
+              <button
+                type="button"
+                onClick={() => openDetail(entry.id)}
+                className="flex-1 flex items-center justify-between gap-4 text-left touch-manipulation min-h-[44px]"
+              >
+                <div>
+                  <p className="font-serif text-lg text-bark">
+                    {format(parseISO(entry.week_from_date), 'MMM d, yyyy')}
+                    {' — '}
+                    {format(parseISO(entry.week_to_date), 'MMM d, yyyy')}
+                  </p>
+                  <p className="text-sm text-bark/50 mt-1">
+                    {entry.checked_items}/{entry.total_items} items ·{' '}
+                    {entry.completed_at
+                      ? format(parseISO(entry.completed_at), 'MMM d, yyyy')
+                      : 'Completed'}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-bark/30 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(entry.id)}
+                disabled={deletingListId === entry.id}
+                className="p-3 text-bark/20 hover:text-red-500 hover:bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-40"
+                aria-label="Delete shopping list"
+              >
+                {deletingListId === entry.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           ))}
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-bark/30 backdrop-blur-sm z-[80] flex items-end sm:items-center justify-center p-4 pb-[env(safe-area-inset-bottom)]">
+          <div className="bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 max-w-sm w-full shadow-warm">
+            <AlertCircle className="h-8 w-8 text-red-500 mb-4" />
+            <h3 className="text-2xl font-serif text-bark mb-4">Delete shopping list?</h3>
+            <p className="text-bark/60 mb-8">This completed list will be removed from your history.</p>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-4 bg-hemp/20 text-bark rounded-2xl font-bold uppercase tracking-widest text-[10px]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteList(showDeleteConfirm)}
+                disabled={deletingListId === showDeleteConfirm}
+                className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] disabled:opacity-50"
+              >
+                {deletingListId === showDeleteConfirm ? (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
