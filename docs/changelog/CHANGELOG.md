@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-06-05 21:13] - Weekly Plan Quote Removal
+
+**担当**: AI Assistant  
+**タイプ**: UI  
+**関連US**: US-009  
+**影響範囲**: Frontend
+
+### 変更内容
+- Removed the quote text from Weekly Plan day cards.
+- Removed the quote container spacing/border so meal cards end after the "Thêm món" action.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更理由: User requested removing the visible quote from the Weekly Plan tab.
+- 技術的な決定: Removed the entire quote block instead of leaving an empty divider.
+
+### テスト
+- [ ] Unit Test追加（UI copy removal only; no unit test needed）
+- [ ] 動作確認完了（pending: frontend Cloud Build trigger/deploy check after push）
+- [ ] エラーハンドリング確認（not applicable）
+
+### 備考
+- This frontend file change should match the new Cloud Build trigger file filter.
+
+---
+
 ## [2026-06-05 21:04] - Frontend Cloud Build Trigger Setup
 
 **担当**: Tai + AI Assistant  

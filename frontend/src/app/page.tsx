@@ -702,11 +702,6 @@ export default function MealPlanPage() {
                 Thêm món
               </button>
               
-              <div className="mt-6 pt-4 border-t border-bark/5">
-                <p className="text-[10px] text-bark/40 italic leading-relaxed">
-                  &quot;Let food be thy medicine and medicine be thy food.&quot;
-                </p>
-              </div>
             </div>
           );
         })}
