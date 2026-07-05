@@ -606,25 +606,6 @@ export default function MealPlanPage() {
     );
   }
 
-  const getWeekRangeString = () => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday, etc.
-    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-    
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + distanceToMonday);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    const formatOption: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
-    const mondayStr = monday.toLocaleDateString('vi-VN', formatOption);
-    const sundayStr = sunday.toLocaleDateString('vi-VN', formatOption);
-    const yearStr = sunday.getFullYear();
-    
-    return `Tuần từ ${mondayStr} – ${sundayStr}, ${yearStr}`;
-  };
-
   return (
     <div className="page-shell pb-8 sm:pb-16 animate-page-enter min-w-0">
       {/* Notifications */}
@@ -666,31 +647,9 @@ export default function MealPlanPage() {
         </div>
       </header>
 
-      {/* Week Selector Bento Card */}
-      <div className="flex items-center justify-between mb-6 sm:mb-8 bg-cream/60 border border-bark/5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-soft">
-        <button 
-          className="h-10 w-10 flex items-center justify-center rounded-xl bg-cream hover:bg-hemp/50 border border-bark/5 text-bark/60 hover:text-bark transition-all active:scale-90"
-          title="Tuần trước"
-        >
-          <span className="text-xl font-bold">←</span>
-        </button>
-        <div className="text-center">
-          <span className="text-[10px] font-bold text-sage-deep uppercase tracking-[0.25em] block mb-1">Thời gian lập kế hoạch</span>
-          <h2 className="font-serif text-lg sm:text-2xl font-black text-bark">
-            {getWeekRangeString()}
-          </h2>
-        </div>
-        <button 
-          className="h-10 w-10 flex items-center justify-center rounded-xl bg-cream hover:bg-hemp/50 border border-bark/5 text-bark/60 hover:text-bark transition-all active:scale-90"
-          title="Tuần sau"
-        >
-          <span className="text-xl font-bold">→</span>
-        </button>
-      </div>
-
-      {/* 7-Day Plan: Horizontal Swipe Carousel on Mobile, Bento Grid on Desktop */}
-      <div className="w-full overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0">
-        <div className="flex gap-4 min-w-max lg:grid lg:grid-cols-7 lg:gap-3 lg:min-w-0">
+      {/* 7-Day Plan: Vertical Grid on Mobile, Bento Grid on Desktop */}
+      <div className="w-full pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {DAY_INDICES.map((dayIndex) => {
             const dayMeals = selectedMeals[dayIndex] || [];
             
@@ -704,7 +663,7 @@ export default function MealPlanPage() {
               <div
                 key={dayIndex}
                 className={cn(
-                  "snap-start shrink-0 w-[290px] xs:w-[325px] lg:w-auto flex flex-col h-full min-h-[350px] lg:min-h-[380px] transition-all duration-300 rounded-[2rem] p-5 sm:p-6 shadow-soft border relative group",
+                  "w-full flex flex-col h-full min-h-[320px] lg:min-h-[380px] transition-all duration-300 rounded-[1.75rem] sm:rounded-[2rem] p-5 sm:p-6 shadow-soft border relative group",
                   isToday 
                     ? "bg-cream border-sage border-2 shadow-warm ring-1 ring-sage/10" 
                     : "bg-cream/40 border-bark/5 opacity-90 lg:opacity-85 hover:opacity-100 focus-within:opacity-100"
