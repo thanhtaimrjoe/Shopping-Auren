@@ -5,6 +5,59 @@
 
 ---
 
+## [2026-07-05 09:45] - Dynamic Search Bar for Product Library Modal
+
+**担当**: AI Assistant  
+**タイプ**: Feature  
+**関連US**: US-009 / US-010  
+**影響範囲**: Frontend
+
+### 変更内容
+- Implemented a dynamic `onChange` search bar inside the "Thư viện sản phẩm" (Product Library) modal on the Weekly Plan page.
+- Added automatic reset of the search query (`productLibrarySearch` state) whenever the product modal opens.
+- Displayed helper empty-state text specifically when search queries yield no matching products ("Không tìm thấy sản phẩm phù hợp").
+- Optimized UI for mobile devices with a prominent padding input, a native touch-friendly close action, clear button `(X)` on search queries, and sticky header search layout.
+
+### 実装詳細
+- ファイル: `frontend/src/app/page.tsx`
+- 変更理由: Enhance user experience on mobile and desktop by allowing fast real-time product filtering inside the popup, resolving the friction of scrolling through a long products catalog.
+- 技術的な決定: Fixed the search bar inside the sticky header flexbox (`flex-shrink-0`) of the popup, ensuring it remains visible at the top even when scrolling through hundreds of database products.
+
+### テスト
+- [ ] Unit Test追加 (UI-only state filtering)
+- [x] 動作確認完了 (Verified input handler, state clearing on opening, clear button trigger, and conditional empty rendering)
+- [x] エラーハンドリング確認 (Graceful fallback when search query doesn't match any library items)
+
+---
+
+## [2026-07-05 09:30] - Local Database Permissions and CORS Fix
+
+**担当**: AI Assistant  
+**タイプ**: Bugfix / Database  
+**関連US**: All (Local Environment Setup)  
+**影響範囲**: Backend, Database, API, Frontend
+
+### 変更内容
+- Created a new Supabase migration (`20260705092100_grant_permissions.sql`) to grant schema and table permissions explicitly on the `public` schema.
+- Granted SELECT, INSERT, UPDATE, DELETE, and execution rights to roles: `postgres`, `service_role`, `authenticated`, `anon` on all tables, sequences, and functions.
+- Altered default privileges in the `public` schema so that future tables created will automatically inherit these standard privileges.
+- Reset and re-seeded the database using `npx supabase db reset` to apply all changes cleanly on the local environment.
+
+### 実装詳細
+- ファイル: `supabase/migrations/20260705092100_grant_permissions.sql`
+- 変更理由: Local Supabase CLI setup didn't automatically grant `public` schema table permissions to API-facing roles (`service_role`, `authenticated`, `anon`). This caused FastAPI to crash with `42501 permission denied` (Internal Server Error 500) and strip CORS headers, leading to 7 network/CORS error issues in the browser console.
+- 技術的な決定: Created a formal migration file instead of manual CLI execution, ensuring subsequent database setups or resets (`supabase db reset`) maintain identical access permissions on all local systems.
+
+### テスト
+- [ ] Unit Test追加 (Database config only)
+- [x] 動作確認完了 (Confirmed that FastAPI API endpoints return 401 Unauthorized instead of 500 Internal Server Error when unauthenticated, and console CORS/Network errors are fixed)
+- [x] エラーハンドリング確認 (Verified no unhandled exceptions in python backend tasks)
+
+### 備考
+- User accounts from production were re-seeded smoothly during the database reset.
+
+---
+
 ## [2026-06-05 21:20] - Frontend Cloud Build Context Fix
 
 **担当**: AI Assistant  

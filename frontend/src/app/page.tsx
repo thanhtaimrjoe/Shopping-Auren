@@ -106,6 +106,7 @@ export default function MealPlanPage() {
   const [extraProducts, setExtraProducts] = useState<ExtraProductItem[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productLibrarySearch, setProductLibrarySearch] = useState('');
   const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
   const [draftItems, setDraftItems] = useState<DraftShoppingItem[]>([]);
@@ -455,6 +456,7 @@ export default function MealPlanPage() {
   };
 
   const openProductModal = () => {
+    setProductLibrarySearch('');
     const selectedIds = new Set(
       productsDatabase
         .filter((p) =>
@@ -586,6 +588,10 @@ export default function MealPlanPage() {
 
   const filteredDraftProducts = productsDatabase.filter((product) =>
     product.name.toLowerCase().includes(draftProductSearch.toLowerCase())
+  );
+
+  const filteredProductsDatabase = productsDatabase.filter((product) =>
+    product.name.toLowerCase().includes(productLibrarySearch.toLowerCase())
   );
 
   const includedDraftCount = draftItems.filter((item) => item.included && item.name.trim()).length;
@@ -996,7 +1002,7 @@ export default function MealPlanPage() {
           <div 
             className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
+            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h3 id="product-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
                 <button 
@@ -1006,12 +1012,35 @@ export default function MealPlanPage() {
                   <X className="h-5 w-5 text-bark/40" />
                 </button>
               </div>
+              
+              {/* Search Bar optimized for mobile */}
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-bark/35" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm sản phẩm..."
+                  value={productLibrarySearch}
+                  onChange={(e) => setProductLibrarySearch(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 bg-bark/5 border border-bark/10 rounded-2xl text-sm font-medium text-bark placeholder:text-bark/30 focus:outline-none focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all"
+                />
+                {productLibrarySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setProductLibrarySearch('')}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-bark/30 hover:text-bark transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
             <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar" role="region" aria-label="Available products">
-              {productsDatabase.length > 0 ? (
+              {filteredProductsDatabase.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-                  {productsDatabase.map((p, idx) => {
+                  {filteredProductsDatabase.map((p, idx) => {
                     const isSelected = pendingProductIds.has(p.id);
                     return (
                       <button
@@ -1045,7 +1074,9 @@ export default function MealPlanPage() {
                 </div>
               ) : (
                 <div className="py-20 text-center">
-                  <p className="text-bark/40 text-lg italic">Không có sản phẩm nào trong thư viện.</p>
+                  <p className="text-bark/40 text-lg italic">
+                    {productLibrarySearch ? 'Không tìm thấy sản phẩm phù hợp.' : 'Không có sản phẩm nào trong thư viện.'}
+                  </p>
                 </div>
               )}
             </div>
