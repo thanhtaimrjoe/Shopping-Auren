@@ -595,7 +595,6 @@ export default function MealPlanPage() {
   );
 
   const includedDraftCount = draftItems.filter((item) => item.included && item.name.trim()).length;
-
   if (authLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
@@ -607,14 +606,33 @@ export default function MealPlanPage() {
     );
   }
 
+  const getWeekRangeString = () => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday, etc.
+    const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + distanceToMonday);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const formatOption: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+    const mondayStr = monday.toLocaleDateString('vi-VN', formatOption);
+    const sundayStr = sunday.toLocaleDateString('vi-VN', formatOption);
+    const yearStr = sunday.getFullYear();
+    
+    return `Tuần từ ${mondayStr} – ${sundayStr}, ${yearStr}`;
+  };
+
   return (
-    <div className="page-shell pb-4 sm:pb-12 animate-page-enter min-w-0">
+    <div className="page-shell pb-8 sm:pb-16 animate-page-enter min-w-0">
       {/* Notifications */}
       {notification && (
         <div
           role="alert"
           className={cn(
-            "fixed top-[calc(3.5rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto",
+            "fixed top-[calc(4rem+env(safe-area-inset-top))] left-3 right-3 sm:left-auto sm:right-6 sm:top-8 z-[100] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-warm animate-scale-in max-w-md sm:ml-auto border border-cream/10",
             notification.type === 'success'
               ? 'bg-sage text-cream'
               : notification.type === 'info'
@@ -626,190 +644,266 @@ export default function MealPlanPage() {
         </div>
       )}
 
-      <header className="mb-6 sm:mb-10">
-        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
-          Meal plan
-        </h1>
-      </header>
-
-      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-        <div className="w-full sm:w-auto">
+      {/* Hero Welcome Header & Main Action */}
+      <header className="mb-6 sm:mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="page-title text-3xl sm:text-4xl md:text-5xl text-bark font-serif mb-2 leading-tight font-black tracking-tight">
+            Kế hoạch ăn uống
+          </h1>
+          <p className="text-sm text-bark/50 font-medium">Lên thực đơn dinh dưỡng và chuẩn bị danh sách mua sắm tuần này</p>
+        </div>
+        
+        {/* Generate Shopping List Button styled as a Premium Accent Action */}
+        <div className="shrink-0">
           <button
             onClick={openDraftModal}
             disabled={!currentPlanId || isLoading}
-            className="w-full sm:w-auto justify-center px-4 py-3 bg-bark text-cream rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-soft hover:bg-bark/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation min-h-[44px]"
+            className="w-full md:w-auto px-6 py-3.5 bg-bark text-cream hover:bg-sage-deep rounded-2xl text-xs font-bold uppercase tracking-widest shadow-soft hover:shadow-warm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 touch-manipulation active:scale-[0.98]"
           >
-            <ShoppingBag className="h-4 w-4 shrink-0" />
-            <span className="truncate">Generate shopping list</span>
+            <ShoppingBag className="h-4.5 w-4.5 shrink-0" />
+            <span>Tạo danh sách mua sắm</span>
           </button>
+        </div>
+      </header>
+
+      {/* Week Selector Bento Card */}
+      <div className="flex items-center justify-between mb-6 sm:mb-8 bg-cream/60 border border-bark/5 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-soft">
+        <button 
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-cream hover:bg-hemp/50 border border-bark/5 text-bark/60 hover:text-bark transition-all active:scale-90"
+          title="Tuần trước"
+        >
+          <span className="text-xl font-bold">←</span>
+        </button>
+        <div className="text-center">
+          <span className="text-[10px] font-bold text-sage-deep uppercase tracking-[0.25em] block mb-1">Thời gian lập kế hoạch</span>
+          <h2 className="font-serif text-lg sm:text-2xl font-black text-bark">
+            {getWeekRangeString()}
+          </h2>
+        </div>
+        <button 
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-cream hover:bg-hemp/50 border border-bark/5 text-bark/60 hover:text-bark transition-all active:scale-90"
+          title="Tuần sau"
+        >
+          <span className="text-xl font-bold">→</span>
+        </button>
+      </div>
+
+      {/* 7-Day Plan: Horizontal Swipe Carousel on Mobile, Bento Grid on Desktop */}
+      <div className="w-full overflow-x-auto no-scrollbar snap-x snap-mandatory pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0">
+        <div className="flex gap-4 min-w-max lg:grid lg:grid-cols-7 lg:gap-3 lg:min-w-0">
+          {DAY_INDICES.map((dayIndex) => {
+            const dayMeals = selectedMeals[dayIndex] || [];
+            
+            // Calculate if this day is today dynamically
+            const today = new Date();
+            const currentDayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
+            const mappedTodayIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // Map Sunday to 6, Monday to 0...
+            const isToday = dayIndex === mappedTodayIndex;
+
+            return (
+              <div
+                key={dayIndex}
+                className={cn(
+                  "snap-start shrink-0 w-[290px] xs:w-[325px] lg:w-auto flex flex-col h-full min-h-[350px] lg:min-h-[380px] transition-all duration-300 rounded-[2rem] p-5 sm:p-6 shadow-soft border relative group",
+                  isToday 
+                    ? "bg-cream border-sage border-2 shadow-warm ring-1 ring-sage/10" 
+                    : "bg-cream/40 border-bark/5 opacity-90 lg:opacity-85 hover:opacity-100 focus-within:opacity-100"
+                )}
+              >
+                {isToday && (
+                  <span className="absolute -top-3 left-6 px-3 py-1 bg-sage text-cream text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm">
+                    Hôm nay
+                  </span>
+                )}
+                
+                {/* Day Header */}
+                <div className="mb-4 flex items-center justify-between border-b border-bark/5 pb-3">
+                  <h4 className={cn(
+                    "text-xs font-black uppercase tracking-[0.18em]",
+                    isToday ? "text-sage-deep" : "text-bark/50"
+                  )}>
+                    {DAY_LABELS[dayIndex]}
+                  </h4>
+                  {isToday && <span className="w-2 h-2 bg-sage rounded-full" />}
+                </div>
+
+                {/* Selected Meals List */}
+                <div className="flex-1 space-y-3 mb-5 overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
+                  {dayMeals.length > 0 ? (
+                    dayMeals.map((mealName, mIdx) => {
+                      const mealDetails = mealDatabase.find(m => m.name === mealName);
+                      const ingredients = parseIngredients(mealDetails?.ingredients);
+
+                      return (
+                        <div 
+                          key={mIdx} 
+                          className="group/meal flex flex-col bg-hemp/15 rounded-2xl p-3.5 border border-bark/5 hover:bg-hemp/30 transition-all duration-200 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <span className="text-xs text-bark font-bold leading-tight break-words flex-1 pr-1">{mealName}</span>
+                            <button 
+                              onClick={() => removeMeal(dayIndex, mIdx)}
+                              className="lg:opacity-0 lg:group-hover/meal:opacity-100 p-1.5 -mr-1.5 -mt-1 hover:bg-bark/10 rounded-full transition-all touch-manipulation min-h-[30px] min-w-[30px] flex items-center justify-center shrink-0"
+                              title="Xóa món ăn"
+                            >
+                              <X className="h-3 w-3 text-bark/50 hover:text-red-500" />
+                            </button>
+                          </div>
+                          {ingredients.length > 0 && (
+                            <ul className="mt-2 space-y-1 pl-1">
+                              {ingredients.slice(0, 4).map((ing: string, iIdx: number) => (
+                                <li key={iIdx} className="text-[10px] text-bark/45 flex items-center gap-1.5 truncate" title={ing}>
+                                  <span className="w-1 h-1 bg-bark/20 rounded-full flex-shrink-0" />
+                                  <span className="truncate">{ing}</span>
+                                </li>
+                              ))}
+                              {ingredients.length > 4 && (
+                                <li className="text-[9px] text-sage font-semibold pl-2.5">
+                                  + {ingredients.length - 4} nguyên liệu khác
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-bark/5 rounded-2xl p-4 text-center">
+                      <span className="text-xl mb-1 opacity-20">🍽️</span>
+                      <p className="text-[10px] text-bark/30 italic">Chưa chọn món nào</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Button with Soft Micro-interaction */}
+                <button 
+                  onClick={() => openModal(dayIndex)}
+                  className={cn(
+                    "w-full py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 font-bold text-[10px] uppercase tracking-widest active:scale-[0.97]",
+                    isToday
+                      ? "bg-sage text-cream hover:bg-sage-deep shadow-md hover:shadow"
+                      : "bg-hemp/30 text-bark hover:bg-sage hover:text-cream shadow-sm"
+                  )}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Thêm món</span>
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-        {DAY_INDICES.map((dayIndex) => {
-          const dayMeals = selectedMeals[dayIndex] || [];
-
-          return (
-            <div
-              key={dayIndex}
-              className="group bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 transition-all duration-300 flex flex-col h-full min-w-0 shadow-soft"
-            >
-              <div className="mb-6">
-                <h4 className="text-base font-bold uppercase tracking-[0.2em] text-bark">
-                  {DAY_LABELS[dayIndex]}
-                </h4>
-              </div>
-
-              {/* Selected Meals List */}
-              <div className="flex-1 space-y-3 mb-4">
-                {dayMeals.length > 0 ? (
-                  dayMeals.map((mealName, mIdx) => {
-                    const mealDetails = mealDatabase.find(m => m.name === mealName);
-                    
-                    const ingredients = parseIngredients(mealDetails?.ingredients);
-
-                    return (
-                      <div key={mIdx} className="group/meal flex flex-col bg-hemp/10 rounded-xl p-3 border border-bark/5 hover:bg-hemp/20 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-bark font-bold">{mealName}</span>
-                          <button 
-                            onClick={() => removeMeal(dayIndex, mIdx)}
-                            className="sm:opacity-0 sm:group-hover/meal:opacity-100 p-2 -mr-1 hover:bg-bark/10 rounded-full transition-all touch-manipulation min-h-[36px] min-w-[36px] flex items-center justify-center"
-                          >
-                            <X className="h-3 w-3 text-bark/40" />
-                          </button>
-                        </div>
-                        {ingredients.length > 0 && (
-                          <ul className="mt-2 space-y-0.5">
-                            {ingredients.map((ing: string, iIdx: number) => (
-                              <li key={iIdx} className="text-[10px] text-bark/50 flex items-center gap-1.5">
-                                <span className="w-1 h-1 bg-bark/20 rounded-full flex-shrink-0" />
-                                {ing}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="h-24 flex items-center justify-center border-2 border-dashed border-bark/5 rounded-2xl">
-                    <p className="text-xs text-bark/20 italic">No meals selected</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Add Button */}
-              <button 
-                onClick={() => openModal(dayIndex)}
-                className="w-full py-3 px-4 bg-sage text-cream rounded-xl flex items-center justify-center gap-2 hover:bg-sage-deep shadow-soft transition-all font-bold text-xs uppercase tracking-widest"
-              >
-                <Plus className="h-4 w-4" />
-                Thêm món
-              </button>
-              
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Extra Products Section */}
-      <div className="mt-8 sm:mt-10 bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-soft">
-        <div className="flex flex-col xs:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
-          <h3 className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Mua thêm (Products)</h3>
+      {/* Extra Products Section as a Beautiful Complementary Bento */}
+      <div className="mt-4 sm:mt-6 bg-cream/45 border border-bark/5 rounded-3xl p-5 sm:p-7 shadow-soft">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h3 className="text-xs font-black text-bark uppercase tracking-[0.25em] mb-1">Mua thêm ngoài thực đơn</h3>
+            <p className="text-[11px] text-bark/40 font-medium">Bổ sung các nhu yếu phẩm hoặc đồ dùng gia đình cần mua</p>
+          </div>
           <button 
             onClick={openProductModal}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-sage text-cream rounded-xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all touch-manipulation min-h-[44px]"
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-sage text-cream rounded-2xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all duration-200 active:scale-[0.97] touch-manipulation min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
-            Thêm sản phẩm
+            <span>Thêm sản phẩm</span>
           </button>
         </div>
         
         <div>
           {extraProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {extraProducts.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between bg-cream/50 p-5 rounded-2xl border border-hemp/20 shadow-sm">
-                  <span className="font-medium text-bark">{p.name}</span>
+                <div key={idx} className="flex items-center justify-between bg-cream/85 p-4 rounded-2xl border border-hemp/25 shadow-sm hover:border-sage/20 transition-all duration-200">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xs text-bark font-bold truncate">{p.name}</span>
+                  </div>
                   <button 
                     onClick={() => handleRemoveProduct(p.id)}
-                    className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-all"
+                    className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-full transition-all shrink-0"
+                    title="Xóa sản phẩm"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center bg-cream/30 rounded-2xl border border-hemp/20 border-dashed">
-              <p className="text-bark/40 text-sm italic">Chưa có sản phẩm mua thêm.</p>
+            <div className="p-10 text-center bg-cream/20 rounded-2xl border border-hemp/25 border-dashed">
+              <span className="text-2xl mb-1 block opacity-30">🛒</span>
+              <p className="text-bark/40 text-xs italic">Chưa có sản phẩm mua thêm nào.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal Popup */}
+      {/* Modal Popup: Chọn Món Ăn */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title">
-          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsModalOpen(false)} />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/35 backdrop-blur-sm transition-all" aria-label="Đóng" onClick={() => setIsModalOpen(false)} />
           <div 
             ref={modalRef}
-            className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-lg shadow-warm animate-scale-in overflow-hidden max-h-[min(90dvh,640px)] flex flex-col pb-[env(safe-area-inset-bottom)]"
+            className="relative bg-cream rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-lg shadow-warm animate-scale-in overflow-hidden max-h-[min(90dvh,640px)] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
           >
-            <div className="p-5 sm:p-8 border-b border-bark/5 shrink-0">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 id="meal-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.2em] sm:tracking-[0.3em]">Chọn món ăn</h3>
+            <div className="p-6 sm:p-8 border-b border-bark/5 shrink-0 bg-cream/90 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 id="meal-modal-title" className="text-xs font-black text-bark uppercase tracking-[0.25em]">Chọn món ăn</h3>
+                  <p className="text-[10px] text-bark/40 font-medium mt-1">Chọn từ thư viện để thêm vào {activeDayIndex !== null && DAY_LABELS[activeDayIndex]}</p>
+                </div>
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/50 rounded-full transition-all touch-manipulation"
+                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/40 rounded-full transition-all touch-manipulation"
                 >
-                  <X className="h-5 w-5 text-bark/40" />
+                  <X className="h-5 w-5 text-bark/45" />
                 </button>
               </div>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/20" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-bark/30" />
                 <input 
                   ref={searchInputRef}
                   type="text" 
-                  placeholder="Tìm kiếm món ăn..."
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-3.5 sm:py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 focus:ring-2 focus:ring-sage/20 transition-all"
+                  placeholder="Tìm kiếm món ăn trong thư viện..."
+                  className="w-full bg-bark/5 border border-bark/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-medium text-bark placeholder:text-bark/25 focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all focus:outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1.5 custom-scrollbar bg-cream/30">
               {fetchLoading ? (
-                <div className="py-12 flex justify-center">
+                <div className="py-16 flex justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-sage" />
                 </div>
               ) : filteredMeals.length > 0 ? (
-                filteredMeals.map((meal, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleToggleMeal(meal.name)}
-                    disabled={isLoading}
-                    className={cn(
-                        "w-full text-left px-6 py-4 rounded-2xl transition-all font-medium flex items-center justify-between group",
-                        activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name)
-                          ? "bg-sage text-cream shadow-sm"
-                          : "hover:bg-sage/10 hover:text-sage-deep text-bark"
+                filteredMeals.map((meal, i) => {
+                  const isSelected = activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleToggleMeal(meal.name)}
+                      disabled={isLoading}
+                      className={cn(
+                        "w-full text-left px-5 py-3.5 rounded-2xl transition-all font-semibold flex items-center justify-between group active:scale-[0.99] border",
+                        isSelected
+                          ? "bg-sage text-cream shadow-sm border-transparent"
+                          : "hover:bg-sage/10 hover:text-sage-deep text-bark bg-cream border-bark/5 hover:border-transparent"
                       )}
                     >
-                      {meal.name}
-                      {activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name) ? (
-                        <CheckCircle2 className="h-5 w-5 text-cream" />
+                      <span className="text-xs sm:text-sm">{meal.name}</span>
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4.5 w-4.5 text-cream shrink-0" />
                       ) : (
-                        <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all" />
+                        <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-all text-sage-deep shrink-0" />
                       )}
                     </button>
-                ))
+                  );
+                })
               ) : (
-                <div className="py-12 text-center text-bark/40 italic">
-                  Không tìm thấy món ăn nào trong thư viện
+                <div className="py-16 text-center text-bark/40 italic text-xs">
+                  Không tìm thấy món ăn nào phù hợp trong thư viện
                 </div>
               )}
             </div>
@@ -819,77 +913,79 @@ export default function MealPlanPage() {
 
       {/* Shopping List Draft Modal */}
       {isDraftModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-4" role="dialog" aria-modal="true" aria-labelledby="draft-modal-title">
-          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsDraftModalOpen(false)} />
-          <div className="relative bg-cream rounded-t-[2rem] lg:rounded-[2.5rem] w-full max-w-6xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(94dvh,820px)] pb-[env(safe-area-inset-bottom)]">
-            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="draft-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/35 backdrop-blur-sm transition-all" aria-label="Đóng" onClick={() => setIsDraftModalOpen(false)} />
+          <div className="relative bg-cream rounded-t-[2.5rem] lg:rounded-3xl w-full max-w-6xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(94dvh,820px)] pb-[env(safe-area-inset-bottom)] lg:pb-0">
+            <div className="p-5 sm:p-6 border-b border-bark/5 flex-shrink-0 bg-cream/90 backdrop-blur-md">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h3 id="draft-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.25em]">Tạo shopping list</h3>
-                  <p className="mt-1 text-xs text-bark/50">{includedDraftCount} items selected</p>
+                  <h3 id="draft-modal-title" className="text-xs font-black text-bark uppercase tracking-[0.25em]">Chuẩn bị danh sách mua sắm</h3>
+                  <p className="mt-1 text-xs text-bark/40 font-medium">Đã chọn {includedDraftCount} nguyên liệu và sản phẩm để thêm vào checklist</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsDraftModalOpen(false)}
-                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/50 rounded-full transition-all touch-manipulation"
-                  aria-label="Close draft modal"
+                  className="h-10 w-10 flex items-center justify-center hover:bg-hemp/40 rounded-full transition-all touch-manipulation"
+                  aria-label="Đóng"
                 >
-                  <X className="h-5 w-5 text-bark/40" />
+                  <X className="h-5 w-5 text-bark/45" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-cream/20">
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
+                
+                {/* Draft Items Selection */}
                 <section className="min-w-0">
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <h4 className="text-[11px] font-bold uppercase tracking-[0.22em] text-bark/60">Draft items</h4>
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/50">Danh sách nháp (Draft items)</h4>
                     {draftItems.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setDraftItems((items) => items.map((item) => ({ ...item, included: true })))}
-                        className="text-[10px] font-bold uppercase tracking-widest text-sage-deep hover:text-bark"
+                        className="text-[10px] font-bold uppercase tracking-widest text-sage hover:text-sage-deep"
                       >
-                        Select all
+                        Chọn tất cả
                       </button>
                     )}
                   </div>
 
                   {draftItems.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {draftItems.map((item) => (
-                        <div key={item.draft_id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 items-start bg-hemp/10 border border-bark/5 rounded-2xl p-3">
-                          <label className="pt-3 flex items-center justify-center">
+                        <div key={item.draft_id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 items-center bg-cream border border-bark/5 rounded-2xl p-4 shadow-sm hover:border-sage/10 transition-all">
+                          <label className="flex items-center justify-center cursor-pointer">
                             <input
                               type="checkbox"
                               checked={item.included}
                               onChange={(event) => updateDraftItem(item.draft_id, { included: event.target.checked })}
-                              className="h-5 w-5 rounded border-bark/20 text-sage focus:ring-sage"
-                              aria-label={`Include ${item.name}`}
+                              className="h-5 w-5 rounded-lg border-bark/20 text-sage focus:ring-sage"
+                              aria-label={`Bao gồm ${item.name}`}
                             />
                           </label>
-                          <div className="min-w-0 space-y-2">
+                          <div className="min-w-0 space-y-1">
                             <input
                               type="text"
                               value={item.name}
                               onChange={(event) => updateDraftItem(item.draft_id, { name: event.target.value })}
-                              className="w-full bg-cream border border-bark/10 rounded-xl px-3 py-2.5 text-sm font-semibold text-bark focus:outline-none focus:ring-2 focus:ring-sage/20"
-                              aria-label="Draft item name"
+                              className="w-full bg-cream border border-bark/10 rounded-xl px-3 py-2 text-xs sm:text-sm font-bold text-bark focus:outline-none focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all"
+                              aria-label="Tên nguyên liệu"
                             />
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-sage-deep bg-sage/10 px-2 py-1 rounded-lg">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-sage bg-sage/10 px-2 py-0.5 rounded-md">
                                 {item.category}
                               </span>
                               {item.note && (
-                                <span className="text-[10px] text-bark/45 truncate max-w-full">{item.note}</span>
+                                <span className="text-[10px] text-bark/40 truncate max-w-full font-medium">{item.note}</span>
                               )}
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => removeDraftItem(item.draft_id)}
-                            className="h-10 w-10 flex items-center justify-center hover:bg-red-50 text-red-500 rounded-full transition-all touch-manipulation"
-                            aria-label={`Remove ${item.name}`}
+                            className="h-9 w-9 flex items-center justify-center hover:bg-red-50 text-red-400 hover:text-red-500 rounded-full transition-all touch-manipulation shrink-0"
+                            aria-label={`Xóa ${item.name}`}
                           >
                             <X className="h-4 w-4" />
                           </button>
@@ -897,75 +993,80 @@ export default function MealPlanPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="h-40 flex items-center justify-center border-2 border-dashed border-bark/10 rounded-2xl">
-                      <p className="text-sm text-bark/35 italic">Draft đang trống. Thêm món hoặc sản phẩm để tạo checklist.</p>
+                    <div className="h-52 flex flex-col items-center justify-center border-2 border-dashed border-bark/10 rounded-3xl p-6 text-center">
+                      <span className="text-3xl mb-1 opacity-20">📝</span>
+                      <p className="text-xs text-bark/35 italic">Bản nháp đang trống. Thêm món hoặc sản phẩm để tạo checklist.</p>
                     </div>
                   )}
                 </section>
 
+                {/* Left Sidebars for Adding Items */}
                 <aside className="space-y-4 min-w-0">
-                  <section className="bg-hemp/10 border border-bark/5 rounded-2xl p-4">
+                  
+                  {/* Add Meals Sidebar */}
+                  <section className="bg-cream border border-bark/5 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-3">
-                      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-bark/60">Thêm món vào list</h4>
-                      <Plus className="h-4 w-4 text-sage-deep" />
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/50">Thêm món vào list</h4>
+                      <Plus className="h-3.5 w-3.5 text-sage" />
                     </div>
                     <div className="relative mb-3">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/25" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/30" />
                       <input
                         type="text"
                         value={draftMealSearch}
                         onChange={(event) => setDraftMealSearch(event.target.value)}
                         placeholder="Tìm món..."
-                        className="w-full bg-cream border border-bark/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
+                        className="w-full bg-bark/5 border border-bark/10 rounded-xl py-2 pl-9 pr-3 text-xs text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
                       />
                     </div>
-                    <div className="max-h-56 overflow-y-auto space-y-2 custom-scrollbar">
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
                       {filteredDraftMeals.length > 0 ? (
                         filteredDraftMeals.map((meal) => (
                           <button
                             type="button"
                             key={meal.id}
                             onClick={() => addMealToDraft(meal)}
-                            className="w-full text-left px-3 py-2.5 rounded-xl bg-cream hover:bg-sage/10 text-sm font-medium text-bark transition-all"
+                            className="w-full text-left px-3 py-2 bg-cream hover:bg-sage/10 text-xs font-bold text-bark hover:text-sage-deep transition-all rounded-lg border border-bark/5"
                           >
                             {meal.name}
                           </button>
                         ))
                       ) : (
-                        <p className="py-6 text-center text-xs text-bark/35 italic">Không tìm thấy món.</p>
+                        <p className="py-4 text-center text-[10px] text-bark/35 italic">Không tìm thấy món phù hợp.</p>
                       )}
                     </div>
                   </section>
 
-                  <section className="bg-hemp/10 border border-bark/5 rounded-2xl p-4">
+                  {/* Add Products Sidebar */}
+                  <section className="bg-cream border border-bark/5 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-3">
-                      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-bark/60">Thêm sản phẩm vào list</h4>
-                      <ShoppingBag className="h-4 w-4 text-sage-deep" />
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-bark/50">Thêm sản phẩm vào list</h4>
+                      <ShoppingBag className="h-3.5 w-3.5 text-sage" />
                     </div>
                     <div className="relative mb-3">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/25" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bark/30" />
                       <input
                         type="text"
                         value={draftProductSearch}
                         onChange={(event) => setDraftProductSearch(event.target.value)}
                         placeholder="Tìm sản phẩm..."
-                        className="w-full bg-cream border border-bark/10 rounded-xl py-2.5 pl-9 pr-3 text-sm text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
+                        className="w-full bg-bark/5 border border-bark/10 rounded-xl py-2 pl-9 pr-3 text-xs text-bark placeholder:text-bark/25 focus:outline-none focus:ring-2 focus:ring-sage/20"
                       />
                     </div>
-                    <div className="max-h-56 overflow-y-auto space-y-2 custom-scrollbar">
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
                       {filteredDraftProducts.length > 0 ? (
                         filteredDraftProducts.map((product) => (
                           <button
                             type="button"
                             key={product.id}
                             onClick={() => addProductToDraft(product)}
-                            className="w-full text-left px-3 py-2.5 rounded-xl bg-cream hover:bg-sage/10 text-sm font-medium text-bark transition-all"
+                            className="w-full text-left px-3 py-2 bg-cream hover:bg-sage/10 text-xs font-bold text-bark hover:text-sage-deep transition-all rounded-lg border border-bark/5"
                           >
                             {product.name}
                           </button>
                         ))
                       ) : (
-                        <p className="py-6 text-center text-xs text-bark/35 italic">Không tìm thấy sản phẩm.</p>
+                        <p className="py-4 text-center text-[10px] text-bark/35 italic">Không tìm thấy sản phẩm phù hợp.</p>
                       )}
                     </div>
                   </section>
@@ -973,11 +1074,12 @@ export default function MealPlanPage() {
               </div>
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-bark/5 bg-cream flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0">
+            {/* Glassmorphic Footer Actions */}
+            <div className="p-5 border-t border-bark/5 bg-cream flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsDraftModalOpen(false)}
-                className="px-5 py-3 rounded-xl border border-bark/10 text-bark text-xs font-bold uppercase tracking-widest hover:bg-hemp/40 transition-all"
+                className="px-5 py-3 rounded-xl border border-bark/10 text-bark text-xs font-bold uppercase tracking-widest hover:bg-hemp/30 transition-all duration-150 active:scale-95"
               >
                 Hủy
               </button>
@@ -985,7 +1087,7 @@ export default function MealPlanPage() {
                 type="button"
                 onClick={handleCreateChecklistFromDraft}
                 disabled={isDraftSubmitting || includedDraftCount === 0}
-                className="px-6 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="px-6 py-3 bg-bark text-cream hover:bg-sage-deep rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-150 shadow-soft disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
               >
                 {isDraftSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Tạo checklist
@@ -995,35 +1097,38 @@ export default function MealPlanPage() {
         </div>
       )}
 
-      {/* Product Modal Popup */}
+      {/* Product Modal Popup: Thư viện sản phẩm */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
-          <button type="button" className="absolute inset-0 bg-bark/30 backdrop-blur-sm" aria-label="Close modal" onClick={() => setIsProductModalOpen(false)} />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+          <button type="button" className="absolute inset-0 bg-bark/35 backdrop-blur-sm transition-all" aria-label="Đóng" onClick={() => setIsProductModalOpen(false)} />
           <div 
-            className="relative bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)]"
+            className="relative bg-cream rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)] sm:pb-0"
           >
-            <div className="p-4 sm:p-6 border-b border-bark/5 flex-shrink-0 flex flex-col gap-4">
+            <div className="p-6 border-b border-bark/5 flex-shrink-0 flex flex-col gap-4 bg-cream/90 backdrop-blur-md">
               <div className="flex items-center justify-between">
-                <h3 id="product-modal-title" className="text-xs font-bold text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
+                <div>
+                  <h3 id="product-modal-title" className="text-xs font-black text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
+                  <p className="text-[10px] text-bark/40 font-medium mt-1">Chọn các sản phẩm cần mua thêm bên ngoài thực đơn hàng tuần</p>
+                </div>
                 <button 
                   onClick={() => setIsProductModalOpen(false)}
-                  className="p-2 hover:bg-hemp/50 rounded-full transition-all"
+                  className="p-2 hover:bg-hemp/40 rounded-full transition-all"
                 >
-                  <X className="h-5 w-5 text-bark/40" />
+                  <X className="h-5 w-5 text-bark/45" />
                 </button>
               </div>
               
-              {/* Search Bar optimized for mobile */}
+              {/* Mobile-optimized search with clear-btn */}
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <Search className="h-4 w-4 text-bark/35" />
                 </div>
                 <input
                   type="text"
-                  placeholder="Tìm kiếm sản phẩm..."
+                  placeholder="Tìm kiếm sản phẩm trong thư viện..."
                   value={productLibrarySearch}
                   onChange={(e) => setProductLibrarySearch(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-bark/5 border border-bark/10 rounded-2xl text-sm font-medium text-bark placeholder:text-bark/30 focus:outline-none focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all"
+                  className="w-full pl-10 pr-10 py-3 bg-bark/5 border border-bark/10 rounded-2xl text-xs sm:text-sm font-semibold text-bark placeholder:text-bark/30 focus:outline-none focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all"
                 />
                 {productLibrarySearch && (
                   <button
@@ -1037,9 +1142,9 @@ export default function MealPlanPage() {
               </div>
             </div>
             
-            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar" role="region" aria-label="Available products">
+            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar bg-cream/30" role="region" aria-label="Sản phẩm sẵn có">
               {filteredProductsDatabase.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
                   {filteredProductsDatabase.map((p, idx) => {
                     const isSelected = pendingProductIds.has(p.id);
                     return (
@@ -1047,25 +1152,26 @@ export default function MealPlanPage() {
                         key={idx}
                         type="button"
                         onClick={() => togglePendingProduct(p.id)}
-                        className={`p-2 sm:p-3 rounded-2xl text-left transition-all relative overflow-hidden flex flex-col justify-between min-h-[120px] sm:min-h-[150px] touch-manipulation ${
+                        className={cn(
+                          "p-3 sm:p-4 rounded-2xl text-left transition-all duration-200 relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[140px] touch-manipulation border active:scale-95",
                           isSelected 
-                            ? 'bg-sage text-cream shadow-md scale-100 opacity-90' 
-                            : 'bg-cream hover:bg-sage/10 text-bark border border-hemp/20 shadow-sm hover:shadow hover:scale-[1.02] active:scale-95'
-                        }`}
+                            ? 'bg-sage text-cream shadow-md scale-100 opacity-95 border-transparent' 
+                            : 'bg-cream hover:bg-sage/10 text-bark border-bark/5 shadow-sm hover:shadow hover:scale-[1.02]'
+                        )}
                       >
                         <div className="flex flex-col items-center justify-center text-center h-full w-full">
-                            {p.image_url ? (
-                              <img src={p.image_url} alt={p.name} className="w-24 h-24 object-contain mb-2" />
-                            ) : (
-                              <div className="w-24 h-24 bg-hemp/20 rounded-full mb-2 flex items-center justify-center">
-                                <ShoppingBag className="h-10 w-10 text-bark/20" />
-                              </div>
-                            )}
-                            <span className="block font-medium leading-tight text-base">{p.name}</span>
-                          </div>
+                          {p.image_url ? (
+                            <img src={p.image_url} alt={p.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mb-2 rounded-lg" />
+                          ) : (
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-hemp/15 rounded-full mb-2.5 flex items-center justify-center shrink-0">
+                              <ShoppingBag className={cn("h-5 w-5 sm:h-6 sm:w-6", isSelected ? 'text-cream' : 'text-bark/30')} />
+                            </div>
+                          )}
+                          <span className="block font-bold leading-tight text-xs sm:text-sm tracking-wide break-words line-clamp-2">{p.name}</span>
+                        </div>
                         {isSelected && (
-                          <div className="absolute top-3 right-3 text-cream">
-                            <CheckCircle2 className="h-5 w-5" />
+                          <div className="absolute top-2.5 right-2.5 text-cream">
+                            <CheckCircle2 className="h-4 w-4" />
                           </div>
                         )}
                       </button>
@@ -1073,20 +1179,21 @@ export default function MealPlanPage() {
                   })}
                 </div>
               ) : (
-                <div className="py-20 text-center">
-                  <p className="text-bark/40 text-lg italic">
+                <div className="py-24 text-center">
+                  <span className="text-3xl mb-1 block opacity-30">🔍</span>
+                  <p className="text-bark/40 text-xs sm:text-sm italic font-medium">
                     {productLibrarySearch ? 'Không tìm thấy sản phẩm phù hợp.' : 'Không có sản phẩm nào trong thư viện.'}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="p-4 md:p-6 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
+            <div className="p-5 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
               <button 
                 type="button"
                 onClick={handleProductModalDone}
                 disabled={isProductsLoading}
-                className="px-8 py-3 bg-bark text-cream rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-bark/90 transition-all shadow-soft disabled:opacity-50 flex items-center gap-2"
+                className="px-8 py-3 bg-bark hover:bg-sage-deep text-cream rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-150 shadow-soft disabled:opacity-50 flex items-center gap-2 active:scale-95"
               >
                 {isProductsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Xong
