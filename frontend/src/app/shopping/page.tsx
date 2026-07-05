@@ -6,16 +6,11 @@ import {
   Loader2, ListPlus, Plus, Trash2, X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/cn';
 import { shoppingListsApi, mealPlansApi } from '@/lib/api';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { Toast, type ToastMessage } from '@/components/Toast';
 import { SHOPPING_GROUP_MANUAL, sortShoppingGroups } from '@/lib/shopping-groups';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 interface ShoppingItem {
   id: string;
@@ -113,7 +108,7 @@ export default function ShoppingPage() {
       !allCheckedNotifiedRef.current
     ) {
       allCheckedNotifiedRef.current = true;
-      setToast({ type: 'success', message: 'すべてチェックしました！買い物完了ボタンを押してください。' });
+      setToast({ type: 'success', message: 'Tuyệt vời! Đã mua đủ sản phẩm. Hãy nhấn nút Hoàn tất mua sắm.' });
     }
 
     try {
@@ -133,7 +128,7 @@ export default function ShoppingPage() {
   const handleCompleteList = async () => {
     if (!list || list.status === 'completed' || !weekFrom || !weekTo) return;
     if (weekTo < weekFrom) {
-      setToast({ type: 'error', message: '終了日は開始日以降にしてください。' });
+      setToast({ type: 'error', message: 'Ngày kết thúc phải trùng hoặc sau ngày bắt đầu.' });
       return;
     }
     setIsCompleting(true);
@@ -145,11 +140,11 @@ export default function ShoppingPage() {
       if (response.data.success) {
         setList(null);
         setIsCompleteModalOpen(false);
-        setToast({ type: 'success', message: '買い物リストを完了しました。' });
+        setToast({ type: 'success', message: 'Danh sách mua sắm đã hoàn tất và lưu vào lịch sử.' });
       }
     } catch (error) {
       console.error('Failed to complete list:', error);
-      setToast({ type: 'error', message: 'リストを完了できませんでした。' });
+      setToast({ type: 'error', message: 'Không thể hoàn thành danh sách mua sắm.' });
     } finally {
       setIsCompleting(false);
     }
@@ -162,9 +157,11 @@ export default function ShoppingPage() {
       const response = await shoppingListsApi.generate({ meal_plan_id: currentMealPlanId });
       if (response.data.success) {
         setList(response.data.data.shopping_list);
+        setToast({ type: 'success', message: 'Tạo danh sách mua sắm thành công!' });
       }
     } catch (error) {
       console.error('Failed to generate list:', error);
+      setToast({ type: 'error', message: 'Không thể khởi tạo danh sách mua sắm.' });
     } finally {
       setIsGenerating(false);
     }
@@ -193,11 +190,11 @@ export default function ShoppingPage() {
         });
         setNewItemName('');
         setIsAddSheetOpen(false);
-        setToast({ type: 'success', message: 'アイテムを追加しました。' });
+        setToast({ type: 'success', message: 'Đã thêm sản phẩm mới vào danh sách.' });
       }
     } catch (error) {
       console.error('Failed to add item:', error);
-      setToast({ type: 'error', message: 'アイテムを追加できませんでした。' });
+      setToast({ type: 'error', message: 'Không thể thêm sản phẩm.' });
     } finally {
       setIsAddingItem(false);
     }
@@ -216,9 +213,10 @@ export default function ShoppingPage() {
         checked_items: checkedCount,
         progress: items.length ? Math.round((checkedCount / items.length) * 100) : 0,
       });
+      setToast({ type: 'success', message: 'Đã xóa sản phẩm thành công.' });
     } catch (error) {
       console.error('Failed to delete item:', error);
-      setToast({ type: 'error', message: 'アイテムを削除できませんでした。' });
+      setToast({ type: 'error', message: 'Không thể xóa sản phẩm.' });
     }
   };
 
@@ -234,104 +232,151 @@ export default function ShoppingPage() {
   if (authLoading || !user || (isLoading && !list)) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-sage" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-sage" />
+          <p className="text-sm text-bark/60 font-medium">Đang tải danh sách mua sắm...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="page-shell animate-page-enter min-w-0">
+    <div className="page-shell animate-page-enter min-w-0 pb-12">
       {toast && <Toast {...toast} onDismiss={() => setToast(null)} />}
 
-      <header className="mb-6 sm:mb-10">
-        <h1 className="page-title text-2xl sm:text-4xl md:text-5xl text-bark font-serif mb-3 sm:mb-6 leading-tight">
-          Shopping List
-        </h1>
+      {/* Page Header */}
+      <header className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="page-title text-3xl sm:text-4xl md:text-5xl text-bark font-serif leading-tight font-black tracking-tight">
+            Danh sách mua sắm
+          </h1>
+          <p className="text-sm text-bark/50 font-medium mt-1">
+            Quản lý và kiểm tra nguyên liệu thực phẩm cho đợt mua sắm
+          </p>
+        </div>
+        {list && isListActive && (
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsAddSheetOpen(true)}
+              className="w-full sm:w-auto justify-center h-12 sm:h-14 px-6 bg-cream text-bark border border-bark/10 rounded-2xl shadow-soft hover:shadow hover:bg-white/80 flex items-center gap-2.5 transition-all font-bold uppercase tracking-widest text-xs touch-manipulation active:scale-95 duration-200"
+            >
+              <Plus className="h-5 w-5 shrink-0" />
+              Thêm sản phẩm
+            </button>
+            {list.total_items > 0 && (
+              <button
+                type="button"
+                onClick={openCompleteModal}
+                disabled={isCompleting}
+                className="w-full sm:w-auto justify-center h-12 sm:h-14 px-6 bg-sage text-cream rounded-2xl shadow-soft hover:shadow-warm flex items-center gap-2.5 hover:bg-sage-deep transition-all font-bold uppercase tracking-widest text-xs touch-manipulation active:scale-95 duration-200 disabled:opacity-50"
+              >
+                {isCompleting ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <CheckCircle2 className="h-5 w-5 shrink-0" />}
+                Hoàn tất mua sắm
+              </button>
+            )}
+          </div>
+        )}
       </header>
 
       {!list ? (
-        <div className="bg-cream rounded-[1.75rem] sm:rounded-[2.5rem] p-6 sm:p-12 shadow-soft text-center max-w-3xl mx-auto">
-          <div className="h-20 w-20 rounded-full bg-sage/10 flex items-center justify-center mx-auto mb-8">
+        <div className="bg-cream/40 border border-bark/5 rounded-[2.5rem] p-8 sm:p-14 shadow-soft text-center max-w-3xl mx-auto animate-scale-in">
+          <div className="h-20 w-20 rounded-3xl bg-sage/10 flex items-center justify-center mx-auto mb-6 shadow-sm">
             <ShoppingBag className="h-10 w-10 text-sage" />
           </div>
-          <h2 className="text-3xl font-serif text-bark mb-4">No active list found</h2>
-          <p className="text-bark/60 mb-10 text-lg">
+          <h2 className="text-3xl font-serif text-bark mb-3 font-bold tracking-tight">Chưa có danh sách mua sắm</h2>
+          <p className="text-bark/50 mb-8 max-w-md mx-auto text-sm leading-relaxed font-medium">
             {currentMealPlanId
-              ? 'You have a meal plan. Generate a shopping list to get started.'
-              : 'Plan your meals first to automatically generate a shopping list.'}
+              ? 'Bạn đã lập kế hoạch ăn uống cho tuần này. Hãy tạo nhanh danh sách mua sắm tương ứng để bắt đầu mua sắm ngay.'
+              : 'Hãy lập kế hoạch ăn uống trước tiên tại trang Lập kế hoạch để hệ thống tự động tổng hợp danh sách nguyên liệu cần mua sắm.'}
           </p>
           {currentMealPlanId ? (
             <button
               type="button"
               onClick={handleGenerateList}
               disabled={isGenerating}
-              className="bg-sage text-cream px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-warm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 mx-auto disabled:opacity-50"
+              className="bg-sage text-cream px-8 py-4.5 rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep transition-all duration-300 active:scale-95 flex items-center gap-2.5 mx-auto disabled:opacity-50 min-h-[48px]"
             >
               {isGenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <ListPlus className="h-5 w-5" />}
-              Generate List
+              Tạo danh sách mua sắm
             </button>
           ) : (
             <Link
               href="/"
-              className="inline-flex bg-bark text-cream px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-warm hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="inline-flex items-center justify-center bg-sage text-cream px-8 py-4.5 rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-warm hover:bg-sage-deep transition-all duration-300 active:scale-95 min-h-[48px] mx-auto"
             >
-              Go to Planner
+              Đi đến trang Lập kế hoạch
             </Link>
           )}
         </div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div className="text-sm text-bark/50">
-              {list.checked_items} / {list.total_items} checked
-              {list.status === 'completed' && (
-                <span className="ml-3 text-sage-deep font-semibold uppercase tracking-widest text-xs">
-                  Completed
-                </span>
-              )}
+          {/* Stats Dashboard Bento Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 sm:mb-8">
+            {/* Checked items count bento */}
+            <div className="bg-cream/40 border border-bark/5 rounded-3xl p-5 shadow-soft flex items-center justify-between gap-4">
+              <div>
+                <span className="text-[9px] font-black text-gold/80 tracking-widest uppercase">Trạng thái</span>
+                <p className="font-serif text-xl sm:text-2xl text-bark font-bold mt-1">
+                  {list.checked_items} / {list.total_items}
+                </p>
+                <p className="text-[10px] text-bark/40 font-semibold uppercase tracking-wider mt-0.5">Sản phẩm đã chọn</p>
+              </div>
+              <div className="h-11 w-11 rounded-xl bg-hemp/30 flex items-center justify-center shrink-0">
+                <ShoppingBag className="h-5 w-5 text-sage-deep" />
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              {isListActive && (
-                <button
-                  type="button"
-                  onClick={() => setIsAddSheetOpen(true)}
-                  className="w-full sm:w-auto justify-center bg-cream text-bark border border-bark/10 px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center gap-2 touch-manipulation min-h-[48px]"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add item
-                </button>
-              )}
-              {isListActive && list.total_items > 0 && (
-                <button
-                  type="button"
-                  onClick={openCompleteModal}
-                  disabled={isCompleting}
-                  className="w-full sm:w-auto justify-center bg-sage text-cream px-6 py-3 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-warm disabled:opacity-50 flex items-center gap-2 touch-manipulation min-h-[48px]"
-                >
-                  {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Finish shopping
-                </button>
-              )}
+
+            {/* Progress bento */}
+            <div className="bg-cream/40 border border-bark/5 rounded-3xl p-5 shadow-soft flex flex-col justify-between gap-3 sm:col-span-2">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-[9px] font-black text-sage tracking-widest uppercase">Tiến độ mua sắm</span>
+                  <p className="font-serif text-xl sm:text-2xl text-bark font-bold mt-1">{list.progress}%</p>
+                </div>
+                <span className="text-[10px] text-bark/40 font-semibold uppercase tracking-wider">
+                  {list.status === 'completed' ? 'Đã hoàn tất' : 'Đang tiến hành'}
+                </span>
+              </div>
+              <div className="w-full bg-hemp/20 h-2 rounded-full overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+                <div
+                  className="bg-sage h-full transition-all duration-500 ease-out"
+                  style={{ width: `${list.progress}%` }}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-bark/30" />
+          {/* Search Bento Box */}
+          <div className="bg-cream/50 border border-bark/5 rounded-3xl p-5 sm:p-7 shadow-soft mb-6 sm:mb-8">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 h-5 w-5 text-bark/30 transition-colors duration-300" />
               <input
                 type="text"
-                placeholder="Search items..."
-                className="w-full bg-cream border-0 rounded-2xl py-4 pl-12 pr-4 text-bark placeholder:text-bark/20 shadow-soft focus:ring-2 focus:ring-sage/20 transition-all"
+                placeholder="Tìm kiếm sản phẩm trong danh sách..."
+                className="w-full bg-hemp/10 border-0 rounded-2xl py-4 pl-12 pr-12 text-bark placeholder:text-bark/25 focus:ring-2 focus:ring-sage/20 focus:bg-white/80 transition-all shadow-[inset_0_2px_4px_rgba(51,69,55,0.01)]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 p-1 bg-bark/10 hover:bg-bark/20 text-bark/60 rounded-full transition-all hover:scale-105 active:scale-95 touch-manipulation"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="space-y-12">
+          {/* Category Grouping */}
+          <div className="space-y-10">
             {categories.length === 0 ? (
-              <div className="py-20 text-center">
-                <p className="text-bark/40 font-serif text-xl">No items found matching your search.</p>
+              <div className="py-20 text-center bg-cream/40 border border-bark/5 rounded-3xl shadow-soft">
+                <Search className="h-8 w-8 text-bark/20 mx-auto mb-4" />
+                <p className="text-bark/40 font-medium">Không tìm thấy sản phẩm nào trong danh sách</p>
               </div>
             ) : (
               categories.map((category) => {
@@ -340,7 +385,7 @@ export default function ShoppingPage() {
 
                 return (
                   <section key={category}>
-                    <h3 className="text-xs font-bold text-bark/40 uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+                    <h3 className="text-xs font-bold text-bark/40 uppercase tracking-[0.3em] mb-6 flex items-center gap-4">
                       {category}
                       <div className="h-px flex-1 bg-bark/5" />
                     </h3>
@@ -349,8 +394,10 @@ export default function ShoppingPage() {
                         <div
                           key={item.id}
                           className={cn(
-                            'group flex items-center justify-between p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] transition-all duration-300 min-h-[56px]',
-                            item.is_checked ? 'bg-hemp/20 opacity-60' : 'bg-cream shadow-soft'
+                            'group flex items-center justify-between p-4 sm:p-5.5 rounded-3xl transition-all duration-300 min-h-[56px] border border-bark/5',
+                            item.is_checked
+                              ? 'bg-hemp/10 opacity-60 border-bark/5'
+                              : 'bg-cream/40 hover:border-sage/20 hover:bg-cream/85 hover:scale-[1.015] active:scale-[0.99] shadow-soft hover:shadow-warm'
                           )}
                         >
                           <button
@@ -361,10 +408,10 @@ export default function ShoppingPage() {
                           >
                             <div
                               className={cn(
-                                'h-6 w-6 rounded-full flex items-center justify-center transition-colors shrink-0 mt-0.5',
+                                'h-6 w-6 rounded-full flex items-center justify-center transition-all shrink-0 mt-0.5',
                                 item.is_checked
-                                  ? 'bg-sage text-cream'
-                                  : 'border-2 border-bark/10 group-hover:border-sage/40'
+                                  ? 'bg-sage text-cream shadow-sm scale-105'
+                                  : 'border-2 border-bark/10 group-hover:border-sage/40 bg-white/50'
                               )}
                             >
                               {item.is_checked ? <CheckCircle2 className="h-4 w-4" /> : null}
@@ -372,7 +419,7 @@ export default function ShoppingPage() {
                             <div className="min-w-0 flex-1">
                               <span
                                 className={cn(
-                                  'font-medium transition-all block',
+                                  'font-bold text-sm sm:text-base transition-all block leading-snug',
                                   item.is_checked ? 'text-bark/40 line-through' : 'text-bark'
                                 )}
                               >
@@ -381,7 +428,7 @@ export default function ShoppingPage() {
                               {item.note ? (
                                 <span
                                   className={cn(
-                                    'block text-xs mt-1 leading-snug',
+                                    'block text-xs mt-1 leading-snug font-medium',
                                     item.is_checked ? 'text-bark/30' : 'text-bark/50'
                                   )}
                                 >
@@ -394,7 +441,7 @@ export default function ShoppingPage() {
                             <button
                               type="button"
                               onClick={() => handleDeleteItem(item.id)}
-                              className="p-2 text-bark/20 hover:text-red-500 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                              className="p-2.5 text-bark/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 touch-manipulation min-h-[42px] min-w-[42px] flex items-center justify-center shrink-0"
                               aria-label={`Remove ${item.name}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -414,50 +461,56 @@ export default function ShoppingPage() {
         </>
       )}
 
+      {/* Complete Shopping Modal */}
       {isCompleteModalOpen && list && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
           <button
             type="button"
-            className="absolute inset-0 bg-bark/40 backdrop-blur-sm"
-            aria-label="Close"
+            className="absolute inset-0 bg-bark/30 backdrop-blur-sm transition-opacity duration-300"
+            aria-label="Đóng"
             onClick={() => !isCompleting && setIsCompleteModalOpen(false)}
           />
-          <div className="relative w-full max-w-md bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-warm animate-page-enter">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xs font-bold text-bark uppercase tracking-[0.2em]">
-                Weekly period
-              </h2>
+          <div className="relative w-full sm:max-w-md bg-cream/95 backdrop-blur-lg border border-bark/8 rounded-t-[2.5rem] sm:rounded-3xl p-6 sm:p-8 shadow-warm animate-scale-in pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8">
+            <div className="flex items-center justify-between mb-6 gap-2 border-b border-bark/5 pb-3">
+              <div className="min-w-0">
+                <span className="text-[9px] font-black text-gold/80 tracking-widest uppercase">
+                  Hoàn tất đợt mua
+                </span>
+                <h3 className="text-xs font-extrabold text-bark/40 uppercase tracking-[0.15em] truncate mt-0.5">
+                  Thời gian mua sắm
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsCompleteModalOpen(false)}
                 disabled={isCompleting}
-                className="p-3 bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2.5 bg-hemp/20 hover:bg-hemp/30 text-bark rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center shadow-sm"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-sm text-bark/60 mb-6">
-              Enter the date range for this shopping trip. It will be saved in your history.
+            <p className="text-xs text-bark/50 mb-6 font-medium leading-relaxed">
+              Nhập khoảng thời gian áp dụng cho đợt mua sắm này để lưu lại lịch sử chi tiêu và thực phẩm của bạn.
             </p>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                  From
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-bark/40 px-1">
+                  Từ ngày
                 </label>
                 <input
                   type="date"
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-semibold focus:ring-2 focus:ring-sage/20 focus:bg-white transition-all shadow-[inset_0_2px_4px_rgba(51,69,55,0.01)]"
                   value={weekFrom}
                   onChange={(e) => setWeekFrom(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                  To
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-bark/40 px-1">
+                  Đến ngày
                 </label>
                 <input
                   type="date"
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-semibold focus:ring-2 focus:ring-sage/20 focus:bg-white transition-all shadow-[inset_0_2px_4px_rgba(51,69,55,0.01)]"
                   value={weekTo}
                   onChange={(e) => setWeekTo(e.target.value)}
                 />
@@ -466,54 +519,62 @@ export default function ShoppingPage() {
                 type="button"
                 onClick={handleCompleteList}
                 disabled={isCompleting || !weekFrom || !weekTo}
-                className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px]"
+                className="w-full py-4 bg-sage text-cream rounded-2xl font-extrabold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px] shadow-warm hover:bg-sage-deep transition-all duration-300 hover:shadow active:scale-[0.98]"
               >
-                {isCompleting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save & finish'}
+                {isCompleting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Lưu & hoàn tất'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Manual Add Item Modal */}
       {isAddSheetOpen && list && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
           <button
             type="button"
-            className="absolute inset-0 bg-bark/40 backdrop-blur-sm"
-            aria-label="Close"
+            className="absolute inset-0 bg-bark/30 backdrop-blur-sm transition-opacity duration-300"
+            aria-label="Đóng"
             onClick={() => setIsAddSheetOpen(false)}
           />
-          <div className="relative w-full max-w-md bg-cream rounded-t-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 shadow-warm animate-page-enter">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xs font-bold text-bark uppercase tracking-[0.2em]">Add item</h2>
+          <div className="relative w-full sm:max-w-md bg-cream/95 backdrop-blur-lg border border-bark/8 rounded-t-[2.5rem] sm:rounded-3xl p-6 sm:p-8 shadow-warm animate-scale-in pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-8">
+            <div className="flex items-center justify-between mb-6 gap-2 border-b border-bark/5 pb-3">
+              <div className="min-w-0">
+                <span className="text-[9px] font-black text-gold/80 tracking-widest uppercase">
+                  Sản phẩm mới
+                </span>
+                <h3 className="text-xs font-extrabold text-bark/40 uppercase tracking-[0.15em] truncate mt-0.5">
+                  Thêm sản phẩm thủ công
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsAddSheetOpen(false)}
-                className="p-3 bg-hemp/20 rounded-xl touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2.5 bg-hemp/20 hover:bg-hemp/30 text-bark rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 touch-manipulation min-h-[40px] min-w-[40px] flex items-center justify-center shadow-sm"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-bark/40 px-2">
-                  Item name
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-bark/40 px-1">
+                  Tên sản phẩm
                 </label>
                 <input
                   type="text"
-                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark focus:ring-2 focus:ring-sage/20"
+                  className="w-full bg-hemp/10 border-0 rounded-2xl py-4 px-6 text-bark font-serif text-lg font-bold placeholder:text-bark/25 focus:ring-2 focus:ring-sage/20 focus:bg-white transition-all shadow-[inset_0_2px_4px_rgba(51,69,55,0.01)]"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="Milk, eggs..."
+                  placeholder="Sữa, trứng, thịt..."
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddItem}
                 disabled={isAddingItem || !newItemName.trim()}
-                className="w-full py-4 bg-sage text-cream rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px]"
+                className="w-full py-4 bg-sage text-cream rounded-2xl font-extrabold uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 touch-manipulation min-h-[48px] shadow-warm hover:bg-sage-deep transition-all duration-300 hover:shadow active:scale-[0.98]"
               >
-                {isAddingItem ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Add to list'}
+                {isAddingItem ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Thêm vào danh sách'}
               </button>
             </div>
           </div>

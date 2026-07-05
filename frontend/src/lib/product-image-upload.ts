@@ -14,10 +14,10 @@ const ALLOWED_IMAGE_TYPES = new Set([
 
 export function validateProductImageFile(file: File): string | null {
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    return 'Please choose a JPEG, PNG, WebP, GIF, or AVIF image.';
+    return 'Vui lòng chọn ảnh định dạng JPEG, PNG, WebP, GIF hoặc AVIF.';
   }
   if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
-    return 'Image must be 5 MB or smaller.';
+    return 'Kích thước ảnh phải từ 5 MB trở xuống.';
   }
   return null;
 }
