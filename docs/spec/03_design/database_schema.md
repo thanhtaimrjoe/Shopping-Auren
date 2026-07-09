@@ -1,343 +1,207 @@
 # Database Schema — Shopping Memo
 
-**作成日**: 2026-05-09  
-**最終更新**: 2026-05-24  
-**プロジェクト**: Shopping Memo  
-**目的**: データベース設計とテーブル定義
+**Date Created**: 2026-05-09  
+**Last Updated**: 2026-05-24 (AI DB Optimizer - English Translation & Soft Delete enforcement)  
+**Project**: Shopping Memo  
+**Purpose**: Database Design and Table Definitions
 
 ---
 
-## ER図
+## 1. Entity Relationship Diagram (ERD)
 
-```
-┌─────────────┐
-│    users    │
-└──────┬──────┘
-       │
-       │ 1:N
-       ▼
-┌─────────────┐         ┌──────────────┐
-│    meals    │         │   products   │
-└──────┬──────┘         └──────┬───────┘
-       │                       │
-       │ N:M                   │
-       ▼                       │
-┌─────────────┐                │
-│ meal_plans  │                │
-└──────┬──────┘                │
-       │                       │
-       │ 1:1                   │
-       ▼                       │
-┌─────────────┐                │
-│shopping_lists│◄──────────────┘
-└──────┬──────┘         1:N
-       │
-       │ 1:N
-       ▼
-┌─────────────┐
-│shopping_items│
-└─────────────┘
+```mermaid
+erDiagram
+    users ||--o{ meals : "creates"
+    users ||--o{ products : "creates"
+    users ||--o{ meal_plans : "owns"
+    users ||--o{ shopping_lists : "owns"
+
+    meals ||--o{ meal_plan_items : "included in"
+    meal_plans ||--o{ meal_plan_items : "contains"
+    meal_plans ||--o| shopping_lists : "generates"
+    shopping_lists ||--o{ shopping_items : "contains"
 ```
 
 ---
 
-## テーブル定義
+## 2. Table Definitions
 
-### 1. users（ユーザー）
+### 2.1. `users` (Users table - Managed by Supabase Auth)
+Managed via `auth.users` in Supabase, but extended here for application context.
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | ユーザーID（PK） |
-| email | VARCHAR(255) | NOT NULL | - | メールアドレス（Unique） |
-| display_name | VARCHAR(100) | NULL | - | Tên hiển thị |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
-| updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `email` | VARCHAR(255) | NO | - | Unique email address |
+| `display_name` | VARCHAR(100) | YES | - | User's display name |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
 
 ---
 
-### 2. meals（料理）
+### 2.2. `meals` (Meal definitions)
 
-> **2026-05-24**: `category` カラムは削除済み（migration `20260524180000_drop_meals_products_category.sql`）。
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `user_id` | UUID | NO | - | Foreign Key -> `users.id` |
+| `name` | VARCHAR(100) | NO | - | Meal Name (Unique per user_id, case-insensitive) |
+| `ingredients` | JSONB | NO | `'[]'::jsonb` | Array of strings for ingredients |
+| `category` | VARCHAR(50) | YES | - | Category (e.g., washoku, yoshoku). *Re-added per Epic 2 US-003 requirements.* |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
+| `deleted_at` | TIMESTAMP | YES | - | **Soft delete timestamp** |
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | 料理ID（PK） |
-| user_id | UUID | NOT NULL | - | ユーザーID（FK） |
-| name | VARCHAR(100) | NOT NULL | - | 料理名（Unique per user, case-insensitive） |
-| ingredients | JSONB | NOT NULL | '[]'::jsonb | 材料リスト（文字列配列、改行区切りテキストで入出力） |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
-| updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-| deleted_at | TIMESTAMP | NULL | - | 論理削除（Soft delete） |
-
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- UNIQUE INDEX: `lower(name)` per `user_id`
-- INDEX: `user_id, deleted_at`
+- UNIQUE INDEX: `lower(name)` per `user_id` where `deleted_at IS NULL`
+- INDEX: `user_id`, `deleted_at`
 
 ---
 
-### 3. products（雑貨）
+### 2.3. `products` (Daily necessities)
 
-> **2026-05-24**: `category` カラムは削除済み（migration `20260524180000_drop_meals_products_category.sql`）。  
-> **2026-05-24**: `image_url` は Supabase Storage バケット `product-images` へアップロード後のURLを格納（migration `20260524140000_product_images_storage.sql`）。
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `user_id` | UUID | NO | - | Foreign Key -> `users.id` |
+| `name` | VARCHAR(100) | NO | - | Product Name |
+| `image_url` | TEXT | YES | - | URL to Supabase Storage `product-images` bucket |
+| `category` | VARCHAR(50) | YES | - | Category. *Re-added per Epic 3 US-007 requirements.* |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
+| `deleted_at` | TIMESTAMP | YES | - | **Soft delete timestamp** |
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | 雑貨ID（PK） |
-| user_id | UUID | NOT NULL | - | ユーザーID（FK） |
-| name | VARCHAR(100) | NOT NULL | - | 雑貨名 |
-| image_url | TEXT | NULL | - | 画像URL（Supabase Storage `product-images` バケット） |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
-| updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
-| deleted_at | TIMESTAMP | NULL | - | 論理削除（Soft delete） |
-
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- INDEX: `user_id, deleted_at`
-
-**Storage**:
-- バケット名: `product-images`（public read）
-- パス: `products/{product_id}/{timestamp}-{filename}`
-- RLS: 自分の product のみ INSERT/UPDATE/DELETE 可
+- INDEX: `user_id`, `deleted_at`
 
 ---
 
-### 4. meal_plans（食事計画）
+### 2.4. `meal_plans` (Weekly meal plans)
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | 計画ID（PK） |
-| user_id | UUID | NOT NULL | - | ユーザーID（FK） |
-| week_start_date | DATE | NOT NULL | - | 週の開始日（月曜日） |
-| status | VARCHAR(20) | NOT NULL | 'draft' | ステータス（draft/active/completed） |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
-| updated_at | TIMESTAMP | NOT NULL | now() | 更新日時 |
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `user_id` | UUID | NO | - | Foreign Key -> `users.id` |
+| `week_start_date` | DATE | NO | - | Start date of the week (Always Monday) |
+| `status` | VARCHAR(20) | NO | `'draft'` | Status (`draft`, `active`, `completed`) |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
+| `deleted_at` | TIMESTAMP | YES | - | **Soft delete timestamp** |
 
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
-- UNIQUE INDEX: `user_id, week_start_date`
-- INDEX: `status`
+- UNIQUE INDEX: `user_id`, `week_start_date` where `deleted_at IS NULL`
 
 ---
 
-### 5. meal_plan_items（食事計画アイテム）
+### 2.5. `meal_plan_items` (Mapping meals to specific days)
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | アイテムID（PK） |
-| meal_plan_id | UUID | NOT NULL | - | 食事計画ID（FK） |
-| meal_id | UUID | NOT NULL | - | 料理ID（FK - public.meals.id） |
-| day_of_week | INTEGER | NOT NULL | - | 曜日（0=月, 6=日） |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `meal_plan_id` | UUID | NO | - | Foreign Key -> `meal_plans.id` |
+| `meal_id` | UUID | NO | - | Foreign Key -> `meals.id` |
+| `day_of_week` | INTEGER | NO | - | Day index (0=Monday ... 6=Sunday) |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
 
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `meal_plan_id` REFERENCES `meal_plans(id)` ON DELETE CASCADE
-- FOREIGN KEY: `meal_id` REFERENCES `meals(id)` ON DELETE RESTRICT
-- INDEX: `meal_plan_id`
-- INDEX: `meal_plan_id, day_of_week`
+- FOREIGN KEY: `meal_id` REFERENCES `meals(id)` ON DELETE RESTRICT (Prevents hard deleting a meal if it's in a plan)
 
 ---
 
-### 6. shopping_lists（買い物リスト）
+### 2.6. `shopping_lists` (Shopping lists)
 
-> **2026-05-23**: `week_from_date` / `week_to_date` を追加（migration `20260523120000_shopping_list_week_range.sql`）。  
-> **2026-05-24**: `snapshot_json` を追加（migration `20260524120000_add_shopping_list_snapshot.sql`）。
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `user_id` | UUID | NO | - | Foreign Key -> `users.id` |
+| `meal_plan_id` | UUID | YES | - | Foreign Key -> `meal_plans.id` |
+| `week_from_date`| DATE | YES | - | Custom start date for completed histories |
+| `week_to_date`  | DATE | YES | - | Custom end date for completed histories |
+| `status` | VARCHAR(20) | NO | `'active'` | Status (`active`, `completed`) |
+| `snapshot_json` | JSONB | YES | - | Snapshot of items when list is completed |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
+| `completed_at` | TIMESTAMP | YES | - | When the list was finished |
+| `deleted_at` | TIMESTAMP | YES | - | **Soft delete timestamp** |
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | リストID（PK） |
-| user_id | UUID | NOT NULL | - | ユーザーID（FK） |
-| meal_plan_id | UUID | NULL | - | 食事計画ID（FK） |
-| week_start_date | DATE | NOT NULL | - | 内部用（レガシー互換） |
-| week_from_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の開始日 |
-| week_to_date | DATE | NULL | - | 買い物完了時にユーザー入力した週の終了日 |
-| status | VARCHAR(20) | NOT NULL | 'active' | ステータス（active/completed） |
-| snapshot_json | JSONB | NULL | - | 完了時のアイテムスナップショット（履歴用） |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
-| completed_at | TIMESTAMP | NULL | - | 完了日時 |
-
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `user_id` REFERENCES `auth.users(id)` ON DELETE CASCADE
 - FOREIGN KEY: `meal_plan_id` REFERENCES `meal_plans(id)` ON DELETE SET NULL
-- INDEX: `user_id, status`
-- INDEX: `week_start_date`
 
 ---
 
-### 7. shopping_items（買い物アイテム）
+### 2.7. `shopping_items` (Items inside a shopping list)
 
-| カラム名 | 型 | NULL | デフォルト | 説明 |
-|---------|-----|------|-----------|------|
-| id | UUID | NOT NULL | gen_random_uuid() | アイテムID（PK） |
-| shopping_list_id | UUID | NOT NULL | - | 買い物リストID（FK） |
-| name | VARCHAR(100) | NOT NULL | - | アイテム名 |
-| category | VARCHAR(50) | NOT NULL | - | カテゴi |
-| source_type | VARCHAR(20) | NOT NULL | - | ソース（meal/product/manual） |
-| source_id | UUID | NULL | - | ソースID（料理IDまたは雑貨ID） |
-| note | TEXT | NULL | - | Ghi chú (Ví dụ: "Dùng cho món [Tên món]") |
-| is_checked | BOOLEAN | NOT NULL | false | チェック済みフラグ |
-| checked_at | TIMESTAMP | NULL | - | チェック日時 |
-| created_at | TIMESTAMP | NOT NULL | now() | 作成日時 |
+| Column | Type | NULL | Default | Description |
+|---|---|---|---|---|
+| `id` | UUID | NO | `gen_random_uuid()` | Primary Key |
+| `shopping_list_id`| UUID | NO | - | Foreign Key -> `shopping_lists.id` |
+| `name` | VARCHAR(100) | NO | - | Item name |
+| `category` | VARCHAR(50) | NO | - | UI Grouping (e.g., Meal Name, "Khác") |
+| `source_type` | VARCHAR(20) | NO | - | Enum: `meal`, `product`, `manual` |
+| `source_id` | UUID | YES | - | Original Meal/Product ID (for traceability) |
+| `note` | TEXT | YES | - | E.g., "Used for [Meal Name]" |
+| `is_checked` | BOOLEAN | NO | `false` | Checked off status |
+| `checked_at` | TIMESTAMP | YES | - | When the item was checked |
+| `created_at` | TIMESTAMP | NO | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMP | NO | `now()` | Last update timestamp |
 
-**インデックス**:
+**Indexes**:
 - PRIMARY KEY: `id`
 - FOREIGN KEY: `shopping_list_id` REFERENCES `shopping_lists(id)` ON DELETE CASCADE
-- INDEX: `shopping_list_id, is_checked`
-
-**備考**:
-- `source_type`: 料理由来/雑貨由来/手動追加を区別
-- `source_id`: 元の料理IDまたは雑貨ID（トレーサビリティ用）
 
 ---
 
-## マスターデータ
+## 3. Data Integrity & Validation Rules
 
-> **2026-05-24**: `meals.category` / `products.category` は削除された。カテゴリ Enum は将来の参照用として文書のみ保持。
-
-### shopping_items.category の使途変更
-
-`shopping_items.category` は現在、買い物チェックリストのグループ表示に使用:
-- 料理由来アイテム: category = **料理名**（例: `Thịt kho tàu`）
-- 追加商品: category = `Mua thêm`
-- 手動追加: category = `Khác`
-
-#### item_source_type（アイテムソース）
+### 3.1. Date and Time Constraints
 ```sql
-CREATE TYPE item_source_type AS ENUM (
-    'meal',           -- 料理由来
-    'product',        -- 雑貨由来
-    'manual'          -- 手動追加
-);
-```
+-- Enforce Monday as start of week for meal plans
+ALTER TABLE meal_plans ADD CONSTRAINT check_week_start_is_monday
+CHECK (EXTRACT(ISODOW FROM week_start_date) = 1);
 
----
-
-## 初期データ
-
-### サンプル料理
-```sql
-INSERT INTO meals (user_id, name, ingredients, category) VALUES
-('user-uuid', 'カレーライス', '["じゃがいも", "人参", "玉ねぎ", "豚肉", "カレールー"]', 'japanese'),
-('user-uuid', 'パスタカルボナーラ', 'パスタ\nベーコン\n卵\n粉チーズ\n黒胡椒', 'western'),
-('user-uuid', '麻婆豆腐', '豆腐\n豚ひき肉\n長ネギ\n豆板醤\n甜麺醤', 'chinese');
-```
-
-### サンプル雑貨
-```sql
-INSERT INTO miscellaneous (user_id, name, category) VALUES
-('user-uuid', 'トイレットペーパー', 'daily'),
-('user-uuid', '洗剤', 'consumable'),
-('user-uuid', 'ゴミ袋', 'consumable');
-```
-
----
-
-## データ整合性ルール
-
-### 1. 週の開始日は月曜日
-```sql
-ALTER TABLE meal_plans
-ADD CONSTRAINT check_week_start_is_monday
-CHECK (EXTRACT(DOW FROM week_start_date) = 1);
-```
-
-### 2. 曜日は0〜6の範囲
-```sql
-ALTER TABLE meal_plan_items
-ADD CONSTRAINT check_day_of_week_range
+-- Enforce Day of Week range (0 to 6)
+ALTER TABLE meal_plan_items ADD CONSTRAINT check_day_of_week_range
 CHECK (day_of_week BETWEEN 0 AND 6);
 ```
 
-### 3. 完了日時はステータスがcompletedの時のみ
+### 3.2. Soft Delete Scope
+All `GET` APIs MUST append `WHERE deleted_at IS NULL` to ensure soft-deleted records are invisible to the user.
+
+---
+
+## 4. Security: Row Level Security (RLS)
+
+All tables must have RLS enabled to prevent IDOR (Insecure Direct Object Reference).
+
 ```sql
-ALTER TABLE shopping_lists
-ADD CONSTRAINT check_completed_at_with_status
-CHECK (
-    (status = 'completed' AND completed_at IS NOT NULL) OR
-    (status != 'completed' AND completed_at IS NULL)
-);
-```
+-- Example RLS Policy for Meals
+ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 
----
-
-## パフォーマンス最適化
-
-### 1. パーティショニング（将来的に検討）
-- `shopping_lists`を`week_start_date`でパーティション
-- 履歴データが増えた場合に有効
-
-### 2. インデックス戦略
-- 頻繁に検索される`user_id`にインデックス
-- `deleted_at IS NULL`の条件を含む複合インデックス
-- `status`でのフィルタリング用インデックス
-
-### 3. クエリ最適化
-- N+1問題を避けるためのJOIN最適化
-- 必要なカラムのみSELECT（SELECT *を避ける）
-
----
-
-## バックアップ・リストア戦略
-
-### バックアップ
-- **頻度**: 毎日1回（深夜）
-- **保持期間**: 7日間
-- **方法**: Supabase自動バックアップ
-
-### リストア
-- **RTO**: 1時間以内
-- **RPO**: 24時間以内
-
----
-
-## マイグレーション戦略
-
-### 旧データ移行
-1. **旧システムからエクスポート**
-   - Docker Localから既存データをCSV/JSON出力
-2. **データクレンジング**
-   - 不要なデータ削除
-   - フォーマット統一
-3. **新システムへインポート**
-   - Supabaseへバッチインポート
-   - データ整合性チェック
-
----
-
-## セキュリティ
-
-### Row Level Security (RLS)
-```sql
--- ユーザーは自分のデータのみアクセス可能
-ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can only access their own dishes"
-ON dishes
+CREATE POLICY "Users can only access their own meals"
+ON meals
 FOR ALL
 USING (auth.uid() = user_id);
-
--- 同様のポリシーを全テーブルに適用
 ```
 
-### 暗号化
-- **通信**: TLS 1.3
-- **保存**: Supabase標準暗号化（AES-256）
+---
+
+## 5. Storage Buckets
+
+**Bucket Name**: `product-images`
+- Visibility: Public Read
+- Path Structure: `products/{user_id}/{timestamp}-{filename}`
+- RLS Policy: Users can only Upload/Delete images within their own `{user_id}` folder.
 
 ---
 
-## 次のステップ
-
-1. **API Spec作成** → `04_api/api_spec.md`
-2. **マイグレーションファイル作成** → `migrations/`
-3. **Seed Data作成** → `seeds/`
-
----
-
-**作成者**: Claude + Tai  
-**最終更新**: 2026-05-24 (AI Assistant — category drop, snapshot_json, product-images storage)  
-**ステータス**: ✅ Active
+**Status**: ✅ Active (Synced with Epic 2 & 3 English Requirements)
