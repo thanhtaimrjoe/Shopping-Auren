@@ -1,13 +1,24 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field
+from typing import Optional, List
 
 
-class MealCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    ingredients: Optional[str] = Field(None, max_length=5000)
+class MealBase(BaseModel):
+    name: str
+    ingredients: Optional[List[str]] = None
+
+
+class MealCreate(MealBase):
+    pass
 
 
 class MealUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    ingredients: Optional[str] = Field(None, max_length=5000)
+    name: Optional[str] = None
+    ingredients: Optional[List[str]] = Field(default=None)
+
+
+class MealResponse(MealBase):
+    id: str
+
+
+class MealDetailResponse(MealResponse):
+    pass

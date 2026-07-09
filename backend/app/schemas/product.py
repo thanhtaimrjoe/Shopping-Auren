@@ -1,13 +1,24 @@
+from pydantic import BaseModel
 from typing import Optional
 
-from pydantic import BaseModel, Field
 
-
-class ProductCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+class ProductBase(BaseModel):
+    name: str
     image_url: Optional[str] = None
+
+
+class ProductCreate(ProductBase):
+    pass
 
 
 class ProductUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[str] = None
     image_url: Optional[str] = None
+
+
+class ProductResponse(ProductBase):
+    id: str
+
+
+class ProductDetailResponse(ProductResponse):
+    pass

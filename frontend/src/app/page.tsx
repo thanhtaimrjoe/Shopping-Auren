@@ -92,7 +92,7 @@ export default function MealPlanPage() {
   const router = useRouter();
 
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
-  const [selectedMeals, setSelectedMeals] = useState<Record<number, string[]>>({});
+  const [selectedMealIds, setSelectedMealIds] = useState<Record<number, string[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,7 +100,7 @@ export default function MealPlanPage() {
   const [mealDatabase, setMealDatabase] = useState<Meal[]>([]);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null);
-  
+
   // Extra products state
   const [productsDatabase, setProductsDatabase] = useState<Product[]>([]);
   const [extraProducts, setExtraProducts] = useState<ExtraProductItem[]>([]);
@@ -137,12 +137,12 @@ export default function MealPlanPage() {
     if (Array.isArray(plan.meals)) {
       plan.meals.forEach((item: MealPlanItem) => {
         const dayIndex = Number(item.day_of_week);
-        const mealName = item.meal?.name || item.name;
-        if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealName) return;
-        transformed[dayIndex] = [...(transformed[dayIndex] || []), mealName];
+        const mealId = item.meal?.id || item.name;
+        if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6 || !mealId) return;
+        transformed[dayIndex] = [...(transformed[dayIndex] || []), String(mealId)];
       });
     }
-    setSelectedMeals(transformed);
+    setSelectedMealIds(transformed);
   }, []);
 
   const fetchProductsAndShoppingList = useCallback(async () => {
@@ -225,7 +225,7 @@ export default function MealPlanPage() {
       const err = planResult.reason as { response?: { status?: number }; message?: string };
       if (err.response?.status === 404) {
         setCurrentPlanId(null);
-        setSelectedMeals({});
+        setSelectedMealIds({});
       } else if (err.message !== 'Network Error') {
         console.error('Failed to fetch meal plan:', planResult.reason);
       }
@@ -292,12 +292,12 @@ export default function MealPlanPage() {
   };
 
   const buildMealPlanPayload = (mealsByDay: Record<number, string[]>) => {
-    const meals = Object.entries(mealsByDay).flatMap(([dayKey, mealNames]) => {
+    const meals = Object.entries(mealsByDay).flatMap(([dayKey, mealIds]) => {
       const dayIndex = Number(dayKey);
       if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex > 6) return [];
 
-      return mealNames.flatMap((mealName) => {
-        const meal = mealDatabase.find((entry) => entry.name === mealName);
+      return mealIds.flatMap((mealId) => {
+        const meal = mealDatabase.find((entry) => entry.id === mealId);
         if (!meal) return [];
 
         return [{
@@ -324,15 +324,20 @@ export default function MealPlanPage() {
     }
   };
 
+  const findMealById = useCallback(
+    (mealId: string) => mealDatabase.find((entry) => entry.id === mealId),
+    [mealDatabase]
+  );
+
   const findMealByName = useCallback(
     (mealName: string) => mealDatabase.find((entry) => entry.name === mealName),
     [mealDatabase]
   );
 
   const buildDraftItems = useCallback((): DraftShoppingItem[] => {
-    const mealItems = Object.entries(selectedMeals).flatMap(([dayKey, mealNames]) =>
-      mealNames.flatMap((mealName, mealIndex) => {
-        const meal = findMealByName(mealName);
+    const mealItems = Object.entries(selectedMealIds).flatMap(([dayKey, mealIds]) =>
+      mealIds.flatMap((mealId, mealIndex) => {
+        const meal = findMealById(mealId);
         if (!meal) return [];
 
         return parseIngredients(meal.ingredients).map((ingredient, ingredientIndex) => ({
@@ -366,7 +371,7 @@ export default function MealPlanPage() {
     });
 
     return [...mealItems, ...productItems];
-  }, [extraProducts, findMealByName, productsDatabase, selectedMeals]);
+  }, [extraProducts, findMealById, productsDatabase, selectedMealIds]);
 
   const openDraftModal = () => {
     if (!currentPlanId) return;
@@ -517,58 +522,48 @@ export default function MealPlanPage() {
     }
   };
 
-  const handleToggleMeal = async (mealName: string) => {
+  const handleToggleMeal = async (meal: Meal) => {
     if (activeDayIndex === null || !user) return;
-    
-    setIsLoading(true);
-    try {
-      const currentMeals = selectedMeals[activeDayIndex] || [];
-      let updatedMeals;
-      
-      if (currentMeals.includes(mealName)) {
-        // Remove meal
-        updatedMeals = currentMeals.filter(m => m !== mealName);
-      } else {
-        // Add meal (limit 3)
-        if (currentMeals.length >= 3) {
-          alert("Mỗi ngày chỉ tối đa 3 món ăn.");
-          return;
-        }
-        updatedMeals = [...currentMeals, mealName];
-      }
 
-      const nextSelectedMeals = {
-        ...selectedMeals,
-        [activeDayIndex]: updatedMeals,
-      };
-      
-      // Save to backend
-      await persistMealPlan(nextSelectedMeals);
-      setSelectedMeals(nextSelectedMeals);
-      showNotification('success', currentMeals.includes(mealName) ? 'Đã xóa món ăn' : 'Đã thêm món ăn');
-    } catch (error: unknown) {
-      console.error('Failed to toggle meal:', error);
-      const err = error as { response?: { data?: { detail?: string } }; message?: string };
-      const errorMsg = err.response?.data?.detail || err.message || 'Lỗi không xác định';
-      showNotification('error', `Không thể cập nhật món ăn: ${errorMsg}`);
-    } finally {
-      setIsLoading(false);
+    const currentMeals = selectedMealIds[activeDayIndex] || [];
+    let updatedMeals;
+
+    if (currentMeals.includes(meal.id)) {
+      // Remove meal
+      updatedMeals = currentMeals.filter((m) => m !== meal.id);
+    } else {
+      // Add meal (limit 3)
+      if (currentMeals.length >= 3) {
+        alert("Mỗi ngày chỉ tối đa 3 món ăn.");
+        return;
+      }
+      updatedMeals = [...currentMeals, meal.id];
     }
+
+    const nextSelectedMeals = {
+      ...selectedMealIds,
+      [activeDayIndex]: updatedMeals,
+    };
+
+    // Save to backend
+    await persistMealPlan(nextSelectedMeals);
+    setSelectedMealIds(nextSelectedMeals);
+    showNotification('success', currentMeals.includes(meal.id) ? 'Đã xóa món ăn' : 'Đã thêm món ăn');
   };
 
   const removeMeal = async (dayIndex: number, mealIndex: number) => {
     if (!user) return;
-    const currentMeals = selectedMeals[dayIndex] || [];
+    const currentMeals = selectedMealIds[dayIndex] || [];
     const updatedMeals = currentMeals.filter((_, i) => i !== mealIndex);
     const nextSelectedMeals = {
-      ...selectedMeals,
+      ...selectedMealIds,
       [dayIndex]: updatedMeals,
     };
-    
+
     try {
       await persistMealPlan(nextSelectedMeals);
 
-      setSelectedMeals(nextSelectedMeals);
+      setSelectedMealIds(nextSelectedMeals);
       showNotification('success', 'Đã xóa món ăn');
     } catch (error: unknown) {
       console.error('Failed to update meal plan:', error);
@@ -578,7 +573,17 @@ export default function MealPlanPage() {
     }
   };
 
-  const filteredMeals = mealDatabase.filter(meal => 
+  const findMealByIdForRender = useCallback(
+    (mealId: string) => mealDatabase.find((entry) => entry.id === mealId),
+    [mealDatabase]
+  );
+
+  const dayMealDisplayIds = useCallback(
+    (dayIndex: number) => selectedMealIds[dayIndex] || [],
+    [selectedMealIds]
+  );
+
+  const filteredMeals = mealDatabase.filter(meal =>
     meal.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -607,7 +612,7 @@ export default function MealPlanPage() {
   }
 
   return (
-    <div className="page-shell pb-8 sm:pb-16 animate-page-enter min-w-0">
+    <div className="page-shell pb-6 sm:pb-16 animate-page-enter min-w-0">
       {/* Notifications */}
       {notification && (
         <div
@@ -619,7 +624,8 @@ export default function MealPlanPage() {
               : notification.type === 'info'
                 ? 'bg-bark text-cream'
                 : 'bg-red-500 text-cream'
-          )}>
+          )}
+        >
           {notification.type === 'success' ? <CheckCircle2 className="h-5 w-5 flex-shrink-0" /> : <X className="h-5 w-5 flex-shrink-0" />}
           <span className="font-bold text-xs uppercase tracking-widest">{notification.message}</span>
         </div>
@@ -633,7 +639,7 @@ export default function MealPlanPage() {
           </h1>
           <p className="text-sm text-bark/50 font-medium">Lên thực đơn dinh dưỡng và chuẩn bị danh sách mua sắm tuần này</p>
         </div>
-        
+
         {/* Generate Shopping List Button styled as a Premium Accent Action */}
         <div className="shrink-0">
           <button
@@ -651,12 +657,12 @@ export default function MealPlanPage() {
       <div className="w-full pb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {DAY_INDICES.map((dayIndex) => {
-            const dayMeals = selectedMeals[dayIndex] || [];
-            
+            const dayMeals = dayMealDisplayIds(dayIndex);
+
             // Calculate if this day is today dynamically
             const today = new Date();
-            const currentDayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
-            const mappedTodayIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // Map Sunday to 6, Monday to 0...
+            const currentDayOfWeek = today.getDay();
+            const mappedTodayIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
             const isToday = dayIndex === mappedTodayIndex;
 
             return (
@@ -664,8 +670,8 @@ export default function MealPlanPage() {
                 key={dayIndex}
                 className={cn(
                   "w-full flex flex-col h-full min-h-[320px] lg:min-h-[380px] transition-all duration-300 rounded-[1.75rem] sm:rounded-[2rem] p-5 sm:p-6 shadow-soft border relative group",
-                  isToday 
-                    ? "bg-cream border-sage border-2 shadow-warm ring-1 ring-sage/10" 
+                  isToday
+                    ? "bg-cream border-sage border-2 shadow-warm ring-1 ring-sage/10"
                     : "bg-cream/40 border-bark/5 opacity-90 lg:opacity-85 hover:opacity-100 focus-within:opacity-100"
                 )}
               >
@@ -674,7 +680,7 @@ export default function MealPlanPage() {
                     Hôm nay
                   </span>
                 )}
-                
+
                 {/* Day Header */}
                 <div className="mb-4 flex items-center justify-between border-b border-bark/5 pb-3">
                   <h4 className={cn(
@@ -689,18 +695,18 @@ export default function MealPlanPage() {
                 {/* Selected Meals List */}
                 <div className="flex-1 space-y-3 mb-5 overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
                   {dayMeals.length > 0 ? (
-                    dayMeals.map((mealName, mIdx) => {
-                      const mealDetails = mealDatabase.find(m => m.name === mealName);
+                    dayMeals.map((mealId, mIdx) => {
+                      const mealDetails = findMealByIdForRender(mealId);
                       const ingredients = parseIngredients(mealDetails?.ingredients);
 
                       return (
-                        <div 
-                          key={mIdx} 
+                        <div
+                          key={mIdx}
                           className="group/meal flex flex-col bg-hemp/15 rounded-2xl p-3.5 border border-bark/5 hover:bg-hemp/30 transition-all duration-200 shadow-sm"
                         >
                           <div className="flex items-start justify-between gap-1">
-                            <span className="text-xs text-bark font-bold leading-tight break-words flex-1 pr-1">{mealName}</span>
-                            <button 
+                            <span className="text-xs text-bark font-bold leading-tight break-words flex-1 pr-1">{mealDetails?.name || mealId}</span>
+                            <button
                               onClick={() => removeMeal(dayIndex, mIdx)}
                               className="lg:opacity-0 lg:group-hover/meal:opacity-100 p-1.5 -mr-1.5 -mt-1 hover:bg-bark/10 rounded-full transition-all touch-manipulation min-h-[30px] min-w-[30px] flex items-center justify-center shrink-0"
                               title="Xóa món ăn"
@@ -735,7 +741,7 @@ export default function MealPlanPage() {
                 </div>
 
                 {/* Add Button with Soft Micro-interaction */}
-                <button 
+                <button
                   onClick={() => openModal(dayIndex)}
                   className={cn(
                     "w-full py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 font-bold text-[10px] uppercase tracking-widest active:scale-[0.97]",
@@ -760,7 +766,7 @@ export default function MealPlanPage() {
             <h3 className="text-xs font-black text-bark uppercase tracking-[0.25em] mb-1">Mua thêm ngoài thực đơn</h3>
             <p className="text-[11px] text-bark/40 font-medium">Bổ sung các nhu yếu phẩm hoặc đồ dùng gia đình cần mua</p>
           </div>
-          <button 
+          <button
             onClick={openProductModal}
             className="flex items-center justify-center gap-2 px-5 py-3 bg-sage text-cream rounded-2xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all duration-200 active:scale-[0.97] touch-manipulation min-h-[44px]"
           >
@@ -768,7 +774,7 @@ export default function MealPlanPage() {
             <span>Thêm sản phẩm</span>
           </button>
         </div>
-        
+
         <div>
           {extraProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -777,7 +783,7 @@ export default function MealPlanPage() {
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="text-xs text-bark font-bold truncate">{p.name}</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => handleRemoveProduct(p.id)}
                     className="p-2 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-full transition-all shrink-0"
                     title="Xóa sản phẩm"
@@ -800,7 +806,7 @@ export default function MealPlanPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title">
           <button type="button" className="absolute inset-0 bg-bark/35 backdrop-blur-sm transition-all" aria-label="Đóng" onClick={() => setIsModalOpen(false)} />
-          <div 
+          <div
             ref={modalRef}
             className="relative bg-cream rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-lg shadow-warm animate-scale-in overflow-hidden max-h-[min(90dvh,640px)] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0"
           >
@@ -810,7 +816,7 @@ export default function MealPlanPage() {
                   <h3 id="meal-modal-title" className="text-xs font-black text-bark uppercase tracking-[0.25em]">Chọn món ăn</h3>
                   <p className="text-[10px] text-bark/40 font-medium mt-1">Chọn từ thư viện để thêm vào {activeDayIndex !== null && DAY_LABELS[activeDayIndex]}</p>
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="h-10 w-10 flex items-center justify-center hover:bg-hemp/40 rounded-full transition-all touch-manipulation"
@@ -820,9 +826,9 @@ export default function MealPlanPage() {
               </div>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-bark/30" />
-                <input 
+                <input
                   ref={searchInputRef}
-                  type="text" 
+                  type="text"
                   placeholder="Tìm kiếm món ăn trong thư viện..."
                   className="w-full bg-bark/5 border border-bark/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-medium text-bark placeholder:text-bark/25 focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all focus:outline-none"
                   value={searchQuery}
@@ -830,7 +836,7 @@ export default function MealPlanPage() {
                 />
               </div>
             </div>
-            
+
             <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1.5 custom-scrollbar bg-cream/30">
               {fetchLoading ? (
                 <div className="py-16 flex justify-center">
@@ -838,11 +844,11 @@ export default function MealPlanPage() {
                 </div>
               ) : filteredMeals.length > 0 ? (
                 filteredMeals.map((meal, i) => {
-                  const isSelected = activeDayIndex !== null && selectedMeals[activeDayIndex]?.includes(meal.name);
+                  const isSelected = activeDayIndex !== null && selectedMealIds[activeDayIndex]?.includes(meal.id);
                   return (
                     <button
                       key={i}
-                      onClick={() => handleToggleMeal(meal.name)}
+                      onClick={() => handleToggleMeal(meal)}
                       disabled={isLoading}
                       className={cn(
                         "w-full text-left px-5 py-3.5 rounded-2xl transition-all font-semibold flex items-center justify-between group active:scale-[0.99] border",
@@ -894,7 +900,7 @@ export default function MealPlanPage() {
 
             <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-cream/20">
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
-                
+
                 {/* Draft Items Selection */}
                 <section className="min-w-0">
                   <div className="flex items-center justify-between gap-3 mb-4">
@@ -961,7 +967,7 @@ export default function MealPlanPage() {
 
                 {/* Left Sidebars for Adding Items */}
                 <aside className="space-y-4 min-w-0">
-                  
+
                   {/* Add Meals Sidebar */}
                   <section className="bg-cream border border-bark/5 rounded-2xl p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-3">
@@ -982,7 +988,6 @@ export default function MealPlanPage() {
                       {filteredDraftMeals.length > 0 ? (
                         filteredDraftMeals.map((meal) => (
                           <button
-                            type="button"
                             key={meal.id}
                             onClick={() => addMealToDraft(meal)}
                             className="w-full text-left px-3 py-2 bg-cream hover:bg-sage/10 text-xs font-bold text-bark hover:text-sage-deep transition-all rounded-lg border border-bark/5"
@@ -1016,7 +1021,6 @@ export default function MealPlanPage() {
                       {filteredDraftProducts.length > 0 ? (
                         filteredDraftProducts.map((product) => (
                           <button
-                            type="button"
                             key={product.id}
                             onClick={() => addProductToDraft(product)}
                             className="w-full text-left px-3 py-2 bg-cream hover:bg-sage/10 text-xs font-bold text-bark hover:text-sage-deep transition-all rounded-lg border border-bark/5"
@@ -1025,7 +1029,7 @@ export default function MealPlanPage() {
                           </button>
                         ))
                       ) : (
-                        <p className="py-4 text-center text-[10px] text-bark/35 italic">Không tìm thấy sản phẩm phù hợp.</p>
+                        <p className="py-4 text-center text-[10px] text-bark/35 italic">Không tìm thấy sản phẩm.</p>
                       )}
                     </div>
                   </section>
@@ -1033,130 +1037,29 @@ export default function MealPlanPage() {
               </div>
             </div>
 
-            {/* Glassmorphic Footer Actions */}
-            <div className="p-5 border-t border-bark/5 bg-cream flex flex-col sm:flex-row justify-end gap-3 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsDraftModalOpen(false)}
-                className="px-5 py-3 rounded-xl border border-bark/10 text-bark text-xs font-bold uppercase tracking-widest hover:bg-hemp/30 transition-all duration-150 active:scale-95"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateChecklistFromDraft}
-                disabled={isDraftSubmitting || includedDraftCount === 0}
-                className="px-6 py-3 bg-bark text-cream hover:bg-sage-deep rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-150 shadow-soft disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
-              >
-                {isDraftSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Tạo checklist
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Modal Popup: Thư viện sản phẩm */}
-      {isProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
-          <button type="button" className="absolute inset-0 bg-bark/35 backdrop-blur-sm transition-all" aria-label="Đóng" onClick={() => setIsProductModalOpen(false)} />
-          <div 
-            className="relative bg-cream rounded-t-[2.5rem] sm:rounded-3xl w-full max-w-4xl shadow-warm animate-scale-in overflow-hidden flex flex-col max-h-[min(92dvh,720px)] pb-[env(safe-area-inset-bottom)] sm:pb-0"
-          >
-            <div className="p-6 border-b border-bark/5 flex-shrink-0 flex flex-col gap-4 bg-cream/90 backdrop-blur-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 id="product-modal-title" className="text-xs font-black text-bark uppercase tracking-[0.3em]">Thư viện sản phẩm</h3>
-                  <p className="text-[10px] text-bark/40 font-medium mt-1">Chọn các sản phẩm cần mua thêm bên ngoài thực đơn hàng tuần</p>
-                </div>
-                <button 
-                  onClick={() => setIsProductModalOpen(false)}
-                  className="p-2 hover:bg-hemp/40 rounded-full transition-all"
-                >
-                  <X className="h-5 w-5 text-bark/45" />
-                </button>
-              </div>
-              
-              {/* Mobile-optimized search with clear-btn */}
-              <div className="relative w-full">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-bark/35" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm sản phẩm trong thư viện..."
-                  value={productLibrarySearch}
-                  onChange={(e) => setProductLibrarySearch(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-bark/5 border border-bark/10 rounded-2xl text-xs sm:text-sm font-semibold text-bark placeholder:text-bark/30 focus:outline-none focus:ring-2 focus:ring-sage/20 focus:border-sage transition-all"
-                />
-                {productLibrarySearch && (
+            <div className="p-5 sm:p-6 border-t border-bark/5 flex-shrink-0 bg-cream/90 backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <p className="text-[11px] text-bark/50 font-medium">
+                  {includedDraftCount} mục đã chọn để tạo checklist
+                </p>
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setProductLibrarySearch('')}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-bark/30 hover:text-bark transition-all"
+                    onClick={() => setIsDraftModalOpen(false)}
+                    className="px-5 py-3 rounded-2xl border border-bark/10 text-xs font-bold text-bark hover:bg-hemp/20 transition-all"
                   >
-                    <X className="h-4 w-4" />
+                    Đóng
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={handleCreateChecklistFromDraft}
+                    disabled={isDraftSubmitting || includedDraftCount === 0}
+                    className="px-6 py-3 bg-sage text-cream rounded-2xl text-xs font-bold uppercase tracking-widest shadow-soft hover:bg-sage-deep transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isDraftSubmitting ? 'Đang tạo...' : 'Tạo checklist mua sắm'}
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="overflow-y-auto p-4 md:p-6 custom-scrollbar bg-cream/30" role="region" aria-label="Sản phẩm sẵn có">
-              {filteredProductsDatabase.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-                  {filteredProductsDatabase.map((p, idx) => {
-                    const isSelected = pendingProductIds.has(p.id);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => togglePendingProduct(p.id)}
-                        className={cn(
-                          "p-3 sm:p-4 rounded-2xl text-left transition-all duration-200 relative overflow-hidden flex flex-col justify-between min-h-[110px] sm:min-h-[140px] touch-manipulation border active:scale-95",
-                          isSelected 
-                            ? 'bg-sage text-cream shadow-md scale-100 opacity-95 border-transparent' 
-                            : 'bg-cream hover:bg-sage/10 text-bark border-bark/5 shadow-sm hover:shadow hover:scale-[1.02]'
-                        )}
-                      >
-                        <div className="flex flex-col items-center justify-center text-center h-full w-full">
-                          {p.image_url ? (
-                            <img src={p.image_url} alt={p.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mb-2 rounded-lg" />
-                          ) : (
-                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-hemp/15 rounded-full mb-2.5 flex items-center justify-center shrink-0">
-                              <ShoppingBag className={cn("h-5 w-5 sm:h-6 sm:w-6", isSelected ? 'text-cream' : 'text-bark/30')} />
-                            </div>
-                          )}
-                          <span className="block font-bold leading-tight text-xs sm:text-sm tracking-wide break-words line-clamp-2">{p.name}</span>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute top-2.5 right-2.5 text-cream">
-                            <CheckCircle2 className="h-4 w-4" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-24 text-center">
-                  <span className="text-3xl mb-1 block opacity-30">🔍</span>
-                  <p className="text-bark/40 text-xs sm:text-sm italic font-medium">
-                    {productLibrarySearch ? 'Không tìm thấy sản phẩm phù hợp.' : 'Không có sản phẩm nào trong thư viện.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-5 border-t border-bark/5 flex justify-end flex-shrink-0 bg-cream">
-              <button 
-                type="button"
-                onClick={handleProductModalDone}
-                disabled={isProductsLoading}
-                className="px-8 py-3 bg-bark hover:bg-sage-deep text-cream rounded-xl font-bold uppercase tracking-widest text-xs transition-all duration-150 shadow-soft disabled:opacity-50 flex items-center gap-2 active:scale-95"
-              >
-                {isProductsLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Xong
-              </button>
             </div>
           </div>
         </div>
