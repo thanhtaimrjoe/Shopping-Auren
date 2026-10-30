@@ -21,6 +21,17 @@ The optimized frontend build is `pnpm build`.
 
 ## Data and authentication
 
-`src/lib/mock-data.ts` defines the typed `ShoppingRepository` boundary and an in-memory demo implementation. The UI uses seeded mock data and client state; updates do not persist after a reload. Authentication is simulated. Supabase, FastAPI, API endpoints, and a physical database schema are not implemented or connected. Those integrations are deferred until API and schema contracts and project credentials are approved.
+`src/lib/shopping-types.ts` defines the app data types. Supabase Auth and the Supabase browser Data API now back the library, Weekly Plan, active Checklist, and shopping history. The frontend talks directly to Supabase for the MVP; a separate Render backend is deferred.
 
 Product behavior and labels follow the approved BRD, Screen Specification, Component Specification, and PO navigation decisions. The approved MagicPath canvas informs the visual direction; where its older prototype behavior conflicts with current screen rules, the screen rules take precedence.
+# Supabase dev setup
+
+The MVP uses one Supabase dev project. The browser connects directly with Supabase Auth and the Data API; do not put a service-role key in the frontend.
+
+1. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the project's publishable key.
+2. Run `pnpm install`, then `pnpm dev`.
+3. Create an account or sign in through the app. With email confirmation enabled, confirm the address before signing in.
+
+The schema migrations are in `supabase/migrations/`. They store the library and Weekly Plan in relational tables, persist the active Checklist and shopping history, enable owner-only RLS for all application tables, and use invoker-rights Postgres functions for atomic multi-table saves.
+
+The old in-memory demo seed is not imported automatically. It contains duplicate Meal names; the Supabase schema enforces per-user unique names after trimming and whitespace normalization. Add only data you want to keep to your account.

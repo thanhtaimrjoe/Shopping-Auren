@@ -8,10 +8,12 @@ import {
   UtensilsCrossed, X,
 } from 'lucide-react';
 import {
-  categories, weekdays, mockRepository, normalizeName,
+  categories, weekdays, normalizeName,
   type Category, type ChecklistItem, type Ingredient, type Meal, type Plan,
   type Product, type ShoppingData, type Snapshot, type Weekday,
-} from '@/lib/mock-data';
+} from '@/lib/shopping-types';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { SupabaseShoppingRepository } from '@/lib/supabase/shopping-repository';
 
 type Screen = 'home' | 'checklist' | 'library' | 'settings';
 type EntityKind = 'meal' | 'ingredient' | 'product';
@@ -26,6 +28,7 @@ const navItems: { id: Screen; label: string; icon: typeof Home }[] = [
 const blankPlan = (): Plan => Object.fromEntries(weekdays.map((d) => [d, []])) as unknown as Plan;
 const blankData: ShoppingData = { ingredients: [], meals: [], products: [], plan: blankPlan(), planProductIds: [] };
 const emptyForm: FormState = { name: '', ingredientIds: [], category: categories[0] };
+const shoppingRepository = new SupabaseShoppingRepository();
 
 export default function HomePage() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -42,7 +45,7 @@ export default function HomePage() {
   const [draftProducts, setDraftProducts] = useState<string[]>([]);
   const [libraryQuery, setLibraryQuery] = useState('');
   const [toast, setToast] = useState('');
-  const [signedIn, setSignedIn] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
   const [authMode, setAuthMode] = useState<'Đăng nhập' | 'Đăng ký'>('Đăng nhập');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -59,7 +62,50 @@ export default function HomePage() {
   const [editingName, setEditingName] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category>(categories[0]);
 
-  useEffect(() => { mockRepository.load().then((value) => { setData(value); setLoaded(true); }); }, []);
+  useEffect(() => {
+    let active = true;
+    async function loadSession(session: { user: { id: string; email?: string } } | null) {
+      if (!active) return;
+      if (!session) { setSignedIn(false); setLoaded(true); return; }
+      setSignedIn(true); setLoaded(false);
+      if (session.user.email) setAuthEmail(session.user.email);
+      try {
+        const [value, records] = await Promise.all([shoppingRepository.load(), shoppingRepository.loadShoppingRecords()]);
+        if (active) {
+          setData(value); setActiveChecklist(records.activeChecklist); setSnapshots(records.snapshots);
+          setAuthError(''); setLoaded(true);
+        }
+      } catch (error) {
+        if (active) {
+          const message = error instanceof Error ? error.message : 'Không tải được dữ liệu Supabase.';
+          setAuthError(message); setToast(message); setLoaded(true);
+        }
+      }
+    }
+    let supabase;
+    try {
+      supabase = getSupabaseBrowserClient();
+    } catch (error) {
+      queueMicrotask(() => {
+        if (active) {
+          setAuthError(error instanceof Error ? error.message : 'Thiếu cấu hình Supabase.');
+          setLoaded(true);
+        }
+      });
+      return () => { active = false; };
+    }
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') return;
+      queueMicrotask(() => { void loadSession(session); });
+    });
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (error) throw error;
+      return loadSession(data.session);
+    }).catch((error: unknown) => {
+      if (active) { setAuthError(error instanceof Error ? error.message : 'Không thể kiểm tra phiên đăng nhập.'); setLoaded(true); }
+    });
+    return () => { active = false; authListener.subscription.unsubscribe(); };
+  }, []);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(''), 2600);
@@ -106,7 +152,16 @@ export default function HomePage() {
 
   function updateData(next: ShoppingData) {
     setData(next);
-    void mockRepository.save(next);
+    void shoppingRepository.save(next).catch((error: unknown) => {
+      flash(error instanceof Error ? `Không lưu được lên Supabase: ${error.message}` : 'Không lưu được lên Supabase.');
+    });
+  }
+  function updateActiveChecklist(next: ChecklistItem[] | null | ((items: ChecklistItem[] | null) => ChecklistItem[] | null)) {
+    const value = typeof next === 'function' ? next(activeChecklist) : next;
+    setActiveChecklist(value);
+    void shoppingRepository.saveActiveChecklist(value).catch((error: unknown) => {
+      flash(error instanceof Error ? `Không lưu được Checklist: ${error.message}` : 'Không lưu được Checklist.');
+    });
   }
   function flash(message: string) { setToast(message); }
   function openMealPicker(day: Weekday) { setTargetDay(day); setQuery(''); setDialog('meal-picker'); }
@@ -163,34 +218,40 @@ export default function HomePage() {
   }
   const [pendingChecklist, setPendingChecklist] = useState<ChecklistItem[]>([]);
   function confirmChecklist() {
-    setActiveChecklist(pendingChecklist); setDialog(''); setScreen('checklist');
-    flash('Checklist đã được tạo trong bản demo.');
+    updateActiveChecklist(pendingChecklist); setDialog(''); setScreen('checklist');
+    flash('Checklist đã được lưu.');
   }
   function toggleOccurrence(id: string) {
-    setActiveChecklist((items) => items?.map((item) => item.id === id ? { ...item, checked: !item.checked } : item) ?? null);
+    updateActiveChecklist((items) => items?.map((item) => item.id === id ? { ...item, checked: !item.checked } : item) ?? null);
   }
   function removeOccurrence(id: string) {
-    setActiveChecklist((items) => items?.filter((item) => item.id !== id) ?? null);
+    updateActiveChecklist((items) => items?.filter((item) => item.id !== id) ?? null);
   }
   function addFromLibrary(kind: 'ingredient' | 'product', id: string) {
     const item = kind === 'ingredient' ? data.ingredients.find((entry) => entry.id === id) : data.products.find((entry) => entry.id === id);
     if (!item || !activeChecklist) return;
     const newItem: ChecklistItem = { id: crypto.randomUUID(), name: item.name, kind, checked: false, sourceId: item.id, ...(kind === 'product' ? { category: (item as Product).category } : {}) };
-    setActiveChecklist((items) => [...(items ?? []), newItem]); setDialog('');
+    updateActiveChecklist((items) => [...(items ?? []), newItem]); setDialog('');
   }
   function addOther(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = otherName.trim(); if (!name || !activeChecklist) return;
-    setActiveChecklist((items) => [...(items ?? []), { id: crypto.randomUUID(), name, kind: 'other', checked: false }]);
+    updateActiveChecklist((items) => [...(items ?? []), { id: crypto.randomUUID(), name, kind: 'other', checked: false }]);
     setOtherName('');
   }
-  function completeShopping() {
+  async function completeShopping() {
     if (!dateFrom || !dateTo) { setDateError(''); return; }
     if (dateFrom > dateTo) { setDateError('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'); return; }
     if (!activeChecklist) return;
     const done: Snapshot = { id: crypto.randomUUID(), from: dateFrom, to: dateTo, createdAt: new Date().toISOString(), items: structuredClone(activeChecklist) };
-    setSnapshots((items) => [done, ...items]); setActiveChecklist(null); setDialog(''); setScreen('settings');
-    flash('Snapshot mô phỏng đã được lưu vào Lịch sử.');
+    try {
+      await shoppingRepository.addHistory(done);
+      await shoppingRepository.saveActiveChecklist(null);
+      setSnapshots((items) => [done, ...items]); setActiveChecklist(null); setDialog(''); setScreen('settings');
+      flash('Snapshot đã được lưu vào Lịch sử.');
+    } catch (error) {
+      flash(error instanceof Error ? `Không thể hoàn tất shopping: ${error.message}` : 'Không thể lưu snapshot.');
+    }
   }
   function openEntity(kind: EntityKind, entity?: Ingredient | Meal | Product) {
     setFormKind(kind); setFormError('');
@@ -229,7 +290,7 @@ export default function HomePage() {
       if (Object.values(data.plan).some((ids) => ids.includes(id))) { flash('Không thể xóa Meal đang có trong Weekly Plan.'); return; }
       const meal = data.meals.find((x) => x.id === id);
       updateData({ ...data, meals: data.meals.filter((x) => x.id !== id) });
-      if (meal && activeChecklist) setActiveChecklist(activeChecklist.map((item) => item.mealName === meal.name ? { ...item } : item));
+      if (meal && activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.mealName === meal.name ? { ...item } : item));
     } else {
       if (selectedProductIds().includes(id)) { flash('Không thể xóa Product đang có trong Weekly Plan.'); return; }
       updateData({ ...data, products: data.products.filter((x) => x.id !== id) });
@@ -238,14 +299,25 @@ export default function HomePage() {
   function attemptSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!authEmail.trim() || !authPassword) { setAuthError(''); return; }
-    setSignedIn(true); setAuthError(''); setScreen('home');
-    flash('Phiên demo đã bắt đầu. Tài khoản chưa được xác thực hoặc lưu.');
+    const supabase = getSupabaseBrowserClient();
+    const result = authMode === 'Đăng nhập'
+      ? supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
+      : supabase.auth.signUp({ email: authEmail.trim(), password: authPassword });
+    void result.then(({ data: authData, error }) => {
+      if (error) { setAuthError(error.message); return; }
+      if (!authData.session) {
+        setAuthError('Tài khoản đã tạo. Kiểm tra email để xác nhận, sau đó đăng nhập.');
+        return;
+      }
+      setAuthError('');
+      setScreen('home');
+    }).catch((error: unknown) => setAuthError(error instanceof Error ? error.message : 'Không thể xác thực tài khoản.'));
   }
 
   if (!loaded) return <main className="loading-screen"><span className="brand-mark">a</span></main>;
   if (!signedIn) return <main className="auth-screen">
-    <section className="auth-story"><div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div><div className="auth-message"><span className="eyebrow">MỘT TUẦN NHẸ NHÀNG HƠN</span><h1>Good things<br />begin at home.</h1><p>Lên kế hoạch, chuẩn bị và chăm sóc căn nhà theo nhịp của riêng bạn.</p></div><small className="auth-caption">Bản demo · Đăng nhập mô phỏng</small></section>
-    <section className="auth-pane"><form className="auth-card" onSubmit={attemptSignIn}><span className="eyebrow">CHÀO MỪNG BẠN</span><h2>{authMode}</h2><p>{authMode === 'Đăng nhập' ? 'Đăng nhập để tiếp tục với không gian của bạn.' : 'Tạo tài khoản để bắt đầu.'}</p><label>Email<input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="off" /></label><label>Mật khẩu<input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete="off" /></label>{authError && <p className="field-error">{authError}</p>}<button className="button primary auth-submit">{authMode}<ArrowRight size={16} /></button><div className="auth-switch">{authMode === 'Đăng nhập' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'} <button type="button" onClick={() => setAuthMode(authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập')}>{authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập'}</button></div><small className="sim-note">Đăng nhập mô phỏng · Không xác thực hoặc lưu tài khoản thật.</small></form></section>
+    <section className="auth-story"><div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div><div className="auth-message"><span className="eyebrow">MỘT TUẦN NHẸ NHÀNG HƠN</span><h1>Good things<br />begin at home.</h1><p>Lên kế hoạch, chuẩn bị và chăm sóc căn nhà theo nhịp của riêng bạn.</p></div><small className="auth-caption">Tài khoản được xác thực bằng Supabase.</small></section>
+    <section className="auth-pane"><form className="auth-card" onSubmit={attemptSignIn}><span className="eyebrow">CHÀO MỪNG BẠN</span><h2>{authMode}</h2><p>{authMode === 'Đăng nhập' ? 'Đăng nhập để tiếp tục với không gian của bạn.' : 'Tạo tài khoản để bắt đầu.'}</p><label>Email<input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="email" required /></label><label>Mật khẩu<input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete={authMode === 'Đăng nhập' ? 'current-password' : 'new-password'} minLength={6} required /></label>{authError && <p className="field-error">{authError}</p>}<button className="button primary auth-submit">{authMode}<ArrowRight size={16} /></button><div className="auth-switch">{authMode === 'Đăng nhập' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'} <button type="button" onClick={() => setAuthMode(authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập')}>{authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập'}</button></div><small className="sim-note">MVP · Xác thực và lưu dữ liệu bằng Supabase.</small></form></section>
   </main>;
 
   return <div className="app-shell">
@@ -253,13 +325,13 @@ export default function HomePage() {
       <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
       <p className="sidebar-caption">KHÔNG GIAN CỦA BẠN</p>
       <nav className="side-nav" aria-label="Điều hướng chính">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-button ${screen === id ? 'active' : ''}`} onClick={() => setScreen(id)}><Icon size={19} strokeWidth={1.8} /><span>{label}</span>{id === 'checklist' && activeChecklist && <i className="nav-indicator" />}</button>)}</nav>
-      <div className="sidebar-profile"><span className="avatar">M</span><span><b>Minh Anh</b><small>Bản xem trước</small></span><MoreHorizontal size={20} /></div>
+      <div className="sidebar-profile"><span className="avatar">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>Supabase</small></span><MoreHorizontal size={20} /></div>
     </aside>
 
-    <div className="mobile-top"><span className="brand-mark">a</span><b>auren</b><span className="demo-chip"><i /> Demo dữ liệu</span></div>
+    <div className="mobile-top"><span className="brand-mark">a</span><b>auren</b><span className="demo-chip"><i /> Supabase</span></div>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumb">Không gian của bạn <ChevronRight size={14} /> <b>{navItems.find((x) => x.id === screen)?.label}</b></div><span className="demo-chip"><i /> Demo dữ liệu</span></header>
-      <div className="demo-banner"><CheckCircle2 size={17} /><span><b>Bản demo tương tác</b> · Dữ liệu chỉ ở trong phiên này. Chưa kết nối Supabase hoặc backend.</span></div>
+      <header className="topbar"><div className="breadcrumb">Không gian của bạn <ChevronRight size={14} /> <b>{navItems.find((x) => x.id === screen)?.label}</b></div><span className="demo-chip"><i /> Supabase dev</span></header>
+      <div className="demo-banner"><CheckCircle2 size={17} /><span><b>Dữ liệu đồng bộ</b> · Lưu trong Supabase dev, riêng tư theo tài khoản đăng nhập.</span></div>
 
       {screen === 'home' && <section className="page-content">
         <div className="page-heading"><div><p className="eyebrow">KẾ HOẠCH TUẦN CỦA BẠN</p><h1>Weekly Plan</h1><p className="heading-description">Lên kế hoạch nhẹ nhàng cho những bữa ăn trong tuần.</p></div><div className="heading-actions"><button className="button secondary" onClick={() => setDialog('reset')}><RotateCcw size={15} /> Đặt lại mẫu</button><button className="button primary" onClick={startChecklist}>Tạo Checklist <ArrowRight size={16} /></button></div></div>
@@ -275,7 +347,7 @@ export default function HomePage() {
         <div className="page-heading"><div><p className="eyebrow">DANH SÁCH MUA SẮM</p><h1>Checklist</h1><p className="heading-description">{activeChecklist ? 'Các mục trong phiên mua sắm hiện tại.' : 'Xem trước và tạo Checklist từ Weekly Plan.'}</p></div><div className="heading-actions">{activeChecklist ? <button className="button primary" onClick={() => { setDateFrom(''); setDateTo(''); setDateError(''); setDialog('complete'); }}>Hoàn tất shopping <Check size={16} /></button> : <button className="button primary" onClick={startChecklist}>Tạo Checklist <ArrowRight size={16} /></button>}</div></div>
         {activeChecklist ? <><div className="progress-card"><div className="progress-title"><span className="progress-icon"><Check size={17} /></span><span><b>Đang tiến hành</b><small>{checkedCount} / {itemCount} mục đã hoàn tất</small></span></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><b>{progress}%</b></div>
           <div className="checklist-layout"><div className="checklist-list"><div className="list-toolbar"><b>Tất cả mục <span>{itemCount}</span></b></div>
-            {renderChecklistGroups(activeChecklist, toggleOccurrence, removeOccurrence, setEditingItemId, setEditingName, setEditingCategory, editingItemId, editingName, editingCategory, setActiveChecklist)}
+            {renderChecklistGroups(activeChecklist, toggleOccurrence, removeOccurrence, setEditingItemId, setEditingName, setEditingCategory, editingItemId, editingName, editingCategory, updateActiveChecklist)}
             <button className="add-from-library" onClick={() => setDialog('add-library')}><Plus size={16} /> Thêm Ingredient hoặc Product từ thư viện</button>
             <form className="other-form" onSubmit={addOther}><Plus size={16} /><input value={otherName} onChange={(e) => setOtherName(e.target.value)} aria-label="Tên mục phát sinh" placeholder="Thêm mục phát sinh" /><button type="submit">Thêm</button></form>
           </div></div>
@@ -290,7 +362,7 @@ export default function HomePage() {
       </section>}
 
       {screen === 'settings' && <section className="page-content settings-page"><div className="page-heading"><div><p className="eyebrow">TÀI KHOẢN</p><h1>Cài đặt</h1><p className="heading-description">Quản lý phiên đăng nhập và xem Lịch sử.</p></div></div>
-        <section className="settings-card"><div className="card-title"><span className="settings-symbol"><Settings size={18} /></span><div><b>Tài khoản</b><small>Phiên đăng nhập mô phỏng</small></div></div><div className="account-row"><span className="avatar large">M</span><span><b>Minh Anh</b><small>{authEmail || 'Tài khoản mẫu'}</small></span><span className="session-tag">Demo</span></div><button className="settings-action" onClick={() => { setSignedIn(false); setAuthMode('Đăng nhập'); setAuthPassword(''); }}><LogOut size={17} /><span>Đăng xuất</span><ChevronRight size={17} /></button></section>
+        <section className="settings-card"><div className="card-title"><span className="settings-symbol"><Settings size={18} /></span><div><b>Tài khoản</b><small>Đăng nhập Supabase</small></div></div><div className="account-row"><span className="avatar large">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>{authEmail}</small></span><span className="session-tag">Dev</span></div><button className="settings-action" onClick={() => { void getSupabaseBrowserClient().auth.signOut(); setAuthMode('Đăng nhập'); setAuthPassword(''); }}><LogOut size={17} /><span>Đăng xuất</span><ChevronRight size={17} /></button></section>
         <section className="settings-card history-section"><div className="card-title"><span className="settings-symbol"><Clock3 size={18} /></span><div><b>Lịch sử</b><small>Snapshot shopping đã hoàn tất</small></div><span className="history-count">{snapshots.length}</span></div>{snapshots.length ? <div className="history-list">{snapshots.map((entry) => <article className="history-row" key={entry.id}><Archive size={18} /><div><b>{formatDate(entry.from)} – {formatDate(entry.to)}</b><small>{entry.items.length} mục · {formatTimestamp(entry.createdAt)}</small></div><button className="text-button" onClick={() => { setSnapshot(entry); setConfirmSnapshotDelete(false); setDialog('view-history'); }}>Xem <ArrowRight size={14} /></button></article>)}</div> : <div className="history-empty"><Clock3 size={23} /><b>Chưa có lịch sử</b><p>Snapshot sẽ xuất hiện tại đây sau khi bạn hoàn tất shopping.</p></div>}</section>
       </section>}
     </main>
@@ -305,10 +377,10 @@ export default function HomePage() {
       {dialog === 'overwrite' && <div className="dialog-content"><p>Active Checklist sẽ được thay bằng Checklist mới từ Weekly Plan.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Không</button><button className="button primary" onClick={confirmChecklist}>Có</button></footer></div>}
       {dialog === 'complete' && <form className="dialog-content" onSubmit={(e) => { e.preventDefault(); completeShopping(); }}><p className="dialog-note">Lưu snapshot chỉ đọc vào Lịch sử. Có thể hoàn tất dù còn mục chưa được đánh dấu.</p><label className="form-field">Từ ngày<input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDateError(''); }} required /></label><label className="form-field">Đến ngày<input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDateError(''); }} required /></label>{(dateError || (dateFrom && dateTo && dateFrom > dateTo)) && <p className="field-error">{dateError || 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Hoàn tất</button></footer></form>}
       {dialog === 'entity' && <form className="dialog-content" onSubmit={saveEntity}><label className="form-field">Tên<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus /></label>{formKind === 'meal' && <fieldset className="ingredient-select"><legend>Ingredient</legend>{data.ingredients.map((ingredient) => <label key={ingredient.id}><input type="checkbox" checked={form.ingredientIds.includes(ingredient.id)} onChange={(e) => setForm({ ...form, ingredientIds: e.target.checked ? [...form.ingredientIds, ingredient.id] : form.ingredientIds.filter((id) => id !== ingredient.id) })} />{ingredient.name}</label>)}</fieldset>}{formKind === 'product' && <label className="form-field">Category<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>}{formError && <p className="field-error">{formError}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Lưu</button></footer></form>}
-      {dialog === 'view-history' && snapshot && <div className="dialog-content"><div className="history-meta"><b>Từ ngày</b><span>{formatDate(snapshot.from)}</span><b>Đến ngày</b><span>{formatDate(snapshot.to)}</span><b>Thời điểm tạo</b><span>{formatTimestamp(snapshot.createdAt)}</span></div><div className="snapshot-list">{snapshot.items.map((item) => <div key={item.id}><span className={`snapshot-state ${item.checked ? 'checked' : ''}`}>{item.checked ? <Check size={13} /> : <X size={13} />}</span><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span>{item.category && <small>{item.category}</small>}</div>)}</div>{confirmSnapshotDelete ? <><p className="dialog-note delete-confirm-copy">Xóa snapshot này khỏi Lịch sử?</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setConfirmSnapshotDelete(false)}>Không</button><button className="button danger-quiet" onClick={() => { setSnapshots((entries) => entries.filter((entry) => entry.id !== snapshot.id)); setConfirmSnapshotDelete(false); setDialog(''); }}>Có</button></footer></> : <footer className="dialog-footer"><button className="button danger-quiet" onClick={() => setConfirmSnapshotDelete(true)}>Xóa snapshot</button><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer>}</div>}
+      {dialog === 'view-history' && snapshot && <div className="dialog-content"><div className="history-meta"><b>Từ ngày</b><span>{formatDate(snapshot.from)}</span><b>Đến ngày</b><span>{formatDate(snapshot.to)}</span><b>Thời điểm tạo</b><span>{formatTimestamp(snapshot.createdAt)}</span></div><div className="snapshot-list">{snapshot.items.map((item) => <div key={item.id}><span className={`snapshot-state ${item.checked ? 'checked' : ''}`}>{item.checked ? <Check size={13} /> : <X size={13} />}</span><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span>{item.category && <small>{item.category}</small>}</div>)}</div>{confirmSnapshotDelete ? <><p className="dialog-note delete-confirm-copy">Xóa snapshot này khỏi Lịch sử?</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setConfirmSnapshotDelete(false)}>Không</button><button className="button danger-quiet" onClick={() => { void shoppingRepository.deleteHistory(snapshot.id).then(() => { setSnapshots((entries) => entries.filter((entry) => entry.id !== snapshot.id)); setConfirmSnapshotDelete(false); setDialog(''); }).catch((error: unknown) => flash(error instanceof Error ? error.message : 'Không xóa được snapshot.')); }}>Có</button></footer></> : <footer className="dialog-footer"><button className="button danger-quiet" onClick={() => setConfirmSnapshotDelete(true)}>Xóa snapshot</button><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer>}</div>}
     </section></div>}
     {toast && <div className="toast" role="status"><CheckCircle2 size={17} />{toast}</div>}
-    <footer className="prototype-disclaimer">Bản demo · dữ liệu chỉ trong phiên này · chưa kết nối backend</footer>
+    <footer className="prototype-disclaimer">Môi trường dev · Frontend kết nối trực tiếp Supabase.</footer>
   </div>;
 }
 
