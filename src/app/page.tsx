@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Archive, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown,
-  ChevronRight, Circle, ClipboardList, Clock3, Home, Library, LogOut,
-  MoreHorizontal, Pencil, Plus, RotateCcw, Search, Settings, ShoppingBasket, Trash2,
+  AlertCircle, Archive, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown,
+  ChevronRight, Circle, ClipboardList, Clock3, Home, Info, Library, LogOut,
+  Pencil, Plus, RotateCcw, Search, Settings, ShoppingBasket, Trash2,
   UtensilsCrossed, X,
 } from 'lucide-react';
 import {
@@ -20,6 +20,7 @@ type Screen = 'home' | 'checklist' | 'library' | 'settings';
 type EntityKind = 'meal' | 'ingredient' | 'product';
 type Dialog = '' | 'meal-picker' | 'product-picker' | 'reset' | 'preview' | 'overwrite' | 'complete' | 'entity' | 'add-library' | 'view-history';
 type FormState = { id?: string; name: string; ingredientIds: string[]; category: Category };
+type Toast = { message: string; tone: 'success' | 'error' | 'info' };
 const navItems: { id: Screen; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Trang chủ', icon: Home },
   { id: 'checklist', label: 'Danh sách', icon: ClipboardList },
@@ -45,7 +46,7 @@ export default function HomePage() {
   const [categoryFilter, setCategoryFilter] = useState<Category | 'Tất cả'>('Tất cả');
   const [draftProducts, setDraftProducts] = useState<string[]>([]);
   const [libraryQuery, setLibraryQuery] = useState('');
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState<Toast | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [authMode, setAuthMode] = useState<'Đăng nhập' | 'Đăng ký'>('Đăng nhập');
   const [authStep, setAuthStep] = useState<'email' | 'password'>('email');
@@ -64,6 +65,7 @@ export default function HomePage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category>(categories[0]);
+  const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -81,7 +83,7 @@ export default function HomePage() {
       } catch (error) {
         if (active) {
           const message = saveErrorMessage(error instanceof Error ? error.message : '');
-          setAuthError(message); setToast(message); setLoaded(true);
+          setAuthError(message); setToast({ message, tone: 'error' }); setLoaded(true);
         }
       }
     }
@@ -111,7 +113,7 @@ export default function HomePage() {
   }, []);
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(''), 2600);
+    const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
@@ -144,6 +146,28 @@ export default function HomePage() {
       window.scrollTo(0, scrollY);
     };
   }, [dialog]);
+  useEffect(() => {
+    if (!dialog) return;
+    const node = dialogRef.current;
+    const returnFocus = document.activeElement as HTMLElement | null;
+    const timer = window.setTimeout(() => node?.focus(), 0);
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') { event.preventDefault(); setDialog(''); return; }
+      if (event.key !== 'Tab' || !node) return;
+      const items = Array.from(node.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'));
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('keydown', onKeyDown);
+      returnFocus?.focus?.();
+    };
+  }, [dialog]);
 
   const itemCount = activeChecklist?.length ?? 0;
   const checkedCount = activeChecklist?.filter((item) => item.checked).length ?? 0;
@@ -158,7 +182,7 @@ export default function HomePage() {
     void shoppingRepository.save(next).catch((error: unknown) => {
       const raw = error instanceof Error ? error.message : '';
       console.error('[supabase] save failed', raw);
-      flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`);
+      flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`, 'error');
     });
   }
   function updateActiveChecklist(next: ChecklistItem[] | null | ((items: ChecklistItem[] | null) => ChecklistItem[] | null)) {
@@ -167,10 +191,10 @@ export default function HomePage() {
     void shoppingRepository.saveActiveChecklist(value).catch((error: unknown) => {
       const raw = error instanceof Error ? error.message : '';
       console.error('[supabase] save checklist failed', raw);
-      flash(`Không lưu được danh sách: ${saveErrorMessage(raw)}`);
+      flash(`Không lưu được danh sách: ${saveErrorMessage(raw)}`, 'error');
     });
   }
-  function flash(message: string) { setToast(message); }
+  function flash(message: string, tone: Toast['tone'] = 'info') { setToast({ message, tone }); }
   function openMealPicker(day: Weekday) { setTargetDay(day); setQuery(''); setDialog('meal-picker'); }
   function openProducts() {
     setDraftProducts(selectedProductIds());
@@ -178,7 +202,7 @@ export default function HomePage() {
   }
   function addMeal(meal: Meal) {
     if (!meal.ingredientIds.length) {
-      flash('Món ăn chưa có nguyên liệu. Vui lòng thêm ít nhất một nguyên liệu trước khi đưa món ăn vào kế hoạch tuần.');
+      flash('Món ăn chưa có nguyên liệu. Vui lòng thêm ít nhất một nguyên liệu trước khi đưa món ăn vào kế hoạch tuần.', 'info');
       return;
     }
     if (data.plan[targetDay].length >= 3 || data.plan[targetDay].includes(meal.id)) return;
@@ -219,14 +243,14 @@ export default function HomePage() {
   }
   function startChecklist() {
     const items = buildPreview();
-    if (!items.length) { flash('Kế hoạch tuần đang trống.'); return; }
+    if (!items.length) { flash('Kế hoạch tuần đang trống.', 'info'); return; }
     setPendingChecklist(items);
     setDialog('preview');
   }
   const [pendingChecklist, setPendingChecklist] = useState<ChecklistItem[]>([]);
   function confirmChecklist() {
     updateActiveChecklist(pendingChecklist); setDialog(''); setScreen('checklist');
-    flash('Danh sách đã được lưu.');
+    flash('Danh sách đã được lưu.', 'success');
   }
   function toggleOccurrence(id: string) {
     updateActiveChecklist((items) => items?.map((item) => item.id === id ? { ...item, checked: !item.checked } : item) ?? null);
@@ -255,11 +279,11 @@ export default function HomePage() {
       await shoppingRepository.addHistory(done);
       await shoppingRepository.saveActiveChecklist(null);
       setSnapshots((items) => [done, ...items]); setActiveChecklist(null); setDialog(''); setScreen('settings');
-      flash('Bản ghi đã được lưu vào Lịch sử.');
+      flash('Bản ghi đã được lưu vào Lịch sử.', 'success');
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
       console.error('[supabase] complete shopping failed', raw);
-      flash(`Không thể hoàn tất mua sắm: ${saveErrorMessage(raw)}`);
+      flash(`Không thể hoàn tất mua sắm: ${saveErrorMessage(raw)}`, 'error');
     }
   }
   function openEntity(kind: EntityKind, entity?: Ingredient | Meal | Product) {
@@ -274,7 +298,7 @@ export default function HomePage() {
     if (!name) { setFormError(''); return; }
     const otherEntities = formKind === 'meal' ? data.meals : formKind === 'ingredient' ? data.ingredients : data.products;
     if (otherEntities.some((entry) => entry.id !== form.id && normalizeName(entry.name) === normalizeName(name))) {
-      setFormError(''); flash('Tên đã có trong thư viện.'); return;
+      setFormError(''); flash('Tên đã có trong thư viện.', 'error'); return;
     }
     const next: ShoppingData = { ...data };
     if (formKind === 'ingredient') {
@@ -293,16 +317,16 @@ export default function HomePage() {
   function deleteEntity(kind: EntityKind, id: string) {
     if (kind === 'ingredient') {
       const usedBy = data.meals.filter((meal) => meal.ingredientIds.includes(id));
-      if (usedBy.length) { flash(`Không thể xóa. Ingredient đang được dùng trong: ${usedBy.map((meal) => meal.name).join(', ')}.`); return; }
+      if (usedBy.length) { flash(`Không thể xóa. Ingredient đang được dùng trong: ${usedBy.map((meal) => meal.name).join(', ')}.`, 'error'); return; }
       updateData({ ...data, ingredients: data.ingredients.filter((x) => x.id !== id) });
       if (activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.sourceId === id ? { ...item, sourceId: undefined } : item));
     } else if (kind === 'meal') {
-      if (Object.values(data.plan).some((ids) => ids.includes(id))) { flash('Không thể xóa món ăn đang có trong kế hoạch tuần.'); return; }
+      if (Object.values(data.plan).some((ids) => ids.includes(id))) { flash('Không thể xóa món ăn đang có trong kế hoạch tuần.', 'error'); return; }
       const meal = data.meals.find((x) => x.id === id);
       updateData({ ...data, meals: data.meals.filter((x) => x.id !== id) });
       if (meal && activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.mealName === meal.name ? { ...item } : item));
     } else {
-      if (selectedProductIds().includes(id)) { flash('Không thể xóa sản phẩm đang có trong kế hoạch tuần.'); return; }
+      if (selectedProductIds().includes(id)) { flash('Không thể xóa sản phẩm đang có trong kế hoạch tuần.', 'error'); return; }
       updateData({ ...data, products: data.products.filter((x) => x.id !== id) });
       if (activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.sourceId === id ? { ...item, sourceId: undefined } : item));
     }
@@ -340,7 +364,7 @@ export default function HomePage() {
     setAuthError('');
   }
 
-  if (!loaded) return <main className="loading-screen"><span className="brand-mark">a</span></main>;
+  if (!loaded) return <main className="loading-screen"><span className="brand-mark">a</span><span className="loading-word">auren</span></main>;
   if (!signedIn) return <main className="auth-screen">
     <header className="auth-header">
       <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
@@ -370,17 +394,17 @@ export default function HomePage() {
   </main>;
 
   return <div className="app-shell">
+    <a className="skip-link" href="#main-content">Bỏ qua tới nội dung chính</a>
     <aside className="sidebar">
       <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
       <p className="sidebar-caption">KHÔNG GIAN CỦA BẠN</p>
       <nav className="side-nav" aria-label="Điều hướng chính">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-button ${screen === id ? 'active' : ''}`} onClick={() => setScreen(id)}><Icon size={19} strokeWidth={1.8} /><span>{label}</span>{id === 'checklist' && activeChecklist && <i className="nav-indicator" />}</button>)}</nav>
-      <div className="sidebar-profile"><span className="avatar">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>Supabase</small></span><MoreHorizontal size={20} /></div>
+      <button className="sidebar-profile" onClick={() => setScreen('settings')}><span className="avatar">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>Tài khoản Supabase</small></span><ChevronRight size={18} /></button>
     </aside>
 
-    <div className="mobile-top"><span className="brand-mark">a</span><b>auren</b><span className="demo-chip"><i /> Supabase</span></div>
-    <main className="main-area">
-      <header className="topbar"><div className="breadcrumb">Không gian của bạn <ChevronRight size={14} /> <b>{navItems.find((x) => x.id === screen)?.label}</b></div><span className="demo-chip"><i /> Supabase dev</span></header>
-      <div className="demo-banner"><CheckCircle2 size={17} /><span><b>Dữ liệu đồng bộ</b> · Lưu trong Supabase dev, riêng tư theo tài khoản đăng nhập.</span></div>
+    <div className="mobile-top"><span className="brand-mark">a</span><b>auren</b></div>
+    <main className="main-area" id="main-content" tabIndex={-1}>
+      <header className="topbar"><div className="breadcrumb">Không gian của bạn <ChevronRight size={14} /> <b>{navItems.find((x) => x.id === screen)?.label}</b></div></header>
 
       {screen === 'home' && <section className="page-content">
         <div className="page-heading"><div><p className="eyebrow">KẾ HOẠCH TUẦN CỦA BẠN</p><h1>Kế hoạch tuần</h1><p className="heading-description">Lên kế hoạch nhẹ nhàng cho những bữa ăn trong tuần.</p></div><div className="heading-actions"><button className="button secondary" onClick={() => setDialog('reset')}><RotateCcw size={15} /> Đặt lại mẫu</button><button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button></div></div>
@@ -394,7 +418,7 @@ export default function HomePage() {
 
       {screen === 'checklist' && <section className="page-content checklist-page">
         <div className="page-heading"><div><p className="eyebrow">DANH SÁCH MUA SẮM</p><h1>Danh sách mua sắm</h1><p className="heading-description">{activeChecklist ? 'Các mục trong phiên mua sắm hiện tại.' : 'Xem trước và tạo danh sách từ kế hoạch tuần.'}</p></div><div className="heading-actions">{activeChecklist ? <button className="button primary" onClick={() => { setDateFrom(''); setDateTo(''); setDateError(''); setDialog('complete'); }}>Hoàn tất mua sắm <Check size={16} /></button> : <button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button>}</div></div>
-        {activeChecklist ? <><div className="progress-card"><div className="progress-title"><span className="progress-icon"><Check size={17} /></span><span><b>Đang tiến hành</b><small>{checkedCount} / {itemCount} mục đã hoàn tất</small></span></div><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><b>{progress}%</b></div>
+        {activeChecklist ? <><div className="progress-card"><div className="progress-title"><span className="progress-icon"><Check size={17} /></span><span><b>Đang tiến hành</b><small>{checkedCount} / {itemCount} mục đã hoàn tất</small></span></div><div className="progress-track"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><b>{progress}%</b></div>
           <div className="checklist-layout"><div className="checklist-list"><div className="list-toolbar"><b>Tất cả mục <span>{itemCount}</span></b></div>
             {renderChecklistGroups(activeChecklist, toggleOccurrence, removeOccurrence, setEditingItemId, setEditingName, setEditingCategory, editingItemId, editingName, editingCategory, updateActiveChecklist)}
             <button className="add-from-library" onClick={() => setDialog('add-library')}><Plus size={16} /> Thêm nguyên liệu hoặc sản phẩm từ thư viện</button>
@@ -407,17 +431,17 @@ export default function HomePage() {
         <div className="page-heading"><div><p className="eyebrow">NGUỒN DỮ LIỆU CỦA BẠN</p><h1>Thư viện</h1><p className="heading-description">Quản lý nguyên liệu, món ăn và sản phẩm.</p></div><button className="button primary" onClick={() => openEntity(selectedLibrary)}><Plus size={16} /> Thêm {selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}</button></div>
         <div className="library-switch" role="tablist" aria-label="Loại thư viện">{([['meal', 'Món ăn'], ['ingredient', 'Nguyên liệu'], ['product', 'Sản phẩm']] as [EntityKind, string][]).map(([kind, label]) => <button key={kind} role="tab" aria-selected={selectedLibrary === kind} className={selectedLibrary === kind ? 'selected' : ''} onClick={() => { setSelectedLibrary(kind); setLibraryQuery(''); }}>{label}<span>{kind === 'meal' ? data.meals.length : kind === 'ingredient' ? data.ingredients.length : data.products.length}</span></button>)}</div>
         <div className="library-toolbar"><label className="search-field"><Search size={16} /><input value={libraryQuery} onChange={(e) => setLibraryQuery(e.target.value)} placeholder={`Tìm ${selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}`} /></label></div>
-        <div className="entity-list">{visibleEntities.map((entity) => <article className="entity-row" key={entity.id}><div className="entity-mark">{selectedLibrary === 'meal' ? <BookOpen size={18} /> : selectedLibrary === 'ingredient' ? <Circle size={17} /> : <ShoppingBasket size={17} />}</div><div className="entity-copy"><b>{entity.name}</b><small>{selectedLibrary === 'meal' ? `${(entity as Meal).ingredientIds.length} nguyên liệu` : selectedLibrary === 'product' ? (entity as Product).category : (data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).length ? `Được dùng trong ${data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).map((meal) => meal.name).join(', ')}` : 'Nguyên liệu')}</small></div><div className="entity-actions"><button aria-label={`Sửa ${entity.name}`} onClick={() => openEntity(selectedLibrary, entity as Ingredient | Meal | Product)}><Pencil size={16} /></button><button aria-label={`Xóa ${entity.name}`} onClick={() => deleteEntity(selectedLibrary, entity.id)}><Trash2 size={16} /></button></div></article>)}{!visibleEntities.length && <div className="empty-list">{libraryQuery ? 'Không có kết quả phù hợp.' : ''}</div>}</div>
+        {visibleEntities.length ? <div className="entity-list">{visibleEntities.map((entity) => <article className="entity-row" key={entity.id}><div className="entity-mark">{selectedLibrary === 'meal' ? <BookOpen size={18} /> : selectedLibrary === 'ingredient' ? <Circle size={17} /> : <ShoppingBasket size={17} />}</div><div className="entity-copy"><b>{entity.name}</b><small>{selectedLibrary === 'meal' ? `${(entity as Meal).ingredientIds.length} nguyên liệu` : selectedLibrary === 'product' ? (entity as Product).category : (data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).length ? `Được dùng trong ${data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).map((meal) => meal.name).join(', ')}` : 'Nguyên liệu')}</small></div><div className="entity-actions"><button aria-label={`Sửa ${entity.name}`} onClick={() => openEntity(selectedLibrary, entity as Ingredient | Meal | Product)}><Pencil size={16} /></button><button aria-label={`Xóa ${entity.name}`} onClick={() => deleteEntity(selectedLibrary, entity.id)}><Trash2 size={16} /></button></div></article>)}</div> : libraryQuery ? <div className="entity-list"><div className="empty-list">Không có kết quả phù hợp.</div></div> : <div className="empty-card"><Library size={28} /><button className="button primary" onClick={() => openEntity(selectedLibrary)}><Plus size={16} /> Thêm {selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}</button></div>}
       </section>}
 
       {screen === 'settings' && <section className="page-content settings-page"><div className="page-heading"><div><p className="eyebrow">TÀI KHOẢN</p><h1>Cài đặt</h1><p className="heading-description">Quản lý phiên đăng nhập và xem Lịch sử.</p></div></div>
-        <section className="settings-card"><div className="card-title"><span className="settings-symbol"><Settings size={18} /></span><div><b>Tài khoản</b><small>Đăng nhập Supabase</small></div></div><div className="account-row"><span className="avatar large">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>{authEmail}</small></span><span className="session-tag">Dev</span></div><button className="settings-action" onClick={() => { void getSupabaseBrowserClient().auth.signOut(); setAuthMode('Đăng nhập'); setAuthPassword(''); }}><LogOut size={17} /><span>Đăng xuất</span><ChevronRight size={17} /></button></section>
+        <section className="settings-card"><div className="card-title"><span className="settings-symbol"><Settings size={18} /></span><div><b>Tài khoản</b><small>Đăng nhập Supabase</small></div></div><div className="account-row"><span className="avatar large">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b></span></div><p className="account-note"><CheckCircle2 size={15} /><span><b>Dữ liệu đồng bộ</b> · Lưu trong Supabase, riêng tư theo tài khoản đăng nhập.</span></p><button className="settings-action" onClick={() => { void getSupabaseBrowserClient().auth.signOut(); setAuthMode('Đăng nhập'); setAuthPassword(''); }}><LogOut size={17} /><span>Đăng xuất</span><ChevronRight size={17} /></button></section>
         <section className="settings-card history-section"><div className="card-title"><span className="settings-symbol"><Clock3 size={18} /></span><div><b>Lịch sử</b><small>Bản ghi mua sắm đã hoàn tất</small></div><span className="history-count">{snapshots.length}</span></div>{snapshots.length ? <div className="history-list">{snapshots.map((entry) => <article className="history-row" key={entry.id}><Archive size={18} /><div><b>{formatDate(entry.from)} – {formatDate(entry.to)}</b><small>{entry.items.length} mục · {formatTimestamp(entry.createdAt)}</small></div><button className="text-button" onClick={() => { setSnapshot(entry); setConfirmSnapshotDelete(false); setDialog('view-history'); }}>Xem <ArrowRight size={14} /></button></article>)}</div> : <div className="history-empty"><Clock3 size={23} /><b>Chưa có lịch sử</b><p>Bản ghi sẽ xuất hiện tại đây sau khi bạn hoàn tất mua sắm.</p></div>}</section>
       </section>}
     </main>
     <nav className="mobile-nav" aria-label="Điều hướng chính">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id)}><Icon size={20} strokeWidth={1.8} /><span>{label}</span></button>)}</nav>
 
-    {dialog && <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(''); }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><header><h2 id="dialog-title">{dialogTitle(dialog, targetDay, formKind, snapshot)}</h2><button className="icon-button" aria-label="Đóng" onClick={() => setDialog('')}><X size={18} /></button></header>
+    {dialog && <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(''); }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabIndex={-1} ref={dialogRef}><header><h2 id="dialog-title">{dialogTitle(dialog, targetDay, formKind, snapshot)}</h2><button className="icon-button" aria-label="Đóng" onClick={() => setDialog('')}><X size={18} /></button></header>
       {dialog === 'meal-picker' && <div className="dialog-content"><p className="dialog-note">Chọn món ăn cho {targetDay} · tối đa 3 món.</p><label className="search-field"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm món ăn" /></label><div className="picker-list">{data.meals.filter((meal) => meal.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map((meal) => <button className="picker-row" key={meal.id} onClick={() => addMeal(meal)} disabled={data.plan[targetDay].includes(meal.id) || data.plan[targetDay].length >= 3}><span><b>{meal.name}</b><small>{[meal.ingredientIds.map((id) => data.ingredients.find((ingredient) => ingredient.id === id)?.name).filter(Boolean).join(', '), data.plan[targetDay].includes(meal.id) ? 'Đã thêm' : ''].filter(Boolean).join(' · ')}</small></span>{meal.ingredientIds.length ? <Plus size={17} /> : <span className="disabled-label">Chưa có nguyên liệu</span>}</button>)}</div><footer><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer></div>}
       {dialog === 'product-picker' && <div className="dialog-content"><p className="dialog-note">Tìm và chọn nhiều sản phẩm từ thư viện cho kế hoạch tuần.</p><label className="search-field"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm sản phẩm" /></label><label className="select-field"><span>Danh mục</span><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as Category | 'Tất cả')}><option>Tất cả</option>{categories.map((c) => <option key={c}>{c}</option>)}</select><ChevronDown size={15} /></label><div className="picker-list">{data.products.filter((p) => p.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')) && (categoryFilter === 'Tất cả' || p.category === categoryFilter)).map((product) => { const already = selectedProductIds().includes(product.id); const checked = draftProducts.includes(product.id); return <button key={product.id} className="picker-row" disabled={already} onClick={() => setDraftProducts((old) => checked ? old.filter((id) => id !== product.id) : [...old, product.id])}><span><b>{product.name}</b><small>{product.category}</small></span>{already ? <span className="added-label">Đã thêm</span> : <span className={`select-check ${checked ? 'checked' : ''}`}>{checked && <Check size={14} />}</span>}</button>; })}{!data.products.some((p) => p.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')) && (categoryFilter === 'Tất cả' || p.category === categoryFilter)) && <p className="empty-list">Không có kết quả phù hợp.</p>}</div><footer className="dialog-footer"><span>{draftProducts.length} đã chọn</span><button className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" onClick={saveProductPicker}>Lưu lựa chọn</button></footer></div>}
       {dialog === 'reset' && <div className="dialog-content"><p>Đặt lại mẫu sẽ xóa các món ăn và sản phẩm đã chọn trong kế hoạch tuần. Danh sách đang hoạt động vẫn được giữ nguyên.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Không</button><button className="button primary" onClick={resetPlan}>Có</button></footer></div>}
@@ -426,10 +450,9 @@ export default function HomePage() {
       {dialog === 'overwrite' && <div className="dialog-content"><p>Danh sách đang hoạt động sẽ được thay bằng danh sách mới từ kế hoạch tuần.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Không</button><button className="button primary" onClick={confirmChecklist}>Có</button></footer></div>}
       {dialog === 'complete' && <form className="dialog-content" onSubmit={(e) => { e.preventDefault(); completeShopping(); }}><p className="dialog-note">Lưu bản ghi chỉ đọc vào Lịch sử. Có thể hoàn tất dù còn mục chưa được đánh dấu.</p><label className="form-field">Từ ngày<input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDateError(''); }} required /></label><label className="form-field">Đến ngày<input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDateError(''); }} required /></label>{(dateError || (dateFrom && dateTo && dateFrom > dateTo)) && <p className="field-error">{dateError || 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Hoàn tất</button></footer></form>}
       {dialog === 'entity' && <form className="dialog-content" onSubmit={saveEntity}><label className="form-field">Tên<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus /></label>{formKind === 'meal' && <><label className="search-field"><Search size={16} /><input value={ingredientQuery} onChange={(e) => setIngredientQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} placeholder="Tìm nguyên liệu" /></label><fieldset className="ingredient-select"><legend>Nguyên liệu</legend>{data.ingredients.filter((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))).map((ingredient) => <label key={ingredient.id}><input type="checkbox" checked={form.ingredientIds.includes(ingredient.id)} onChange={(e) => setForm({ ...form, ingredientIds: e.target.checked ? [...form.ingredientIds, ingredient.id] : form.ingredientIds.filter((id) => id !== ingredient.id) })} />{ingredient.name}</label>)}{!data.ingredients.some((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))) && <p className="empty-list">Không có kết quả phù hợp.</p>}</fieldset></>}{formKind === 'product' && <label className="form-field">Danh mục<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>}{formError && <p className="field-error">{formError}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Lưu</button></footer></form>}
-      {dialog === 'view-history' && snapshot && <div className="dialog-content"><div className="history-meta"><b>Từ ngày</b><span>{formatDate(snapshot.from)}</span><b>Đến ngày</b><span>{formatDate(snapshot.to)}</span><b>Thời điểm tạo</b><span>{formatTimestamp(snapshot.createdAt)}</span></div><div className="snapshot-list">{snapshot.items.map((item) => <div key={item.id}><span className={`snapshot-state ${item.checked ? 'checked' : ''}`}>{item.checked ? <Check size={13} /> : <X size={13} />}</span><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span>{item.category && <small>{item.category}</small>}</div>)}</div>{confirmSnapshotDelete ? <><p className="dialog-note delete-confirm-copy">Xóa bản ghi này khỏi Lịch sử?</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setConfirmSnapshotDelete(false)}>Không</button><button className="button danger-quiet" onClick={() => { void shoppingRepository.deleteHistory(snapshot.id).then(() => { setSnapshots((entries) => entries.filter((entry) => entry.id !== snapshot.id)); setConfirmSnapshotDelete(false); setDialog(''); }).catch((error: unknown) => flash(error instanceof Error ? error.message : 'Không xóa được bản ghi.')); }}>Có</button></footer></> : <footer className="dialog-footer"><button className="button danger-quiet" onClick={() => setConfirmSnapshotDelete(true)}>Xóa bản ghi</button><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer>}</div>}
+      {dialog === 'view-history' && snapshot && <div className="dialog-content"><div className="history-meta"><b>Từ ngày</b><span>{formatDate(snapshot.from)}</span><b>Đến ngày</b><span>{formatDate(snapshot.to)}</span><b>Thời điểm tạo</b><span>{formatTimestamp(snapshot.createdAt)}</span></div><div className="snapshot-list">{snapshot.items.map((item) => <div key={item.id}><span className={`snapshot-state ${item.checked ? 'checked' : ''}`}>{item.checked ? <Check size={13} /> : <X size={13} />}</span><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span>{item.category && <small>{item.category}</small>}</div>)}</div>{confirmSnapshotDelete ? <><p className="dialog-note delete-confirm-copy">Xóa bản ghi này khỏi Lịch sử?</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setConfirmSnapshotDelete(false)}>Không</button><button className="button danger-quiet" onClick={() => { void shoppingRepository.deleteHistory(snapshot.id).then(() => { setSnapshots((entries) => entries.filter((entry) => entry.id !== snapshot.id)); setConfirmSnapshotDelete(false); setDialog(''); }).catch((error: unknown) => flash(error instanceof Error ? error.message : 'Không xóa được bản ghi.', 'error')); }}>Có</button></footer></> : <footer className="dialog-footer"><button className="button danger-quiet" onClick={() => setConfirmSnapshotDelete(true)}>Xóa bản ghi</button><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer>}</div>}
     </section></div>}
-    {toast && <div className="toast" role="status"><CheckCircle2 size={17} />{toast}</div>}
-    <footer className="prototype-disclaimer">Môi trường dev · Frontend kết nối trực tiếp Supabase.</footer>
+    {toast && <div className={`toast ${toast.tone}`} role={toast.tone === 'error' ? 'alert' : 'status'}>{toast.tone === 'error' ? <AlertCircle size={17} /> : toast.tone === 'success' ? <CheckCircle2 size={17} /> : <Info size={17} />}{toast.message}</div>}
   </div>;
 }
 
@@ -448,7 +471,7 @@ function renderChecklistGroups(
   if (others.length) groups.push({ title: 'Khác (phát sinh)', entries: others });
   const ungrouped = items.filter((x) => x.kind === 'ingredient' && !x.placementId);
   if (ungrouped.length) groups.push({ title: 'Nguyên liệu', entries: ungrouped });
-  return <>{groups.map((group, groupIndex) => <section className="occurrence-group" key={`${group.title}-${groupIndex}`}><header><span className="placement-dot" /><b>{group.title}</b>{group.entries.every((x) => x.checked) && <span className="group-done">Hoàn tất</span>}</header>{group.entries.map((item) => <article className={`check-row ${item.checked ? 'checked' : ''}`} key={item.id}>{editingId === item.id ? <><button type="button" className={`check-control ${item.checked ? 'checked' : ''}`} onClick={() => toggle(item.id)} aria-label={item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'}>{item.checked && <Check size={14} />}</button><input className="inline-edit" value={editingName} onChange={(e) => setEditingName(e.target.value)} /><select value={editingCategory} onChange={(e) => setEditingCategory(e.target.value as Category)}><option value={editingCategory}>{editingCategory}</option>{categories.filter((x) => x !== editingCategory).map((x) => <option key={x}>{x}</option>)}</select><button type="button" className="row-action" aria-label="Lưu" onClick={() => { setItems((old) => old?.map((x) => x.id === item.id ? { ...x, name: editingName.trim() || x.name, category: item.kind === 'product' ? editingCategory : x.category } : x) ?? null); setEditingId(null); }}><Check size={16} /></button></> : <><button type="button" className="check-row-toggle" onClick={() => toggle(item.id)} aria-pressed={item.checked} aria-label={`${item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'} ${item.name}`}><span aria-hidden="true" className={`check-control ${item.checked ? 'checked' : ''}`}>{item.checked && <Check size={14} />}</span><span className="check-name">{item.name}</span>{item.category && <small className="category-label">{item.category}</small>}</button><button type="button" className="row-action" aria-label={`Sửa ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); setEditingCategory(item.category ?? categories[0]); }}><Pencil size={15} /></button><button type="button" className="row-action remove-action" aria-label={`Xóa ${item.name}`} onClick={() => remove(item.id)}><X size={16} /></button></>}</article>)}</section>)}</>;
+  return <div className="checklist-groups">{groups.map((group, groupIndex) => <section className="occurrence-group" key={`${group.title}-${groupIndex}`}><header><span className="placement-dot" /><b>{group.title}</b>{group.entries.every((x) => x.checked) && <span className="group-done">Hoàn tất</span>}</header>{group.entries.map((item) => <article className={`check-row ${item.checked ? 'checked' : ''}`} key={item.id}>{editingId === item.id ? <><button type="button" className={`check-control ${item.checked ? 'checked' : ''}`} onClick={() => toggle(item.id)} aria-label={item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'}>{item.checked && <Check size={14} />}</button><input className="inline-edit" value={editingName} onChange={(e) => setEditingName(e.target.value)} /><select value={editingCategory} onChange={(e) => setEditingCategory(e.target.value as Category)}><option value={editingCategory}>{editingCategory}</option>{categories.filter((x) => x !== editingCategory).map((x) => <option key={x}>{x}</option>)}</select><button type="button" className="row-action" aria-label="Lưu" onClick={() => { setItems((old) => old?.map((x) => x.id === item.id ? { ...x, name: editingName.trim() || x.name, category: item.kind === 'product' ? editingCategory : x.category } : x) ?? null); setEditingId(null); }}><Check size={16} /></button></> : <><button type="button" className="check-row-toggle" onClick={() => toggle(item.id)} aria-pressed={item.checked} aria-label={`${item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'} ${item.name}`}><span aria-hidden="true" className={`check-control ${item.checked ? 'checked' : ''}`}>{item.checked && <Check size={14} />}</span><span className="check-name">{item.name}</span>{item.category && <small className="category-label">{item.category}</small>}</button><button type="button" className="row-action" aria-label={`Sửa ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); setEditingCategory(item.category ?? categories[0]); }}><Pencil size={15} /></button><button type="button" className="row-action remove-action" aria-label={`Xóa ${item.name}`} onClick={() => remove(item.id)}><X size={16} /></button></>}</article>)}</section>)}</div>;
 }
 
 function dialogTitle(dialog: Dialog, day: Weekday, kind: EntityKind, snapshot: Snapshot | null) {
