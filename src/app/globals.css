@@ -16,6 +16,7 @@
 html { min-width: 320px; background: var(--ivory); }
 body { margin: 0; color: var(--charcoal); background: var(--ivory); font-family: var(--font-manrope), 'Avenir Next', Arial, sans-serif; font-size: 14px; line-height: 1.5; }
 button, input, select { font: inherit; }
+input, select { font-weight: 400; }
 button { color: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(102,124,101,.35); outline-offset: 2px; }
 button:disabled { opacity: .48; cursor: not-allowed; }
@@ -245,10 +246,9 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .auth-logo { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: 18px; border-radius: 26px; color: white; background: var(--forest); box-shadow: 0 12px 28px rgba(63,81,64,.18); font-family: var(--font-lora), Georgia, serif; font-size: 46px; font-weight: 600; }
 .auth-hero .eyebrow { margin-bottom: 11px; font-size: 11px; }
 .auth-title { margin: 0 0 10px; color: #30342E; font-family: var(--font-lora), Georgia, serif; font-size: clamp(32px,4.4vw,44px); font-weight: 500; letter-spacing: -.03em; line-height: 1.12; }
-.auth-subtitle { margin: 0; color: #7D8077; font-size: 14px; line-height: 1.6; }
 .auth-card { display: grid; gap: 14px; width: min(400px,100%); padding: 26px 26px 22px; border: 1px solid var(--border); border-radius: 20px; background: var(--paper); box-shadow: 0 10px 30px rgba(53,56,50,.06); }
 .auth-field { display: grid; gap: 7px; color: #555950; font-size: 12px; font-weight: 700; }
-.auth-field input { height: 48px; padding: 0 13px; border: 1px solid #E0DFD7; border-radius: 12px; color: var(--charcoal); background: #FFFEFA; font-size: 15px; }
+.auth-field input { height: 48px; padding: 0 13px; border: 1px solid #E0DFD7; border-radius: 12px; color: var(--charcoal); background: #FFFEFA; font-size: 15px; font-weight: 400; }
 .auth-field input:focus-visible { border-color: var(--sage); }
 .auth-account { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 11px; color: #4C5148; background: #F5F4EE; font-size: 12px; }
 .auth-account > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -392,7 +392,6 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .auth-main { gap: 20px; padding: 28px 15px 34px; }
   .auth-logo { width: 72px; height: 72px; margin-bottom: 14px; border-radius: 22px; font-size: 38px; }
   .auth-title { font-size: 29px; }
-  .auth-subtitle { font-size: 14px; }
   .auth-card { gap: 13px; padding: 20px 17px 18px; }
   .auth-field { font-size: 13px; }
   .auth-field input { height: 50px; font-size: 16px; }

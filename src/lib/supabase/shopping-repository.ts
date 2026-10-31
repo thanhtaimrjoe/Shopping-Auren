@@ -131,7 +131,26 @@ export class SupabaseShoppingRepository implements ShoppingRepository {
   }
 
   private async persistActiveChecklist(items: ChecklistItem[] | null) {
-    const { error } = await getSupabaseBrowserClient().rpc('save_active_checklist', { p_items: items });
+    const supabase = getSupabaseBrowserClient();
+    if (items === null) {
+      const { userId } = await this.requireUser();
+      unwrap(await supabase.from('active_checklists').delete().eq('user_id', userId));
+      return;
+    }
+    // The RPC maps snake_case columns; the app model uses shorter keys.
+    const payload = items.map((item, position) => ({
+      id: item.id,
+      kind: item.kind,
+      name_snapshot: item.name,
+      checked: item.checked,
+      position,
+      category_snapshot: item.category ?? null,
+      meal_name_snapshot: item.mealName ?? null,
+      placement_id: item.placementId ?? null,
+      source_ingredient_id: item.kind === 'ingredient' ? item.sourceId ?? null : null,
+      source_product_id: item.kind === 'product' ? item.sourceId ?? null : null,
+    }));
+    const { error } = await supabase.rpc('save_active_checklist', { p_items: payload });
     if (error) throw new Error(error.message);
   }
 

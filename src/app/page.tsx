@@ -13,6 +13,7 @@ import {
   type Product, type ShoppingData, type Snapshot, type Weekday,
 } from '@/lib/shopping-types';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { authErrorMessage, saveErrorMessage } from '@/lib/supabase/messages';
 import { SupabaseShoppingRepository } from '@/lib/supabase/shopping-repository';
 
 type Screen = 'home' | 'checklist' | 'library' | 'settings';
@@ -79,7 +80,7 @@ export default function HomePage() {
         }
       } catch (error) {
         if (active) {
-          const message = error instanceof Error ? error.message : 'Không tải được dữ liệu Supabase.';
+          const message = saveErrorMessage(error instanceof Error ? error.message : '');
           setAuthError(message); setToast(message); setLoaded(true);
         }
       }
@@ -87,10 +88,10 @@ export default function HomePage() {
     let supabase;
     try {
       supabase = getSupabaseBrowserClient();
-    } catch (error) {
+    } catch {
       queueMicrotask(() => {
         if (active) {
-          setAuthError(error instanceof Error ? error.message : 'Thiếu cấu hình Supabase.');
+          setAuthError('Thiếu cấu hình Supabase. Kiểm tra biến môi trường NEXT_PUBLIC_SUPABASE_URL và NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.');
           setLoaded(true);
         }
       });
@@ -155,14 +156,18 @@ export default function HomePage() {
   function updateData(next: ShoppingData) {
     setData(next);
     void shoppingRepository.save(next).catch((error: unknown) => {
-      flash(error instanceof Error ? `Không lưu được lên Supabase: ${error.message}` : 'Không lưu được lên Supabase.');
+      const raw = error instanceof Error ? error.message : '';
+      console.error('[supabase] save failed', raw);
+      flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`);
     });
   }
   function updateActiveChecklist(next: ChecklistItem[] | null | ((items: ChecklistItem[] | null) => ChecklistItem[] | null)) {
     const value = typeof next === 'function' ? next(activeChecklist) : next;
     setActiveChecklist(value);
     void shoppingRepository.saveActiveChecklist(value).catch((error: unknown) => {
-      flash(error instanceof Error ? `Không lưu được danh sách: ${error.message}` : 'Không lưu được danh sách.');
+      const raw = error instanceof Error ? error.message : '';
+      console.error('[supabase] save checklist failed', raw);
+      flash(`Không lưu được danh sách: ${saveErrorMessage(raw)}`);
     });
   }
   function flash(message: string) { setToast(message); }
@@ -252,7 +257,9 @@ export default function HomePage() {
       setSnapshots((items) => [done, ...items]); setActiveChecklist(null); setDialog(''); setScreen('settings');
       flash('Bản ghi đã được lưu vào Lịch sử.');
     } catch (error) {
-      flash(error instanceof Error ? `Không thể hoàn tất mua sắm: ${error.message}` : 'Không thể lưu bản ghi.');
+      const raw = error instanceof Error ? error.message : '';
+      console.error('[supabase] complete shopping failed', raw);
+      flash(`Không thể hoàn tất mua sắm: ${saveErrorMessage(raw)}`);
     }
   }
   function openEntity(kind: EntityKind, entity?: Ingredient | Meal | Product) {
@@ -288,6 +295,7 @@ export default function HomePage() {
       const usedBy = data.meals.filter((meal) => meal.ingredientIds.includes(id));
       if (usedBy.length) { flash(`Không thể xóa. Ingredient đang được dùng trong: ${usedBy.map((meal) => meal.name).join(', ')}.`); return; }
       updateData({ ...data, ingredients: data.ingredients.filter((x) => x.id !== id) });
+      if (activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.sourceId === id ? { ...item, sourceId: undefined } : item));
     } else if (kind === 'meal') {
       if (Object.values(data.plan).some((ids) => ids.includes(id))) { flash('Không thể xóa món ăn đang có trong kế hoạch tuần.'); return; }
       const meal = data.meals.find((x) => x.id === id);
@@ -296,6 +304,7 @@ export default function HomePage() {
     } else {
       if (selectedProductIds().includes(id)) { flash('Không thể xóa sản phẩm đang có trong kế hoạch tuần.'); return; }
       updateData({ ...data, products: data.products.filter((x) => x.id !== id) });
+      if (activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.sourceId === id ? { ...item, sourceId: undefined } : item));
     }
   }
   function attemptSignIn(event: React.FormEvent<HTMLFormElement>) {
@@ -312,14 +321,14 @@ export default function HomePage() {
       ? supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
       : supabase.auth.signUp({ email: authEmail.trim(), password: authPassword });
     void result.then(({ data: authData, error }) => {
-      if (error) { setAuthError(error.message); return; }
+      if (error) { setAuthError(authErrorMessage(error.message)); return; }
       if (!authData.session) {
         setAuthError('Tài khoản đã tạo. Kiểm tra email để xác nhận, sau đó đăng nhập.');
         return;
       }
       setAuthError('');
       setScreen('home');
-    }).catch((error: unknown) => setAuthError(error instanceof Error ? error.message : 'Không thể xác thực tài khoản.'));
+    }).catch((error: unknown) => setAuthError(authErrorMessage(error instanceof Error ? error.message : '')));
   }
   function switchAuthMode() {
     setAuthMode(authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập');
@@ -342,7 +351,6 @@ export default function HomePage() {
         <span className="auth-logo" aria-hidden="true">a</span>
         <span className="eyebrow">CHÀO MỪNG BẠN</span>
         <h1 className="auth-title">{authMode === 'Đăng nhập' ? 'Đăng nhập vào auren' : 'Tạo tài khoản auren'}</h1>
-        <p className="auth-subtitle">{authMode === 'Đăng nhập' ? 'Đăng nhập để tiếp tục với không gian của bạn.' : 'Tạo tài khoản để bắt đầu.'}</p>
       </div>
       <form className="auth-card" onSubmit={attemptSignIn}>
         {authStep === 'email' ? <>
