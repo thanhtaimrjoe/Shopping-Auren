@@ -47,6 +47,7 @@ export default function HomePage() {
   const [toast, setToast] = useState('');
   const [signedIn, setSignedIn] = useState(false);
   const [authMode, setAuthMode] = useState<'Đăng nhập' | 'Đăng ký'>('Đăng nhập');
+  const [authStep, setAuthStep] = useState<'email' | 'password'>('email');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -299,7 +300,13 @@ export default function HomePage() {
   }
   function attemptSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!authEmail.trim() || !authPassword) { setAuthError(''); return; }
+    if (!authEmail.trim()) { setAuthError(''); return; }
+    if (authStep === 'email') {
+      setAuthError('');
+      setAuthStep('password');
+      return;
+    }
+    if (!authPassword) { setAuthError(''); return; }
     const supabase = getSupabaseBrowserClient();
     const result = authMode === 'Đăng nhập'
       ? supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
@@ -314,11 +321,44 @@ export default function HomePage() {
       setScreen('home');
     }).catch((error: unknown) => setAuthError(error instanceof Error ? error.message : 'Không thể xác thực tài khoản.'));
   }
+  function switchAuthMode() {
+    setAuthMode(authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập');
+    setAuthStep('email');
+    setAuthError('');
+  }
+  function editAuthEmail() {
+    setAuthStep('email');
+    setAuthError('');
+  }
 
   if (!loaded) return <main className="loading-screen"><span className="brand-mark">a</span></main>;
   if (!signedIn) return <main className="auth-screen">
-    <section className="auth-story"><div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div><div className="auth-message"><span className="eyebrow">MỘT TUẦN NHẸ NHÀNG HƠN</span><h1>Good things<br />begin at home.</h1><p>Lên kế hoạch, chuẩn bị và chăm sóc căn nhà theo nhịp của riêng bạn.</p></div><small className="auth-caption">Tài khoản được xác thực bằng Supabase.</small></section>
-    <section className="auth-pane"><form className="auth-card" onSubmit={attemptSignIn}><span className="eyebrow">CHÀO MỪNG BẠN</span><h2>{authMode}</h2><p>{authMode === 'Đăng nhập' ? 'Đăng nhập để tiếp tục với không gian của bạn.' : 'Tạo tài khoản để bắt đầu.'}</p><label>Email<input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="email" required /></label><label>Mật khẩu<input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete={authMode === 'Đăng nhập' ? 'current-password' : 'new-password'} minLength={6} required /></label>{authError && <p className="field-error">{authError}</p>}<button className="button primary auth-submit">{authMode}<ArrowRight size={16} /></button><div className="auth-switch">{authMode === 'Đăng nhập' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'} <button type="button" onClick={() => setAuthMode(authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập')}>{authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập'}</button></div><small className="sim-note">MVP · Xác thực và lưu dữ liệu bằng Supabase.</small></form></section>
+    <header className="auth-header">
+      <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
+      <span className="auth-header-tag">Tài khoản Supabase</span>
+    </header>
+    <section className="auth-main">
+      <div className="auth-hero">
+        <span className="auth-logo" aria-hidden="true">a</span>
+        <span className="eyebrow">CHÀO MỪNG BẠN</span>
+        <h1 className="auth-title">{authMode === 'Đăng nhập' ? 'Đăng nhập vào auren' : 'Tạo tài khoản auren'}</h1>
+        <p className="auth-subtitle">{authMode === 'Đăng nhập' ? 'Đăng nhập để tiếp tục với không gian của bạn.' : 'Tạo tài khoản để bắt đầu.'}</p>
+      </div>
+      <form className="auth-card" onSubmit={attemptSignIn}>
+        {authStep === 'email' ? <>
+          <label className="auth-field"><span>Email</span><input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} autoComplete="email" placeholder="ban@example.com" required autoFocus /></label>
+          {authError && <p className="field-error">{authError}</p>}
+          <button className="button primary auth-submit" type="submit">Tiếp tục <ArrowRight size={16} /></button>
+        </> : <>
+          <div className="auth-account"><span>{authEmail}</span><button type="button" className="auth-edit" onClick={editAuthEmail}><Pencil size={13} /> Đổi</button></div>
+          <label className="auth-field"><span>Mật khẩu</span><input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} autoComplete={authMode === 'Đăng nhập' ? 'current-password' : 'new-password'} placeholder={authMode === 'Đăng nhập' ? 'Nhập mật khẩu của bạn' : 'Tối thiểu 6 ký tự'} minLength={authMode === 'Đăng nhập' ? undefined : 6} required autoFocus /></label>
+          {authError && <p className="field-error">{authError}</p>}
+          <button className="button primary auth-submit" type="submit">{authMode} <ArrowRight size={16} /></button>
+        </>}
+        <div className="auth-switch">{authMode === 'Đăng nhập' ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'} <button type="button" onClick={switchAuthMode}>{authMode === 'Đăng nhập' ? 'Đăng ký' : 'Đăng nhập'}</button></div>
+      </form>
+    </section>
+    <footer className="auth-footer"><small className="sim-note">MVP · Xác thực và lưu dữ liệu bằng Supabase.</small></footer>
   </main>;
 
   return <div className="app-shell">
