@@ -3,10 +3,13 @@ export type Category =
   | 'Giấy và đồ dùng một lần'
   | 'Chăm sóc cá nhân'
   | 'Đồ dùng gia đình'
+  | 'Thực phẩm'
+  | 'Đồ uống'
   | 'Khác';
 
 export const categories: Category[] = [
-  'Vệ sinh nhà cửa', 'Giấy và đồ dùng một lần', 'Chăm sóc cá nhân', 'Đồ dùng gia đình', 'Khác',
+  'Vệ sinh nhà cửa', 'Giấy và đồ dùng một lần', 'Chăm sóc cá nhân', 'Đồ dùng gia đình',
+  'Thực phẩm', 'Đồ uống', 'Khác',
 ];
 
 export const weekdays = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'] as const;

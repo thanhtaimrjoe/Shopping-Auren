@@ -1,6 +1,6 @@
-# Shopping-Auren
+# SHOPPING AUREN
 
-Responsive frontend prototype for the approved Shopping-Auren MVP screen and component specifications.
+Responsive frontend prototype for the approved SHOPPING AUREN MVP screen and component specifications.
 
 ## Run locally
 

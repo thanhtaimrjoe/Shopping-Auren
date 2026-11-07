@@ -6,8 +6,8 @@ const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "vietna
 const lora = Lora({ variable: "--font-lora", subsets: ["latin", "vietnamese"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Shopping-Auren",
-  description: "Weekly meal planning and shopping checklist demo.",
+  title: "SHOPPING AUREN",
+  description: "Lên kế hoạch bữa ăn và danh sách mua sắm mỗi tuần.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

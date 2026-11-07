@@ -18,9 +18,10 @@ import { SupabaseShoppingRepository } from '@/lib/supabase/shopping-repository';
 
 type Screen = 'home' | 'checklist' | 'library' | 'settings';
 type EntityKind = 'meal' | 'ingredient' | 'product';
-type Dialog = '' | 'meal-picker' | 'product-picker' | 'reset' | 'preview' | 'overwrite' | 'complete' | 'entity' | 'add-library' | 'view-history';
+type Dialog = '' | 'meal-picker' | 'product-picker' | 'reset' | 'preview' | 'overwrite' | 'complete' | 'entity' | 'add-library' | 'view-history' | 'delete-entity' | 'delete-checklist';
 type FormState = { id?: string; name: string; ingredientIds: string[]; category: Category };
 type Toast = { message: string; tone: 'success' | 'error' | 'info' };
+type MealPlacement = { day: Weekday; index: number };
 const navItems: { id: Screen; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Trang chủ', icon: Home },
   { id: 'checklist', label: 'Danh sách', icon: ClipboardList },
@@ -41,9 +42,12 @@ export default function HomePage() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [dialog, setDialog] = useState<Dialog>('');
   const [confirmSnapshotDelete, setConfirmSnapshotDelete] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ kind: EntityKind; id: string } | null>(null);
   const [targetDay, setTargetDay] = useState<Weekday>('Thứ Hai');
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'Tất cả'>('Tất cả');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<Category | 'Tất cả'>('Tất cả');
+  const [libraryIngredientFilter, setLibraryIngredientFilter] = useState('');
   const [draftProducts, setDraftProducts] = useState<string[]>([]);
   const [libraryQuery, setLibraryQuery] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
@@ -65,6 +69,8 @@ export default function HomePage() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category>(categories[0]);
+  const [draggingPlacement, setDraggingPlacement] = useState<MealPlacement | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<Weekday | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -174,8 +180,8 @@ export default function HomePage() {
   const progress = itemCount ? Math.round((checkedCount / itemCount) * 100) : 0;
   const visibleEntities = useMemo(() => {
     const source = selectedLibrary === 'meal' ? data.meals : selectedLibrary === 'ingredient' ? data.ingredients : data.products;
-    return source.filter((entity) => entity.name.toLocaleLowerCase('vi').includes(libraryQuery.toLocaleLowerCase('vi')));
-  }, [data, selectedLibrary, libraryQuery]);
+    return source.filter((entity) => entity.name.toLocaleLowerCase('vi').includes(libraryQuery.toLocaleLowerCase('vi')) && (selectedLibrary !== 'product' || libraryCategoryFilter === 'Tất cả' || (entity as Product).category === libraryCategoryFilter) && (selectedLibrary !== 'meal' || !libraryIngredientFilter || (entity as Meal).ingredientIds.includes(libraryIngredientFilter)));
+  }, [data, selectedLibrary, libraryQuery, libraryCategoryFilter, libraryIngredientFilter]);
 
   function updateData(next: ShoppingData) {
     setData(next);
@@ -184,6 +190,21 @@ export default function HomePage() {
       console.error('[supabase] save failed', raw);
       flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`, 'error');
     });
+  }
+  function moveMeal(source: MealPlacement, destination: Weekday) {
+    if (source.day === destination) return;
+    if (data.plan[destination].length >= 3) {
+      flash(`${destination} đã có tối đa 3 món ăn.`, 'info');
+      return;
+    }
+    const mealId = data.plan[source.day][source.index];
+    if (!mealId) return;
+    const plan = {
+      ...data.plan,
+      [source.day]: data.plan[source.day].filter((_, index) => index !== source.index),
+      [destination]: [...data.plan[destination], mealId],
+    };
+    updateData({ ...data, plan });
   }
   function updateActiveChecklist(next: ChecklistItem[] | null | ((items: ChecklistItem[] | null) => ChecklistItem[] | null)) {
     const value = typeof next === 'function' ? next(activeChecklist) : next;
@@ -331,6 +352,17 @@ export default function HomePage() {
       if (activeChecklist) updateActiveChecklist(activeChecklist.map((item) => item.sourceId === id ? { ...item, sourceId: undefined } : item));
     }
   }
+  function confirmDeleteEntity() {
+    if (!pendingDelete) return;
+    deleteEntity(pendingDelete.kind, pendingDelete.id);
+    setPendingDelete(null);
+    setDialog('');
+  }
+  function clearChecklist() {
+    updateActiveChecklist(null);
+    setDialog('');
+    flash('Checklist đã được xóa.', 'success');
+  }
   function attemptSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!authEmail.trim()) { setAuthError(''); return; }
@@ -364,17 +396,17 @@ export default function HomePage() {
     setAuthError('');
   }
 
-  if (!loaded) return <main className="loading-screen"><span className="brand-mark">a</span><span className="loading-word">auren</span></main>;
+  if (!loaded) return <main className="loading-screen"><BrandMark /><span className="loading-word">SHOPPING AUREN</span></main>;
   if (!signedIn) return <main className="auth-screen">
     <header className="auth-header">
-      <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
+      <div className="brand-lockup"><BrandMark /><span><b>SHOPPING AUREN</b><small>home, in good rhythm</small></span></div>
       <span className="auth-header-tag">Tài khoản Supabase</span>
     </header>
     <section className="auth-main">
       <div className="auth-hero">
-        <span className="auth-logo" aria-hidden="true">a</span>
+        <BrandMark className="auth-logo" />
         <span className="eyebrow">CHÀO MỪNG BẠN</span>
-        <h1 className="auth-title">{authMode === 'Đăng nhập' ? 'Đăng nhập vào auren' : 'Tạo tài khoản auren'}</h1>
+        <h1 className="auth-title">{authMode === 'Đăng nhập' ? 'Đăng nhập vào SHOPPING AUREN' : 'Tạo tài khoản SHOPPING AUREN'}</h1>
       </div>
       <form className="auth-card" onSubmit={attemptSignIn}>
         {authStep === 'email' ? <>
@@ -396,64 +428,70 @@ export default function HomePage() {
   return <div className="app-shell">
     <a className="skip-link" href="#main-content">Bỏ qua tới nội dung chính</a>
     <aside className="sidebar">
-      <div className="brand-lockup"><span className="brand-mark">a</span><span><b>auren</b><small>home, in good rhythm</small></span></div>
+      <div className="brand-lockup"><BrandMark /><span><b>SHOPPING AUREN</b><small>home, in good rhythm</small></span></div>
       <p className="sidebar-caption">KHÔNG GIAN CỦA BẠN</p>
       <nav className="side-nav" aria-label="Điều hướng chính">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={`nav-button ${screen === id ? 'active' : ''}`} onClick={() => setScreen(id)}><Icon size={19} strokeWidth={1.8} /><span>{label}</span>{id === 'checklist' && activeChecklist && <i className="nav-indicator" />}</button>)}</nav>
       <button className="sidebar-profile" onClick={() => setScreen('settings')}><span className="avatar">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b><small>Tài khoản Supabase</small></span><ChevronRight size={18} /></button>
     </aside>
 
-    <div className="mobile-top"><span className="brand-mark">a</span><b>auren</b></div>
+    <div className="mobile-top"><BrandMark /><b>SHOPPING AUREN</b></div>
     <main className="main-area" id="main-content" tabIndex={-1}>
       <header className="topbar"><div className="breadcrumb">Không gian của bạn <ChevronRight size={14} /> <b>{navItems.find((x) => x.id === screen)?.label}</b></div></header>
 
       {screen === 'home' && <section className="page-content">
-        <div className="page-heading"><div><p className="eyebrow">KẾ HOẠCH TUẦN CỦA BẠN</p><h1>Kế hoạch tuần</h1><p className="heading-description">Lên kế hoạch nhẹ nhàng cho những bữa ăn trong tuần.</p></div><div className="heading-actions"><button className="button secondary" onClick={() => setDialog('reset')}><RotateCcw size={15} /> Đặt lại mẫu</button><button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button></div></div>
         <div className="week-caption"><ShoppingBasket size={16} /><b>Tuần hiện tại</b><span>· 7 ngày</span></div>
-        <div className="day-grid">{weekdays.map((day) => <article className="day-card" key={day}><header><b>{day}</b></header><div className="meal-list">{!data.plan[day].length && <p className="meal-empty"><UtensilsCrossed size={15} /><span>Chưa có món ăn</span></p>}{data.plan[day].map((id, index) => {
+        <div className="day-grid">{weekdays.map((day) => <article className={`day-card ${dragOverDay === day ? 'drag-over' : ''}`} key={day} onDragOver={(event) => { event.preventDefault(); setDragOverDay(day); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverDay(null); }} onDrop={(event) => { event.preventDefault(); const source = draggingPlacement; setDragOverDay(null); setDraggingPlacement(null); if (source) moveMeal(source, day); }}><header><b>{day}</b></header><div className="meal-list">{!data.plan[day].length && <p className="meal-empty"><UtensilsCrossed size={15} /><span>Chưa có món ăn</span></p>}{data.plan[day].map((id, index) => {
           const meal = data.meals.find((entry) => entry.id === id);
-          return meal ? <div className="meal-chip" key={`${id}-${index}`}><span className="meal-dot" />{meal.name}<button aria-label={`Gỡ ${meal.name}`} onClick={() => { updateData({ ...data, plan: { ...data.plan, [day]: data.plan[day].filter((_, i) => i !== index) } }); }}><X size={14} /></button></div> : null;
+          return meal ? <div className={`meal-chip ${draggingPlacement?.day === day && draggingPlacement.index === index ? 'dragging' : ''}`} key={`${id}-${index}`} draggable onDragStart={(event) => { setDraggingPlacement({ day, index }); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', meal.name); }} onDragEnd={() => { setDraggingPlacement(null); setDragOverDay(null); }} title="Nhấn giữ rồi kéo sang ngày khác"><span className="meal-chip-copy"><b>{meal.name}</b><small>{meal.ingredientIds.map((ingredientId) => data.ingredients.find((ingredient) => ingredient.id === ingredientId)?.name).filter((name): name is string => Boolean(name)).join(' · ') || 'Chưa có nguyên liệu'}</small></span><button aria-label={`Gỡ ${meal.name}`} draggable={false} onClick={() => { updateData({ ...data, plan: { ...data.plan, [day]: data.plan[day].filter((_, i) => i !== index) } }); }}><X size={14} /></button></div> : null;
         })}</div><button className="add-meal" disabled={data.plan[day].length >= 3} onClick={() => openMealPicker(day)}><Plus size={16} /><span>Thêm món ăn</span><small>{data.plan[day].length}/3</small></button></article>)}</div>
         <section className="products-section"><div className="section-heading"><div><h2>Sản phẩm</h2><p>Sản phẩm cần mua trong tuần này.</p></div><button className="button secondary" onClick={openProducts}><Plus size={16} /> Chọn sản phẩm</button></div><div className="product-panel"><div className="product-panel-heading"><b>{selectedProductIds().length} sản phẩm</b><span>· được chọn cho tuần này</span></div><div className="product-chips">{selectedProductIds().map((id) => data.products.find((p) => p.id === id)).filter((p): p is Product => Boolean(p)).map((product) => <div className="product-chip" key={product.id}><ShoppingBasket size={15} /><span>{product.name}</span><button aria-label={`Bỏ ${product.name}`} onClick={() => changeProductSelection(selectedProductIds().filter((id) => id !== product.id))}><X size={14} /></button></div>)}{!selectedProductIds().length && <p className="empty-inline">Chưa có sản phẩm nào được chọn.</p>}</div></div></section>
+        <div className="bottom-actions"><button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button><button className="button secondary" onClick={() => setDialog('reset')}><RotateCcw size={15} /> Đặt lại mẫu</button></div>
       </section>}
 
       {screen === 'checklist' && <section className="page-content checklist-page">
-        <div className="page-heading"><div><p className="eyebrow">DANH SÁCH MUA SẮM</p><h1>Danh sách mua sắm</h1><p className="heading-description">{activeChecklist ? 'Các mục trong phiên mua sắm hiện tại.' : 'Xem trước và tạo danh sách từ kế hoạch tuần.'}</p></div><div className="heading-actions">{activeChecklist ? <button className="button primary" onClick={() => { setDateFrom(''); setDateTo(''); setDateError(''); setDialog('complete'); }}>Hoàn tất mua sắm <Check size={16} /></button> : <button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button>}</div></div>
         {activeChecklist ? <><div className="progress-card"><div className="progress-title"><span className="progress-icon"><Check size={17} /></span><span><b>Đang tiến hành</b><small>{checkedCount} / {itemCount} mục đã hoàn tất</small></span></div><div className="progress-track"><span style={{ transform: `scaleX(${progress / 100})` }} /></div><b>{progress}%</b></div>
           <div className="checklist-layout"><div className="checklist-list"><div className="list-toolbar"><b>Tất cả mục <span>{itemCount}</span></b></div>
             {renderChecklistGroups(activeChecklist, toggleOccurrence, removeOccurrence, setEditingItemId, setEditingName, setEditingCategory, editingItemId, editingName, editingCategory, updateActiveChecklist)}
             <button className="add-from-library" onClick={() => setDialog('add-library')}><Plus size={16} /> Thêm nguyên liệu hoặc sản phẩm từ thư viện</button>
             <form className="other-form" onSubmit={addOther}><Plus size={16} /><input value={otherName} onChange={(e) => setOtherName(e.target.value)} aria-label="Tên mục phát sinh" placeholder="Thêm mục phát sinh" /><button type="submit">Thêm</button></form>
           </div></div>
-        </> : <div className="empty-card"><ClipboardList size={28} /><h2>Chưa có danh sách đang hoạt động</h2><p>Xem trước nội dung từ kế hoạch tuần rồi xác nhận để tạo phiên mua sắm.</p><button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={15} /></button></div>}
+        </> : <div className="empty-card"><ClipboardList size={28} /><h2>Chưa có danh sách đang hoạt động</h2><p>Xem trước nội dung từ kế hoạch tuần rồi xác nhận để tạo phiên mua sắm.</p></div>}
+        <div className="bottom-actions">{activeChecklist ? <><button className="button primary" onClick={() => { setDateFrom(''); setDateTo(''); setDateError(''); setDialog('complete'); }}>Hoàn tất mua sắm <Check size={16} /></button><button className="button danger-quiet" onClick={() => setDialog('delete-checklist')}><Trash2 size={15} /> Xóa Checklist</button></> : <button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button>}</div>
       </section>}
 
       {screen === 'library' && <section className="page-content library-page">
-        <div className="page-heading"><div><p className="eyebrow">NGUỒN DỮ LIỆU CỦA BẠN</p><h1>Thư viện</h1><p className="heading-description">Quản lý nguyên liệu, món ăn và sản phẩm.</p></div><button className="button primary" onClick={() => openEntity(selectedLibrary)}><Plus size={16} /> Thêm {selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}</button></div>
         <div className="library-switch" role="tablist" aria-label="Loại thư viện">{([['meal', 'Món ăn'], ['ingredient', 'Nguyên liệu'], ['product', 'Sản phẩm']] as [EntityKind, string][]).map(([kind, label]) => <button key={kind} role="tab" aria-selected={selectedLibrary === kind} className={selectedLibrary === kind ? 'selected' : ''} onClick={() => { setSelectedLibrary(kind); setLibraryQuery(''); }}>{label}<span>{kind === 'meal' ? data.meals.length : kind === 'ingredient' ? data.ingredients.length : data.products.length}</span></button>)}</div>
-        <div className="library-toolbar"><label className="search-field"><Search size={16} /><input value={libraryQuery} onChange={(e) => setLibraryQuery(e.target.value)} placeholder={`Tìm ${selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}`} /></label></div>
-        {visibleEntities.length ? <div className="entity-list">{visibleEntities.map((entity) => <article className="entity-row" key={entity.id}><div className="entity-mark">{selectedLibrary === 'meal' ? <BookOpen size={18} /> : selectedLibrary === 'ingredient' ? <Circle size={17} /> : <ShoppingBasket size={17} />}</div><div className="entity-copy"><b>{entity.name}</b><small>{selectedLibrary === 'meal' ? `${(entity as Meal).ingredientIds.length} nguyên liệu` : selectedLibrary === 'product' ? (entity as Product).category : (data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).length ? `Được dùng trong ${data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).map((meal) => meal.name).join(', ')}` : 'Nguyên liệu')}</small></div><div className="entity-actions"><button aria-label={`Sửa ${entity.name}`} onClick={() => openEntity(selectedLibrary, entity as Ingredient | Meal | Product)}><Pencil size={16} /></button><button aria-label={`Xóa ${entity.name}`} onClick={() => deleteEntity(selectedLibrary, entity.id)}><Trash2 size={16} /></button></div></article>)}</div> : libraryQuery ? <div className="entity-list"><div className="empty-list">Không có kết quả phù hợp.</div></div> : <div className="empty-card"><Library size={28} /><button className="button primary" onClick={() => openEntity(selectedLibrary)}><Plus size={16} /> Thêm {selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}</button></div>}
+        <div className="library-toolbar"><label className="search-field"><Search size={16} /><input value={libraryQuery} onChange={(e) => setLibraryQuery(e.target.value)} placeholder={`Tìm ${selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}`} /></label>{selectedLibrary === 'meal' && <label className="select-field library-select-filter"><span>Nguyên liệu</span><select value={libraryIngredientFilter} onChange={(e) => setLibraryIngredientFilter(e.target.value)}><option value="">Tất cả</option>{data.ingredients.map((ingredient) => <option key={ingredient.id} value={ingredient.id}>{ingredient.name}</option>)}</select><ChevronDown size={15} /></label>}{selectedLibrary === 'product' && <label className="select-field library-select-filter"><span>Danh mục</span><select value={libraryCategoryFilter} onChange={(e) => setLibraryCategoryFilter(e.target.value as Category | 'Tất cả')}><option>Tất cả</option>{categories.map((category) => <option key={category}>{category}</option>)}</select><ChevronDown size={15} /></label>}</div>
+        {visibleEntities.length ? <div className="entity-list">{visibleEntities.map((entity) => <article className="entity-row" key={entity.id}><div className="entity-mark">{selectedLibrary === 'meal' ? <BookOpen size={18} /> : selectedLibrary === 'ingredient' ? <Circle size={17} /> : <ShoppingBasket size={17} />}</div><div className="entity-copy"><b>{entity.name}</b><small>{selectedLibrary === 'meal' ? `${(entity as Meal).ingredientIds.length} nguyên liệu` : selectedLibrary === 'product' ? (entity as Product).category : (data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).length ? `Được dùng trong ${data.meals.filter((meal) => meal.ingredientIds.includes(entity.id)).map((meal) => meal.name).join(', ')}` : 'Nguyên liệu')}</small></div><div className="entity-actions"><button aria-label={`Sửa ${entity.name}`} onClick={() => openEntity(selectedLibrary, entity as Ingredient | Meal | Product)}><Pencil size={16} /></button><button aria-label={`Xóa ${entity.name}`} onClick={() => { setPendingDelete({ kind: selectedLibrary, id: entity.id }); setDialog('delete-entity'); }}><Trash2 size={16} /></button></div></article>)}</div> : libraryQuery || (selectedLibrary === 'product' && libraryCategoryFilter !== 'Tất cả') || (selectedLibrary === 'meal' && libraryIngredientFilter) ? <div className="entity-list"><div className="empty-list">Không có kết quả phù hợp.</div></div> : <div className="empty-card"><Library size={28} /><button className="button primary" onClick={() => openEntity(selectedLibrary)}><Plus size={16} /> Thêm {selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}</button></div>}
+        <button className="library-add-fab" aria-label={`Thêm ${selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}`} title={`Thêm ${selectedLibrary === 'meal' ? 'món ăn' : selectedLibrary === 'ingredient' ? 'nguyên liệu' : 'sản phẩm'}`} onClick={() => openEntity(selectedLibrary)}><Plus size={23} /></button>
       </section>}
 
-      {screen === 'settings' && <section className="page-content settings-page"><div className="page-heading"><div><p className="eyebrow">TÀI KHOẢN</p><h1>Cài đặt</h1><p className="heading-description">Quản lý phiên đăng nhập và xem Lịch sử.</p></div></div>
+      {screen === 'settings' && <section className="page-content settings-page">
         <section className="settings-card"><div className="card-title"><span className="settings-symbol"><Settings size={18} /></span><div><b>Tài khoản</b><small>Đăng nhập Supabase</small></div></div><div className="account-row"><span className="avatar large">{(authEmail[0] ?? 'A').toUpperCase()}</span><span><b>{authEmail || 'Tài khoản'}</b></span></div><p className="account-note"><CheckCircle2 size={15} /><span><b>Dữ liệu đồng bộ</b> · Lưu trong Supabase, riêng tư theo tài khoản đăng nhập.</span></p><button className="settings-action" onClick={() => { void getSupabaseBrowserClient().auth.signOut(); setAuthMode('Đăng nhập'); setAuthPassword(''); }}><LogOut size={17} /><span>Đăng xuất</span><ChevronRight size={17} /></button></section>
         <section className="settings-card history-section"><div className="card-title"><span className="settings-symbol"><Clock3 size={18} /></span><div><b>Lịch sử</b><small>Bản ghi mua sắm đã hoàn tất</small></div><span className="history-count">{snapshots.length}</span></div>{snapshots.length ? <div className="history-list">{snapshots.map((entry) => <article className="history-row" key={entry.id}><Archive size={18} /><div><b>{formatDate(entry.from)} – {formatDate(entry.to)}</b><small>{entry.items.length} mục · {formatTimestamp(entry.createdAt)}</small></div><button className="text-button" onClick={() => { setSnapshot(entry); setConfirmSnapshotDelete(false); setDialog('view-history'); }}>Xem <ArrowRight size={14} /></button></article>)}</div> : <div className="history-empty"><Clock3 size={23} /><b>Chưa có lịch sử</b><p>Bản ghi sẽ xuất hiện tại đây sau khi bạn hoàn tất mua sắm.</p></div>}</section>
       </section>}
     </main>
     <nav className="mobile-nav" aria-label="Điều hướng chính">{navItems.map(({ id, label, icon: Icon }) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id)}><Icon size={20} strokeWidth={1.8} /><span>{label}</span></button>)}</nav>
 
-    {dialog && <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(''); }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabIndex={-1} ref={dialogRef}><header><h2 id="dialog-title">{dialogTitle(dialog, targetDay, formKind, snapshot)}</h2><button className="icon-button" aria-label="Đóng" onClick={() => setDialog('')}><X size={18} /></button></header>
+    {dialog && <div className={`dialog-backdrop ${dialog === 'delete-entity' || dialog === 'delete-checklist' ? 'dialog-backdrop-centered' : ''}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(''); }}><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" tabIndex={-1} ref={dialogRef}><header><h2 id="dialog-title">{dialogTitle(dialog, targetDay, formKind, snapshot)}</h2><button className="icon-button" aria-label="Đóng" onClick={() => setDialog('')}><X size={18} /></button></header>
       {dialog === 'meal-picker' && <div className="dialog-content"><p className="dialog-note">Chọn món ăn cho {targetDay} · tối đa 3 món.</p><label className="search-field"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm món ăn" /></label><div className="picker-list">{data.meals.filter((meal) => meal.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map((meal) => <button className="picker-row" key={meal.id} onClick={() => addMeal(meal)} disabled={data.plan[targetDay].includes(meal.id) || data.plan[targetDay].length >= 3}><span><b>{meal.name}</b><small>{[meal.ingredientIds.map((id) => data.ingredients.find((ingredient) => ingredient.id === id)?.name).filter(Boolean).join(', '), data.plan[targetDay].includes(meal.id) ? 'Đã thêm' : ''].filter(Boolean).join(' · ')}</small></span>{meal.ingredientIds.length ? <Plus size={17} /> : <span className="disabled-label">Chưa có nguyên liệu</span>}</button>)}</div><footer><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer></div>}
       {dialog === 'product-picker' && <div className="dialog-content"><p className="dialog-note">Tìm và chọn nhiều sản phẩm từ thư viện cho kế hoạch tuần.</p><label className="search-field"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm sản phẩm" /></label><label className="select-field"><span>Danh mục</span><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as Category | 'Tất cả')}><option>Tất cả</option>{categories.map((c) => <option key={c}>{c}</option>)}</select><ChevronDown size={15} /></label><div className="picker-list">{data.products.filter((p) => p.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')) && (categoryFilter === 'Tất cả' || p.category === categoryFilter)).map((product) => { const already = selectedProductIds().includes(product.id); const checked = draftProducts.includes(product.id); return <button key={product.id} className="picker-row" disabled={already} onClick={() => setDraftProducts((old) => checked ? old.filter((id) => id !== product.id) : [...old, product.id])}><span><b>{product.name}</b><small>{product.category}</small></span>{already ? <span className="added-label">Đã thêm</span> : <span className={`select-check ${checked ? 'checked' : ''}`}>{checked && <Check size={14} />}</span>}</button>; })}{!data.products.some((p) => p.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi')) && (categoryFilter === 'Tất cả' || p.category === categoryFilter)) && <p className="empty-list">Không có kết quả phù hợp.</p>}</div><footer className="dialog-footer"><span>{draftProducts.length} đã chọn</span><button className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" onClick={saveProductPicker}>Lưu lựa chọn</button></footer></div>}
+      {dialog === 'delete-entity' && <div className="dialog-content"><p className="delete-confirm-copy">Bạn có chắc muốn xóa “{pendingDelete ? (pendingDelete.kind === 'meal' ? data.meals.find((item) => item.id === pendingDelete.id)?.name : pendingDelete.kind === 'ingredient' ? data.ingredients.find((item) => item.id === pendingDelete.id)?.name : data.products.find((item) => item.id === pendingDelete.id)?.name) : ''}” khỏi thư viện?</p><p>Thao tác này không thể hoàn tác.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => { setPendingDelete(null); setDialog(''); }}>Hủy</button><button className="button danger-quiet" onClick={confirmDeleteEntity}>Xóa</button></footer></div>}
+      {dialog === 'delete-checklist' && <div className="dialog-content"><p className="delete-confirm-copy">Xóa checklist đang hoạt động?</p><p>Tất cả mục và trạng thái đã đánh dấu sẽ bị xóa.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button danger-quiet" onClick={clearChecklist}>Xóa Checklist</button></footer></div>}
       {dialog === 'reset' && <div className="dialog-content"><p>Đặt lại mẫu sẽ xóa các món ăn và sản phẩm đã chọn trong kế hoạch tuần. Danh sách đang hoạt động vẫn được giữ nguyên.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Không</button><button className="button primary" onClick={resetPlan}>Có</button></footer></div>}
-      {dialog === 'preview' && <div className="dialog-content"><p className="dialog-note">Xem trước danh sách được tạo từ kế hoạch tuần hiện tại.</p><div className="preview-list">{pendingChecklist.map((item) => <div key={item.id}><Circle size={15} /><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span></div>)}</div><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" onClick={() => activeChecklist ? setDialog('overwrite') : confirmChecklist()}>Tạo danh sách</button></footer></div>}
+      {dialog === 'preview' && <div className="dialog-content"><p className="dialog-note">Xem trước danh sách được tạo từ kế hoạch tuần hiện tại.</p><div className="preview-list">{groupPreviewItems(pendingChecklist).map((group, index) => <section className="preview-group" key={`${group.title}-${index}`}><header><span className="placement-dot" /><b>{group.title}</b></header>{group.entries.map((item) => <div className="preview-row" key={item.id}><Circle size={15} /><span>{item.name}</span></div>)}</section>)}</div><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" onClick={() => activeChecklist ? setDialog('overwrite') : confirmChecklist()}>Tạo danh sách</button></footer></div>}
       {dialog === 'add-library' && <div className="dialog-content"><p className="dialog-note">Mỗi lựa chọn được thêm thành một mục riêng trong danh sách.</p><label className="search-field"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm nguyên liệu hoặc sản phẩm" /></label><div className="picker-list">{[...data.ingredients.map((x) => ({ ...x, kind: 'ingredient' as const })), ...data.products.map((x) => ({ ...x, kind: 'product' as const }))].filter((x) => x.name.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi'))).map((item) => <button className="picker-row" key={`${item.kind}-${item.id}`} onClick={() => addFromLibrary(item.kind, item.id)}><span><b>{item.name}</b><small>{item.kind === 'ingredient' ? 'Nguyên liệu' : item.category}</small></span><Plus size={16} /></button>)}</div><footer><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer></div>}
       {dialog === 'overwrite' && <div className="dialog-content"><p>Danh sách đang hoạt động sẽ được thay bằng danh sách mới từ kế hoạch tuần.</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setDialog('')}>Không</button><button className="button primary" onClick={confirmChecklist}>Có</button></footer></div>}
       {dialog === 'complete' && <form className="dialog-content" onSubmit={(e) => { e.preventDefault(); completeShopping(); }}><p className="dialog-note">Lưu bản ghi chỉ đọc vào Lịch sử. Có thể hoàn tất dù còn mục chưa được đánh dấu.</p><label className="form-field">Từ ngày<input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDateError(''); }} required /></label><label className="form-field">Đến ngày<input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDateError(''); }} required /></label>{(dateError || (dateFrom && dateTo && dateFrom > dateTo)) && <p className="field-error">{dateError || 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Hoàn tất</button></footer></form>}
-      {dialog === 'entity' && <form className="dialog-content" onSubmit={saveEntity}><label className="form-field">Tên<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus /></label>{formKind === 'meal' && <><label className="search-field"><Search size={16} /><input value={ingredientQuery} onChange={(e) => setIngredientQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} placeholder="Tìm nguyên liệu" /></label><fieldset className="ingredient-select"><legend>Nguyên liệu</legend>{data.ingredients.filter((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))).map((ingredient) => <label key={ingredient.id}><input type="checkbox" checked={form.ingredientIds.includes(ingredient.id)} onChange={(e) => setForm({ ...form, ingredientIds: e.target.checked ? [...form.ingredientIds, ingredient.id] : form.ingredientIds.filter((id) => id !== ingredient.id) })} />{ingredient.name}</label>)}{!data.ingredients.some((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))) && <p className="empty-list">Không có kết quả phù hợp.</p>}</fieldset></>}{formKind === 'product' && <label className="form-field">Danh mục<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>}{formError && <p className="field-error">{formError}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Lưu</button></footer></form>}
+      {dialog === 'entity' && <form className="dialog-content" onSubmit={saveEntity}><label className="form-field">Tên<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus /></label>{formKind === 'meal' && <><label className="search-field"><Search size={16} /><input value={ingredientQuery} onChange={(e) => setIngredientQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} placeholder="Tìm nguyên liệu" /></label><fieldset className="ingredient-select"><legend>Nguyên liệu</legend>{data.ingredients.filter((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))).sort((a, b) => Number(form.ingredientIds.includes(b.id)) - Number(form.ingredientIds.includes(a.id))).map((ingredient) => <label key={ingredient.id}><input type="checkbox" checked={form.ingredientIds.includes(ingredient.id)} onChange={(e) => setForm({ ...form, ingredientIds: e.target.checked ? [...form.ingredientIds, ingredient.id] : form.ingredientIds.filter((id) => id !== ingredient.id) })} />{ingredient.name}</label>)}{!data.ingredients.some((ingredient) => ingredient.name.toLocaleLowerCase('vi').includes(ingredientQuery.toLocaleLowerCase('vi'))) && <p className="empty-list">Không có kết quả phù hợp.</p>}</fieldset></>}{formKind === 'product' && <label className="form-field">Danh mục<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></label>}{formError && <p className="field-error">{formError}</p>}<footer className="dialog-footer"><button type="button" className="button secondary" onClick={() => setDialog('')}>Hủy</button><button className="button primary" type="submit">Lưu</button></footer></form>}
       {dialog === 'view-history' && snapshot && <div className="dialog-content"><div className="history-meta"><b>Từ ngày</b><span>{formatDate(snapshot.from)}</span><b>Đến ngày</b><span>{formatDate(snapshot.to)}</span><b>Thời điểm tạo</b><span>{formatTimestamp(snapshot.createdAt)}</span></div><div className="snapshot-list">{snapshot.items.map((item) => <div key={item.id}><span className={`snapshot-state ${item.checked ? 'checked' : ''}`}>{item.checked ? <Check size={13} /> : <X size={13} />}</span><span>{item.mealName ? `${item.mealName} · ` : ''}{item.name}</span>{item.category && <small>{item.category}</small>}</div>)}</div>{confirmSnapshotDelete ? <><p className="dialog-note delete-confirm-copy">Xóa bản ghi này khỏi Lịch sử?</p><footer className="dialog-footer"><button className="button secondary" onClick={() => setConfirmSnapshotDelete(false)}>Không</button><button className="button danger-quiet" onClick={() => { void shoppingRepository.deleteHistory(snapshot.id).then(() => { setSnapshots((entries) => entries.filter((entry) => entry.id !== snapshot.id)); setConfirmSnapshotDelete(false); setDialog(''); }).catch((error: unknown) => flash(error instanceof Error ? error.message : 'Không xóa được bản ghi.', 'error')); }}>Có</button></footer></> : <footer className="dialog-footer"><button className="button danger-quiet" onClick={() => setConfirmSnapshotDelete(true)}>Xóa bản ghi</button><button className="button secondary" onClick={() => setDialog('')}>Đóng</button></footer>}</div>}
     </section></div>}
     {toast && <div className={`toast ${toast.tone}`} role={toast.tone === 'error' ? 'alert' : 'status'}>{toast.tone === 'error' ? <AlertCircle size={17} /> : toast.tone === 'success' ? <CheckCircle2 size={17} /> : <Info size={17} />}{toast.message}</div>}
   </div>;
+}
+
+function BrandMark({ className = '' }: { className?: string }) {
+  return <span className={`brand-mark ${className}`} aria-hidden="true"><svg viewBox="0 0 512 512" focusable="false"><rect width="512" height="512" rx="144" fill="#405140"/><path d="M124 164h264l28 230c4 34-19 58-53 58H149c-34 0-57-24-53-58l28-230Z" fill="#F8F7F1"/><path d="M183 177v-18c0-40 32-73 73-73s73 33 73 73v18" fill="none" stroke="#F8F7F1" strokeLinecap="round" strokeWidth="25"/></svg></span>;
 }
 
 function renderChecklistGroups(
@@ -474,10 +512,23 @@ function renderChecklistGroups(
   return <div className="checklist-groups">{groups.map((group, groupIndex) => <section className="occurrence-group" key={`${group.title}-${groupIndex}`}><header><span className="placement-dot" /><b>{group.title}</b>{group.entries.every((x) => x.checked) && <span className="group-done">Hoàn tất</span>}</header>{group.entries.map((item) => <article className={`check-row ${item.checked ? 'checked' : ''}`} key={item.id}>{editingId === item.id ? <><button type="button" className={`check-control ${item.checked ? 'checked' : ''}`} onClick={() => toggle(item.id)} aria-label={item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'}>{item.checked && <Check size={14} />}</button><input className="inline-edit" value={editingName} onChange={(e) => setEditingName(e.target.value)} /><select value={editingCategory} onChange={(e) => setEditingCategory(e.target.value as Category)}><option value={editingCategory}>{editingCategory}</option>{categories.filter((x) => x !== editingCategory).map((x) => <option key={x}>{x}</option>)}</select><button type="button" className="row-action" aria-label="Lưu" onClick={() => { setItems((old) => old?.map((x) => x.id === item.id ? { ...x, name: editingName.trim() || x.name, category: item.kind === 'product' ? editingCategory : x.category } : x) ?? null); setEditingId(null); }}><Check size={16} /></button></> : <><button type="button" className="check-row-toggle" onClick={() => toggle(item.id)} aria-pressed={item.checked} aria-label={`${item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'} ${item.name}`}><span aria-hidden="true" className={`check-control ${item.checked ? 'checked' : ''}`}>{item.checked && <Check size={14} />}</span><span className="check-name">{item.name}</span>{item.category && <small className="category-label">{item.category}</small>}</button><button type="button" className="row-action" aria-label={`Sửa ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); setEditingCategory(item.category ?? categories[0]); }}><Pencil size={15} /></button><button type="button" className="row-action remove-action" aria-label={`Xóa ${item.name}`} onClick={() => remove(item.id)}><X size={16} /></button></>}</article>)}</section>)}</div>;
 }
 
+function groupPreviewItems(items: ChecklistItem[]) {
+  const placements = [...new Set(items.filter((item) => item.kind === 'ingredient' && item.placementId).map((item) => item.placementId!))];
+  const groups = placements.map((id) => ({
+    title: items.find((item) => item.placementId === id)?.mealName ?? 'Món ăn',
+    entries: items.filter((item) => item.placementId === id),
+  }));
+  const products = items.filter((item) => item.kind === 'product');
+  if (products.length) groups.push({ title: 'Sản phẩm', entries: products });
+  return groups;
+}
+
 function dialogTitle(dialog: Dialog, day: Weekday, kind: EntityKind, snapshot: Snapshot | null) {
   if (dialog === 'meal-picker') return `Thêm món ăn · ${day}`;
   if (dialog === 'product-picker') return 'Chọn sản phẩm';
   if (dialog === 'reset') return 'Đặt lại kế hoạch tuần?';
+  if (dialog === 'delete-entity') return 'Xác nhận xóa';
+  if (dialog === 'delete-checklist') return 'Xóa checklist?';
   if (dialog === 'preview') return 'Danh sách mua sắm';
   if (dialog === 'overwrite') return 'Tạo danh sách mới?';
   if (dialog === 'complete') return 'Hoàn tất mua sắm';
