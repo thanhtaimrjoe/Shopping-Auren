@@ -19,8 +19,8 @@ Bằng chứng chi tiết: `_legacy/audit-2026-11-12.md` (audit 2026-11-12, read
 
 | ID | Mức | Lệch gì | Spec | Quyết định | Theo dõi |
 |---|---|---|---|---|---|
-| AUR-01 | P0 | Migration trong repo dùng `meal.id` → RPC `save_shopping_data` lỗi với mọi payload; prod đã được vá bằng migration không có trong repo | không đổi hành vi | fix | #1 |
-| AUR-15 | P1 | Repo thiếu 2 migration đang chạy trên prod (`20261031011716`, `20261101082901`), 1 migration lệch version (`20261031121500` vs `20261101040902`) | — | fix | #1 |
+| AUR-01 | P0 | Migration trong repo dùng `meal.id` → RPC `save_shopping_data` lỗi với mọi payload; prod đã được vá bằng migration không có trong repo | không đổi hành vi | **fixed** (PR #13) | #1 |
+| AUR-15 | P1 | Repo thiếu 2 migration đang chạy trên prod (`20261031011716`, `20261101082901`), 1 migration lệch version (`20261031121500` vs `20261101040902`) | — | **fixed** (PR #13) | #1 |
 | AUR-02 | P1 | 7 danh mục (Thực phẩm, Đồ uống) vs spec cũ 5 danh mục, không có Q/DEC | BR-10, `02` §4 | accept | DEC-040 |
 | AUR-03 | P1 | Hoàn tất mua sắm = 2 request rời, không toàn vẹn | FR-08 | fix | #2 |
 | AUR-04 | P1 | Kéo–thả món sang ngày đã có nó → phá BR-14 và làm hỏng cả lần lưu | BR-14, FR-05 | fix | #3 |
@@ -49,6 +49,7 @@ Các task dưới đây được Notion đánh `Done` nhưng DoD chưa đạt, h
 
 ## Đã đóng trong chính đợt refactor này
 
+- **AUR-01 / AUR-15** (PR #13): repo nay có đủ 8 migration đúng version như prod. File `20261030163455` **giữ nguyên lịch sử** (vẫn chứa `meal.id`, đúng như đã apply); bản vá nằm ở `20261031011716_fix_save_shopping_data_meal_id_reference.sql` + `20261101040902_harden_...` (file harden đổi tên từ `20261031121500` — version chưa từng apply). Thêm `20261101082901_restrict_rls_auto_enable_execution.sql` có guard để `db reset` trên máy không có `rls_auto_enable()` không fail. Kiểm chứng: harness PGlite, **19/19 check PASS** — 8 migration apply sạch, `save_shopping_data` chạy được với payload rỗng và payload có meal, guard chặn payload lỗi, BR-14/BR-04.2/BR-04.3/BR-01 giữ đúng.
 - **AUR-06**: `docs/*` → `spec/_legacy/repo-docs/`; `docs/RELEASE_READINESS_REPORT.md` và `SOURCE_OF_TRUTH_SYNC.md` không còn ở vị trí quy phạm.
 - **Trùng ID TASK-025**: backlog chuyển sang Issues, ID mới do GitHub cấp.
 - **3 nguồn sự thật**: Notion đóng băng (DEC-044); DB là nguồn cho `04` (P3).
