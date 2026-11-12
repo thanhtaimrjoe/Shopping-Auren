@@ -14,7 +14,11 @@ const saveRules: [RegExp, string][] = [
   [/foreign key constraint/i, 'Dữ liệu liên kết không còn tồn tại.'],
   [/row-level security policy|permission denied/i, 'Tài khoản này không được phép thực hiện thao tác đó.'],
   [/invalid shopping data/i, 'Dữ liệu kế hoạch không hợp lệ.'],
-  [/checklist items must be an array or null/i, 'Danh sách không hợp lệ.'],
+  [/checklist items must be an array/i, 'Danh sách không hợp lệ.'],
+  [/checklist items must not be empty/i, 'Danh sách trống, không có gì để lưu.'],
+  [/no active checklist/i, 'Danh sách này đã kết thúc. Hãy tạo danh sách mới từ kế hoạch tuần.'],
+  [/date range is required/i, 'Vui lòng nhập Từ ngày và Đến ngày.'],
+  [/date_from must be <= date_to/i, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'],
 ];
 
 function match(rules: [RegExp, string][], message: string, fallback: string): string {
