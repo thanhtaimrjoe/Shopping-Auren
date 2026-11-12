@@ -184,10 +184,13 @@ export default function HomePage() {
   }, [data, selectedLibrary, libraryQuery, libraryCategoryFilter, libraryIngredientFilter]);
 
   function updateData(next: ShoppingData) {
+    const previous = data;
     setData(next);
     void shoppingRepository.save(next).catch((error: unknown) => {
       const raw = error instanceof Error ? error.message : '';
       console.error('[supabase] save failed', raw);
+      // roll back only if no newer edit has replaced this optimistic state
+      setData((current) => (current === next ? previous : current));
       flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`, 'error');
     });
   }
@@ -217,11 +220,13 @@ export default function HomePage() {
     updateData({ ...data, plan });
   }
   function updateActiveChecklist(next: ChecklistItem[] | null | ((items: ChecklistItem[] | null) => ChecklistItem[] | null)) {
+    const previous = activeChecklist;
     const value = typeof next === 'function' ? next(activeChecklist) : next;
     setActiveChecklist(value);
     void shoppingRepository.saveActiveChecklist(value).catch((error: unknown) => {
       const raw = error instanceof Error ? error.message : '';
       console.error('[supabase] save checklist failed', raw);
+      setActiveChecklist((current) => (current === value ? previous : current));
       flash(`Không lưu được danh sách: ${saveErrorMessage(raw)}`, 'error');
     });
   }
@@ -305,7 +310,9 @@ export default function HomePage() {
   }
   function addOther(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const name = otherName.trim(); if (!name || !activeChecklist) return;
+    const name = otherName.trim();
+    if (!name) { flash('Tên mục không được để trống.', 'error'); return; }
+    if (!activeChecklist) return;
     updateActiveChecklist((items) => [...(items ?? []), { id: crypto.randomUUID(), name, kind: 'other', checked: false }]);
     setOtherName('');
   }
@@ -332,10 +339,10 @@ export default function HomePage() {
   function saveEntity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = form.name.trim().replace(/\s+/g, ' ');
-    if (!name) { setFormError(''); return; }
+    if (!name) { setFormError('Tên không được để trống.'); return; }
     const otherEntities = formKind === 'meal' ? data.meals : formKind === 'ingredient' ? data.ingredients : data.products;
     if (otherEntities.some((entry) => entry.id !== form.id && normalizeName(entry.name) === normalizeName(name))) {
-      setFormError(''); flash('Tên đã có trong thư viện.', 'error'); return;
+      setFormError('Tên này đã có trong thư viện.'); return;
     }
     const next: ShoppingData = { ...data };
     if (formKind === 'ingredient') {
@@ -381,13 +388,13 @@ export default function HomePage() {
   }
   function attemptSignIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!authEmail.trim()) { setAuthError(''); return; }
+    if (!authEmail.trim()) { setAuthError('Vui lòng nhập email.'); return; }
     if (authStep === 'email') {
       setAuthError('');
       setAuthStep('password');
       return;
     }
-    if (!authPassword) { setAuthError(''); return; }
+    if (!authPassword) { setAuthError('Vui lòng nhập mật khẩu.'); return; }
     const supabase = getSupabaseBrowserClient();
     const result = authMode === 'Đăng nhập'
       ? supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
@@ -525,7 +532,7 @@ function renderChecklistGroups(
   if (others.length) groups.push({ title: 'Khác (phát sinh)', entries: others });
   const ungrouped = items.filter((x) => x.kind === 'ingredient' && !x.placementId);
   if (ungrouped.length) groups.push({ title: 'Nguyên liệu', entries: ungrouped });
-  return <div className="checklist-groups">{groups.map((group, groupIndex) => <section className="occurrence-group" key={`${group.title}-${groupIndex}`}><header><span className="placement-dot" /><b>{group.title}</b>{group.entries.every((x) => x.checked) && <span className="group-done">Hoàn tất</span>}</header>{group.entries.map((item) => <article className={`check-row ${item.checked ? 'checked' : ''}`} key={item.id}>{editingId === item.id ? <><button type="button" className={`check-control ${item.checked ? 'checked' : ''}`} onClick={() => toggle(item.id)} aria-label={item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'}>{item.checked && <Check size={14} />}</button><input className="inline-edit" value={editingName} onChange={(e) => setEditingName(e.target.value)} /><select value={editingCategory} onChange={(e) => setEditingCategory(e.target.value as Category)}><option value={editingCategory}>{editingCategory}</option>{categories.filter((x) => x !== editingCategory).map((x) => <option key={x}>{x}</option>)}</select><button type="button" className="row-action" aria-label="Lưu" onClick={() => { setItems((old) => old?.map((x) => x.id === item.id ? { ...x, name: editingName.trim() || x.name, category: item.kind === 'product' ? editingCategory : x.category } : x) ?? null); setEditingId(null); }}><Check size={16} /></button></> : <><button type="button" className="check-row-toggle" onClick={() => toggle(item.id)} aria-pressed={item.checked} aria-label={`${item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'} ${item.name}`}><span aria-hidden="true" className={`check-control ${item.checked ? 'checked' : ''}`}>{item.checked && <Check size={14} />}</span><span className="check-name">{item.name}</span>{item.category && <small className="category-label">{item.category}</small>}</button><button type="button" className="row-action" aria-label={`Sửa ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); setEditingCategory(item.category ?? categories[0]); }}><Pencil size={15} /></button><button type="button" className="row-action remove-action" aria-label={`Xóa ${item.name}`} onClick={() => remove(item.id)}><X size={16} /></button></>}</article>)}</section>)}</div>;
+  return <div className="checklist-groups">{groups.map((group, groupIndex) => <section className="occurrence-group" key={`${group.title}-${groupIndex}`}><header><span className="placement-dot" /><b>{group.title}</b>{group.entries.every((x) => x.checked) && <span className="group-done">Hoàn tất</span>}</header>{group.entries.map((item) => <article className={`check-row ${item.checked ? 'checked' : ''}`} key={item.id}>{editingId === item.id ? <><button type="button" className={`check-control ${item.checked ? 'checked' : ''}`} onClick={() => toggle(item.id)} aria-label={item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'}>{item.checked && <Check size={14} />}</button><input className="inline-edit" value={editingName} onChange={(e) => setEditingName(e.target.value)} />{item.kind === 'product' && <select value={editingCategory} onChange={(e) => setEditingCategory(e.target.value as Category)}><option value={editingCategory}>{editingCategory}</option>{categories.filter((x) => x !== editingCategory).map((x) => <option key={x}>{x}</option>)}</select>}<button type="button" className="row-action" aria-label="Lưu" onClick={() => { setItems((old) => old?.map((x) => x.id === item.id ? { ...x, name: editingName.trim() || x.name, category: item.kind === 'product' ? editingCategory : x.category } : x) ?? null); setEditingId(null); }}><Check size={16} /></button></> : <><button type="button" className="check-row-toggle" onClick={() => toggle(item.id)} aria-pressed={item.checked} aria-label={`${item.checked ? 'Bỏ đánh dấu' : 'Đánh dấu'} ${item.name}`}><span aria-hidden="true" className={`check-control ${item.checked ? 'checked' : ''}`}>{item.checked && <Check size={14} />}</span><span className="check-name">{item.name}</span>{item.category && <small className="category-label">{item.category}</small>}</button><button type="button" className="row-action" aria-label={`Sửa ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); setEditingCategory(item.category ?? categories[0]); }}><Pencil size={15} /></button><button type="button" className="row-action remove-action" aria-label={`Xóa ${item.name}`} onClick={() => remove(item.id)}><X size={16} /></button></>}</article>)}</section>)}</div>;
 }
 
 function groupPreviewItems(items: ChecklistItem[]) {
