@@ -98,7 +98,7 @@ Khu vực "Lịch sử" trong Cài đặt: liệt kê snapshot (mới nhất tr�
 `Kiểm chứng:` *đã chạy*: harness Postgres — user B đọc 0 row, insert/delete row của A bị từ chối; `anon` bị chặn hoàn toàn.
 
 **BR-02 — Trường bắt buộc.** Tên của Nguyên liệu / Món ăn / Sản phẩm là bắt buộc; Sản phẩm bắt buộc có danh mục. Tên chỉ toàn khoảng trắng = rỗng.
-`Kiểm chứng:` manual: nhập toàn dấu cách → không lưu được **và có thông báo** (AUR-11).
+`Kiểm chứng:` manual: nhập toàn dấu cách → không lưu được **và có thông báo** "Tên không được để trống."; trùng tên → thông báo ngay dưới ô nhập.
 
 **BR-03 — Tên duy nhất & chuẩn hoá.**
 - BR-03.1 Trong cùng tài khoản, tên không được trùng khi bỏ qua hoa/thường.
@@ -153,7 +153,7 @@ Khu vực "Lịch sử" trong Cài đặt: liệt kê snapshot (mới nhất tr�
 **BR-15 — Xoá item khỏi Checklist.** Xoá một occurrence khỏi Checklist đang hoạt động; không xoá bản ghi thư viện.
 `Kiểm chứng:` manual: xoá dòng trong Checklist → thư viện không đổi.
 
-**BR-16 — Sửa thông tin hiển thị của item.** Sửa tên hiển thị **hoặc danh mục** của occurrence; chỉ occurrence đó đổi, thư viện không đổi; snapshot tạo sau lưu giá trị tại thời điểm hoàn tất.
+**BR-16 — Sửa thông tin hiển thị của item.** Sửa tên hiển thị của mọi occurrence; sửa **danh mục** chỉ áp dụng cho occurrence sản phẩm (danh mục là danh mục sản phẩm — item nguyên liệu/mục phát sinh không có danh mục). Chỉ occurrence đó đổi, thư viện không đổi; snapshot tạo sau lưu giá trị tại thời điểm hoàn tất.
 `Kiểm chứng:` manual: đổi tên 1 dòng → dòng khác cùng nguyên liệu không đổi; hoàn tất → snapshot mang tên đã sửa.
 
 **BR-17 — Xoá snapshot.** Xoá từng snapshot đã hoàn tất; snapshot còn lưu vẫn chỉ đọc/bất biến; **không** có retention, không xoá hàng loạt.

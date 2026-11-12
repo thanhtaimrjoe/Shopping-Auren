@@ -30,9 +30,9 @@ Bằng chứng chi tiết: `_legacy/audit-2026-11-12.md` (audit 2026-11-12, read
 | AUR-08 | P2 | Seed migration gắn cứng UUID user production + dữ liệu cá nhân trong repo | `07` (P3) | fix | #7 |
 | AUR-09 | P2 | Copy rải rác, lệch câu chữ spec cũ; product picker không disable khi chọn 0 | FR-05, FR-06 | fix | #8 |
 | AUR-10 | P2 | Chức năng "Xóa Checklist" không có trong spec cũ | BR-18 | accept | DEC-043 |
-| AUR-11 | P2 | Validation im lặng (tên toàn khoảng trắng, thiếu ngày) | BR-02 | fix | #9 |
-| AUR-12 | P2 | Sửa danh mục occurrence chỉ lưu với Product | BR-16 | fix | #10 |
-| AUR-13 | P2 | Lưu lỗi không rollback UI; message che nguyên nhân | BR-09 | fix | #9 |
+| AUR-11 | P2 | Validation im lặng (tên toàn khoảng trắng, thiếu ngày) | BR-02 | **fixed** (PR #16) | #9 |
+| AUR-12 | P2 | Sửa danh mục occurrence chỉ lưu với Product | BR-16 | **fixed** (PR #16) | #10 |
+| AUR-13 | P2 | Lưu lỗi không rollback UI; message che nguyên nhân | BR-09 | **fixed** (PR #16) | #9 |
 | AUR-14 | P3 | `tsc --noEmit` fail khi chưa `next build` | `07` (P3) | fix | #11 |
 
 ## Ghi chú trạng thái (không phải lỗi code)
