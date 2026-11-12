@@ -1,24 +1,26 @@
+import { copy } from '@/lib/copy';
+
 const authRules: [RegExp, string][] = [
-  [/invalid login credentials|password authentication failed|wrong email or password/i, 'Email hoặc mật khẩu không đúng.'],
-  [/user already registered|already registered|already been registered/i, 'Email này đã được đăng ký. Hãy đăng nhập.'],
-  [/email not confirmed/i, 'Email chưa được xác nhận. Kiểm tra hộp thư để xác nhận rồi đăng nhập.'],
-  [/password should be at least|password is too weak|weak password/i, 'Mật khẩu cần có ít nhất 6 ký tự.'],
-  [/rate limit|too many requests|too many attempts/i, 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.'],
-  [/failed to fetch|networkerror|network request failed/i, 'Không kết nối được máy chủ. Kiểm tra kết nối mạng rồi thử lại.'],
-  [/authentication required|jwt|token/i, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.'],
+  [/invalid login credentials|password authentication failed|wrong email or password/i, copy['COPY-01']],
+  [/user already registered|already registered|already been registered/i, copy['COPY-02']],
+  [/email not confirmed/i, copy['COPY-137']],
+  [/password should be at least|password is too weak|weak password/i, copy['COPY-03']],
+  [/rate limit|too many requests|too many attempts/i, copy['COPY-138']],
+  [/failed to fetch|networkerror|network request failed/i, copy['COPY-139']],
+  [/authentication required|jwt|token/i, copy['COPY-140']],
 ];
 
 const saveRules: [RegExp, string][] = [
-  [/not-null constraint|null value in column/i, 'Dữ liệu gửi lên không đủ thông tin bắt buộc.'],
-  [/unique constraint|duplicate key/i, 'Dữ liệu bị trùng với dữ liệu đã có.'],
-  [/foreign key constraint/i, 'Dữ liệu liên kết không còn tồn tại.'],
-  [/row-level security policy|permission denied/i, 'Tài khoản này không được phép thực hiện thao tác đó.'],
-  [/invalid shopping data/i, 'Dữ liệu kế hoạch không hợp lệ.'],
-  [/checklist items must be an array/i, 'Checklist không hợp lệ.'],
-  [/checklist items must not be empty/i, 'Checklist trống, không có gì để lưu.'],
-  [/no active checklist/i, 'Checklist này đã kết thúc. Hãy tạo Checklist mới từ kế hoạch tuần.'],
-  [/date range is required/i, 'Vui lòng nhập Từ ngày và Đến ngày.'],
-  [/date_from must be <= date_to/i, 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'],
+  [/not-null constraint|null value in column/i, copy['COPY-142']],
+  [/unique constraint|duplicate key/i, copy['COPY-143']],
+  [/foreign key constraint/i, copy['COPY-144']],
+  [/row-level security policy|permission denied/i, copy['COPY-145']],
+  [/invalid shopping data/i, copy['COPY-146']],
+  [/checklist items must be an array/i, copy['COPY-147']],
+  [/checklist items must not be empty/i, copy['COPY-148']],
+  [/no active checklist/i, copy['COPY-149']],
+  [/date range is required/i, copy['COPY-121']],
+  [/date_from must be <= date_to/i, copy['COPY-122']],
 ];
 
 function match(rules: [RegExp, string][], message: string, fallback: string): string {
@@ -30,10 +32,10 @@ function match(rules: [RegExp, string][], message: string, fallback: string): st
 
 /** Thông báo lỗi đăng nhập/đăng ký bằng tiếng Việt. */
 export function authErrorMessage(message: string): string {
-  return match(authRules, message, 'Không thể xác thực tài khoản. Vui lòng thử lại.');
+  return match(authRules, message, copy['COPY-141']);
 }
 
 /** Thông báo lỗi khi lưu dữ liệu lên Supabase bằng tiếng Việt. */
 export function saveErrorMessage(message: string): string {
-  return match(saveRules, message, 'Không lưu được dữ liệu lên Supabase.');
+  return match(saveRules, message, copy['COPY-150']);
 }
