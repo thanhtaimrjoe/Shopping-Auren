@@ -55,7 +55,7 @@ begin
   );
 
   insert into public.meal_ingredients(user_id, meal_id, ingredient_id, position)
-    select v_user_id, meal.id, ingredient.value::uuid, (ingredient.ordinality - 1)::smallint
+    select v_user_id, (meal.value->>'id')::uuid, ingredient.value::uuid, (ingredient.ordinality - 1)::smallint
     from pg_catalog.jsonb_array_elements(p_data->'meals') as meal(value)
     cross join lateral pg_catalog.jsonb_array_elements_text(meal.value->'ingredientIds') with ordinality as ingredient(value, ordinality);
 
