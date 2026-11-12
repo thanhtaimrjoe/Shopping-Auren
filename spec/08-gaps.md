@@ -23,10 +23,10 @@ Bằng chứng chi tiết: `_legacy/audit-2026-11-12.md` (audit 2026-11-12, read
 | AUR-15 | P1 | Repo thiếu 2 migration đang chạy trên prod (`20261031011716`, `20261101082901`), 1 migration lệch version (`20261031121500` vs `20261101040902`) | — | **fixed** (PR #13) | #1 |
 | AUR-02 | P1 | 7 danh mục (Thực phẩm, Đồ uống) vs spec cũ 5 danh mục, không có Q/DEC | BR-10, `02` §4 | accept | DEC-040 |
 | AUR-03 | P1 | Hoàn tất mua sắm = 2 request rời, không toàn vẹn | FR-08 | fix | #2 |
-| AUR-04 | P1 | Kéo–thả món sang ngày đã có nó → phá BR-14 và làm hỏng cả lần lưu | BR-14, FR-05 | fix | #3 |
+| AUR-04 | P1 | Kéo–thả món sang ngày đã có nó → phá BR-14 và làm hỏng cả lần lưu | BR-14, FR-05 | **fixed** (PR #14) | #3 |
 | AUR-05 | P1 | Không có chế độ xem theo món; TASK-022 vẫn đánh Done | FR-07, BR-05.3 | defer | DEC-041 |
 | AUR-06 | P1 | `RELEASE_READINESS_REPORT.md` khai TASK-029 Done/GO-LIVE trong khi backlog Draft 0% | — | accept | đã chuyển vào `_legacy/` |
-| AUR-07 | P2 | Bằng chứng "lưu 26 items" đúng trên prod nhưng không tái lập được từ repo | — | fix | #1 |
+| AUR-07 | P2 | Bằng chứng "lưu 26 items" đúng trên prod nhưng không tái lập được từ repo | — | **fixed** (PR #13) | #1 |
 | AUR-08 | P2 | Seed migration gắn cứng UUID user production + dữ liệu cá nhân trong repo | `07` (P3) | fix | #7 |
 | AUR-09 | P2 | Copy rải rác, lệch câu chữ spec cũ; product picker không disable khi chọn 0 | FR-05, FR-06 | fix | #8 |
 | AUR-10 | P2 | Chức năng "Xóa Checklist" không có trong spec cũ | BR-18 | accept | DEC-043 |
