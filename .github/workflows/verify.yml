@@ -1,0 +1,37 @@
+name: verify
+
+# Why `next build` comes before any type check:
+# `src/app/layout.tsx` uses the global `LayoutProps<"/">` type, which Next generates
+# into `.next/types` during `next build` (or `next typegen`). Running `tsc --noEmit`
+# on a clean checkout without that step fails with `TS2304: Cannot find name
+# 'LayoutProps'` — issue #11. `next build` already type-checks, so it is the only
+# type gate we need.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No `cache: npm` on purpose: the repo ships pnpm-lock.yaml only (DEC-046).
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Build (also type-checks; generates LayoutProps)
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Spec lint (links, IDs, front-matter)
+        run: npm run spec:lint
