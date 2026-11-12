@@ -1,11 +1,11 @@
 ---
 id: spec-decisions
-status: draft
+status: approved
 owner: Yano
-decided_by: AI-delegated
+decided_by: PO
 updated: 2026-11-12
 supersedes: []
-note: "DEC-001…DEC-039 chưa được import (P3). File này hiện chỉ chứa các quyết định phát sinh từ đợt refactor spec 2026-11-12."
+note: "DEC-001…039 nhập từ Decision Log trên Notion ngày 2026-11-12 (bản rút gọn, giữ nguyên quyết định). DEC-040…046 phát sinh trong đợt refactor spec."
 ---
 
 # 05 — Nhật ký quyết định (append-only)
@@ -13,6 +13,134 @@ note: "DEC-001…DEC-039 chưa được import (P3). File này hiện chỉ ch�
 Quy tắc: **không sửa, không xoá** mục cũ. Thay đổi ý → thêm mục mới với `Supersedes: DEC-xxx`.
 
 Phân quyền: `decided_by: PO` cho quyết định kinh doanh; `decided_by: AI-delegated` cho quyết định kỹ thuật / cấu trúc trong quyền được PO giao (2026-11-12). PO override bất cứ lúc nào.
+
+---
+
+## DEC-001 — Đặt lại kế hoạch tuần
+**Quyết định:** "Đặt lại mẫu" hiển thị xác nhận Có/Không. Có → xoá trắng 7 ngày và mọi sản phẩm đã chọn; Không → giữ nguyên. Đây là "xoá trắng", không phải khôi phục kế hoạch mẫu. (Q-007 bổ sung: giữ nguyên Checklist đang hoạt động.)
+
+## DEC-002 — Xem trước Checklist
+**Quyết định:** bấm tạo → mở cửa sổ xem trước, người dùng rà soát rồi xác nhận ở cuối.
+**decided_by:** PO
+
+## DEC-003 — Gỡ món khỏi kế hoạch tuần
+**Quyết định:** nút "×" chỉ gỡ món khỏi ngày đó, không xoá khỏi thư viện.
+
+## DEC-004 — Gỡ sản phẩm khỏi kế hoạch tuần
+**Quyết định:** chỉ gỡ khỏi kế hoạch hiện tại, không xoá khỏi thư viện.
+
+## DEC-005 — Snapshot khi hoàn tất
+**Quyết định:** lưu bất biến **tất cả** mục (đã tick và chưa tick). Trong Lịch sử: đã tick hiện biểu tượng chọn, chưa tick hiện dấu X.
+
+## DEC-006 — Tổng số mục và tiến độ (lịch sử)
+**Quyết định ban đầu:** chỉ tính nguyên liệu phát sinh từ kế hoạch + sản phẩm được chọn.
+**Trạng thái:** superseded bởi DEC-013.
+
+## DEC-007 — Bỏ nút "Quản lý sản phẩm" khỏi Checklist
+**Quyết định:** gỡ nút khỏi thẻ Checklist; quản lý sản phẩm nằm ở thư viện.
+
+## DEC-008 — Khoảng ngày của snapshot
+**Quyết định (Q-008):** khi hoàn tất hiển thị pop-up với 2 trường bắt buộc Date From / Date To; From ≤ To; lưu kèm snapshot và timestamp riêng. Khoảng ngày thuộc lần mua, không gắn ngày thực tế vào Weekly Plan.
+
+## DEC-009 — Không thêm cảnh báo khi lưu Weekly Plan
+**Quyết định (Q-009):** không cảnh báo khi lưu/sửa Weekly Plan; chỉ "Đặt lại mẫu" có xác nhận Có/Không.
+
+## DEC-010 — Xây UI mới từ đặc tả, không từ prototype cũ
+**Quyết định:** UI cũ/prototype chỉ là tài liệu tham khảo, không phải nền tảng kiến trúc. Thứ tự: ổn định yêu cầu → screen/component spec → design system → build → verify.
+
+## DEC-011 — Checklist mới ghi đè Checklist đang hoạt động (lịch sử)
+**Quyết định ban đầu (Q-010):** tạo Checklist mới thì ghi đè, **không** cần pop-up xác nhận.
+**Trạng thái:** superseded bởi DEC-024 — nay phải xác nhận ghi đè.
+
+## DEC-012 — Checklist theo Meal + chặn Meal rỗng
+**Quyết định (Q-011):** MVP có chế độ xem Checklist theo Meal; nguyên liệu trùng tên ở các Meal khác có checkbox riêng (duplicate được phép); checkbox chỉ chia sẻ giữa Meal view và dòng tương ứng trong Checklist tổng; Meal tự hoàn tất khi mọi nguyên liệu của nó được tick, bỏ tick → chưa hoàn tất. Meal rỗng không thêm được vào Weekly Plan, phải hiện thông báo đã chốt.
+**Ghi chú:** phần "chế độ xem theo Meal" bị hoãn ở MVP — xem DEC-041.
+
+## DEC-013 — Tổng item và tiến độ (hiện hành)
+**Quyết định (Q-012):** đếm mọi item tick được trong Checklist hiện tại, không tính Meal header; gồm occurrence theo Meal, Product, item thêm từ thư viện và mục phát sinh. **Supersedes DEC-006.**
+
+## DEC-014 — Điều kiện hoàn tất và vòng đời Checklist
+**Quyết định (Q-013):** được hoàn tất dù còn item chưa tick; snapshot bất biến; sau khi lưu thành công Checklist kết thúc; không tạo snapshot lặp từ Checklist đã kết thúc.
+
+## DEC-015 — Checklist tổng hiển thị theo occurrence
+**Quyết định (Q-014):** một dòng cho mỗi Meal–Ingredient occurrence; checkbox chỉ chia sẻ giữa Meal view và dòng tương ứng.
+
+## DEC-016 — Duplicate item và nhóm "Other"
+**Quyết định (Q-015):** thêm duplicate thành occurrence riêng; item phát sinh trực tiếp thuộc nhóm "Other", không phải entity thư viện, được tính vào tiến độ và lưu vào snapshot.
+
+## DEC-017 — Thành phần Ingredient trong một Meal
+**Quyết định (Q-016, A):** cùng một Ingredient tối đa một lần trong một Meal; occurrence giữa các Meal vẫn độc lập.
+
+## DEC-018 — Đặt cùng Meal trong Weekly Plan
+**Quyết định (Q-017, B):** mỗi Meal tối đa một lần trong một ngày, được đặt ở nhiều ngày; giới hạn 3 Meal/ngày vẫn áp dụng.
+
+## DEC-019 — Xoá occurrence khỏi Checklist
+**Quyết định (Q-018, A):** được xoá một occurrence khỏi Checklist đang hoạt động; không xoá bản ghi nguồn.
+
+## DEC-020 — Sửa thông tin hiển thị của occurrence
+**Quyết định (Q-019, B):** được sửa tên hiển thị/danh mục của occurrence; chỉ occurrence đó đổi, không cập nhật thư viện; snapshot sau đó lưu giá trị tại thời điểm hoàn tất.
+**Ghi chú:** danh mục chỉ áp dụng cho occurrence sản phẩm (BR-16, PR #16).
+
+## DEC-021 — Xoá snapshot History
+**Quyết định (Q-020, B):** xoá được từng snapshot; snapshot còn lưu vẫn bất biến; chưa có retention, chưa có xoá hàng loạt.
+
+## DEC-022 — Tách occurrence theo Meal placement
+**Quyết định (Q-021):** không gộp placement; cùng Meal ở nhiều ngày → mỗi lượt đặt một nhóm và bộ occurrence riêng, tiến độ riêng.
+
+## DEC-023 — Giữ occurrence khi xoá nguồn
+**Quyết định (Q-022, B):** Ingredient/Product đã gỡ khỏi tham chiếu chặn xoá thì được xoá khỏi thư viện dù Checklist còn item; occurrence giữ dữ liệu hiển thị, không còn phụ thuộc bản ghi nguồn.
+
+## DEC-024 — Xác nhận trước khi ghi đè Active Checklist
+**Quyết định (Q-023):** có Active Checklist thì phải hiện xác nhận ghi đè; chỉ thay sau khi xác nhận; ghi đè thì bỏ trạng thái tick và mục phát sinh chưa lưu; snapshot đã hoàn tất không ảnh hưởng. **Supersedes DEC-011.**
+
+## DEC-025 — Không tự đồng bộ Checklist khi lưu Weekly Plan
+**Quyết định (Q-024, A):** sửa và lưu Weekly Plan không tự đồng bộ Active Checklist; chỉ khi người dùng chủ động tạo Checklist mới.
+
+## DEC-026 — Nhãn xác nhận tiếng Việt
+**Quyết định (Q-025):** giao diện chỉ tiếng Việt; nhãn xác nhận dùng "Có/Không".
+
+## DEC-027 — Giữ placement khi xoá Meal nguồn
+**Quyết định (Q-026, B):** xoá Meal sau khi đã gỡ khỏi plan, dù Checklist còn placement; Checklist giữ tên Meal đã chụp và mọi occurrence/checkbox, không mất tiến độ.
+
+## DEC-028 — Nhãn tiếng Việt cho ngày, lịch sử, mục phát sinh
+**Quyết định (Q-027, A):** "Từ ngày", "Đến ngày", "Lịch sử", nhóm "Khác (phát sinh)" — phân biệt với Category "Khác".
+
+## DEC-029 — Primary navigation ba tab (lịch sử)
+**Quyết định (Q-028, D):** ba tab: Home, Thư viện, Setting (kèm Profile/History/Sign Out).
+**Trạng thái:** superseded bởi DEC-030.
+
+## DEC-030 — Primary navigation bốn tab
+**Quyết định (Q-029):** bốn tab theo thứ tự Trang chủ (Weekly Plan), **Checklist**, Thư viện, Cài đặt. History và Sign Out nằm trong Cài đặt. **Supersedes DEC-029.**
+
+## DEC-031 — Không có Profile trong MVP
+**Quyết định (Q-030, B):** Profile chỉ là nhãn/placeholder; không có màn hình hay chức năng.
+
+## DEC-032 — Frontend technical baseline
+**Quyết định (Q-032):** Next.js 16.4.3 App Router, React 19.3.1, TypeScript 5.9.3, pnpm, CSS global + next/font (Manrope/Lora) + lucide-react, ESLint 9; repo `thanhtaimrjoe/Shopping-Auren` nhánh main; FE deploy Vercel; công cụ test **chưa chọn**.
+
+## DEC-033 — Bằng chứng tối thiểu trước review frontend
+**Quyết định (Q-033, B):** phải có build + lint + smoke (chạy app, screenshot) trước khi chuyển Ready for Review; đọc tĩnh là chưa đủ.
+
+## DEC-034 — Viewport cho responsive QA
+**Quyết định (Q-034, A):** QA trên 390×844 và 384×854 CSS px + desktop; chưa làm tablet.
+
+## DEC-035 — Data access cho MVP
+**Quyết định (Q-035):** frontend gọi trực tiếp Supabase Auth + Data API/PostgREST; **không** có Render Backend trong MVP; publishable key ở client, không service-role key.
+
+## DEC-036 — Guard cho RPC `save_shopping_data`
+**Quyết định:** áp bản vá guard lên DB dev (payload thiếu key từng xoá sạch dữ liệu); giữ file migration trong repo; push commit UI-03 lên main.
+
+## DEC-037 — Mục tiêu và người dùng hiện tại
+**Quyết định (Q-036):** app phục vụ cá nhân PO, không phát hành app store/thị trường; không KPI thương mại; là case học tập BrSE. Không đổi hành vi đã chốt.
+
+## DEC-038 — Hoàn tất mua sắm phải toàn vẹn
+**Quyết định (Q-037):** chỉ coi là hoàn tất khi cả lưu History **và** đóng Checklist cùng thành công; một bước lỗi → không snapshot mới, giữ Checklist để thử lại; không snapshot trùng.
+**Triển khai:** RPC `complete_shopping` (PR #15).
+
+## DEC-039 — Deployment URL có thể công khai
+**Quyết định (Q-038):** chấp nhận URL deploy công khai; vẫn phải đăng nhập và dữ liệu tách theo tài khoản; không thêm lớp giới hạn truy cập ở tầng deploy.
+
+> Tất cả DEC-001…039 ở trên: **decided_by: PO** (ghi nhận từ Decision Log, 2026-10-28 → 2026-11-07).
 
 ---
 
@@ -68,3 +196,10 @@ Phân quyền: `decided_by: PO` cho quyết định kinh doanh; `decided_by: AI-
 - **supersedes:** một phần `DEC-042` (DEC-042 nói "copy chuẩn là tiếng Việt"; nay tiếng Việt **trừ** thuật ngữ "Checklist").
 - **decided_by:** PO.
 - **Kiểm chứng:** PR sửa nhãn + 16 chuỗi trong `page.tsx`, 3 chuỗi trong `messages.ts`; `npm run build` + `npm run lint` xanh; bảng COPY trong `03` cập nhật cùng chữ.
+
+## DEC-046 — CI chạy build/lint/spec-lint; harness PGlite giữ ngoài lockfile
+
+- **Bối cảnh:** harness 35 check hiện là node script cần `@electric-sql/pglite`; repo dùng `pnpm-lock.yaml` nhưng máy build không có pnpm để cập nhật lockfile đúng cách.
+- **Quyết định:** CI chạy `npm install` + `next build` (sinh `LayoutProps`) + `lint` + `spec-lint`; **không** commit `package-lock.json`. Harness PGlite chạy ở job riêng khi pnpm có sẵn, hoặc chạy tay và ghi kết quả vào `06`.
+- **Lý do:** một lockfile duy nhất; tránh npm/pnpm đánh nhau; CI vẫn bắt được lỗi type-order (#11) và link/ID chết.
+- **decided_by:** AI-delegated.

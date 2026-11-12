@@ -33,7 +33,8 @@ Bằng chứng chi tiết: `_legacy/audit-2026-11-12.md` (audit 2026-11-12, read
 | AUR-11 | P2 | Validation im lặng (tên toàn khoảng trắng, thiếu ngày) | BR-02 | **fixed** (PR #16) | #9 |
 | AUR-12 | P2 | Sửa danh mục occurrence chỉ lưu với Product | BR-16 | **fixed** (PR #16) | #10 |
 | AUR-13 | P2 | Lưu lỗi không rollback UI; message che nguyên nhân | BR-09 | **fixed** (PR #16) | #9 |
-| AUR-14 | P3 | `tsc --noEmit` fail khi chưa `next build` | `07` (P3) | fix | #11 |
+| AUR-14 | P3 | `tsc --noEmit` fail khi chưa `next build` | `07` đã có → workflow ở #5 | fix | #11 |
+| AUR-16 | P2 | `anon` có đủ quyền DML trên cả 10 bảng (default privileges của Supabase); RLS vẫn chặn vì không có policy cho `anon` | `04` §2.4, NFR-02 | **fixed** (PR #20) | — |
 
 ## Ghi chú trạng thái (không phải lỗi code)
 

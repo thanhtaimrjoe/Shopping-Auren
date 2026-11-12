@@ -19,10 +19,10 @@ Nguồn sự thật duy nhất của dự án là **thư mục `spec/` này**. N
 | 01 | `01-product.md` | Vì sao có app, cho ai, phạm vi | approved |
 | 02 | `02-behavior.md` | **App phải hành xử thế nào** (FR/BR/NFR/UC) | approved |
 | 03 | `03-ui-contract.md` | Màn hình, thành phần, câu chữ hiển thị | draft |
-| 04 | `04-data-contract.md` | Bảng, cột, RLS, RPC, ràng buộc | *P3 — chưa tạo* |
+| 04 | `04-data-contract.md` | Bảng, cột, RLS, RPC, ràng buộc | approved |
 | 05 | `05-decisions.md` | Quyết định & lịch sử thay thế | *P3 — chưa tạo* |
-| 06 | `06-verification.md` | Mỗi yêu cầu được kiểm chứng bằng gì | *P3 — chưa tạo* |
-| 07 | `07-operations.md` | Chạy, deploy, migration, sự cố | *P3 — chưa tạo* |
+| 06 | `06-verification.md` | Mỗi yêu cầu được kiểm chứng bằng gì | approved |
+| 07 | `07-operations.md` | Chạy, deploy, migration, sự cố | approved |
 | 08 | `08-gaps.md` | Code lệch spec ở đâu, xử lý thế nào | approved |
 | — | `../AGENTS.md` | Hợp đồng làm việc cho AI agent | approved |
 
