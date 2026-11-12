@@ -56,3 +56,15 @@ Phân quyền: `decided_by: PO` cho quyết định kinh doanh; `decided_by: AI-
 - **Phân quyền:** PO chỉ can thiệp ở tầng business (phạm vi, hành vi người dùng thấy, dữ liệu nghiệp vụ). Quyết định kỹ thuật/cấu trúc do AI quyết và ghi `decided_by: AI-delegated`, PO override bất cứ lúc nào.
 - **Hệ quả:** `docs/*` chuyển vào `spec/_legacy/repo-docs/`; `docs/` không còn tồn tại; mọi tham chiếu Notion trong repo coi là lịch sử.
 - **Kiểm chứng:** PR này (spec/repo-canonical) + issue backlog tương ứng.
+
+## DEC-045 — Nhãn tab "Checklist" và chính sách thuật ngữ trong copy
+
+- **Bối cảnh:** `spec/03-ui-contract.md` (PR #18) phát hiện: tab thứ hai đang render "Danh sách" trong khi `DEC-030` gọi là "Checklist"; ngoài ra copy còn lẫn thuật ngữ tiếng Anh (`Ingredient`, `Checklist`) trong câu tiếng Việt; và 14 chuỗi lỗi kỹ thuật (`COPY-137…150`) chưa từng được duyệt.
+- **Quyết định của PO (2026-11-12):**
+  1. Tab thứ hai mang nhãn **"Checklist"** — code đổi từ "Danh sách" sang "Checklist" để khớp `DEC-030`.
+  2. **"Checklist" là thuật ngữ tiếng Anh duy nhất được giữ**; mọi thuật ngữ khác Việt hoá (`Ingredient` → "Nguyên liệu", `Meal` → "Món ăn", `Product` → "Sản phẩm").
+  3. **Duyệt toàn bộ `COPY-137…150`** (thông báo kỹ thuật từ `messages.ts`) làm chuẩn.
+- **Hệ quả:** mọi câu có "danh sách" chỉ phiên mua sắm đổi thành "Checklist" (nút "Tạo Checklist", "Checklist đã được lưu.", "Xóa Checklist?"…); `BR-02` vẫn yêu cầu thông báo rõ khi tên rỗng.
+- **supersedes:** một phần `DEC-042` (DEC-042 nói "copy chuẩn là tiếng Việt"; nay tiếng Việt **trừ** thuật ngữ "Checklist").
+- **decided_by:** PO.
+- **Kiểm chứng:** PR sửa nhãn + 16 chuỗi trong `page.tsx`, 3 chuỗi trong `messages.ts`; `npm run build` + `npm run lint` xanh; bảng COPY trong `03` cập nhật cùng chữ.
