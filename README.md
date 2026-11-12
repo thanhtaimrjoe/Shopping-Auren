@@ -23,7 +23,7 @@ The optimized frontend build is `pnpm build`.
 
 `src/lib/shopping-types.ts` defines the app data types. Supabase Auth and the Supabase browser Data API now back the library, Weekly Plan, active Checklist, and shopping history. The frontend talks directly to Supabase for the MVP; a separate Render backend is deferred.
 
-Product behavior and labels follow the approved BRD, Screen Specification, Component Specification, and PO navigation decisions. The approved MagicPath canvas informs the visual direction; where its older prototype behavior conflicts with current screen rules, the screen rules take precedence.
+Product behavior is defined in `spec/` — start at `spec/00-index.md`. Notion and the old `docs/` folder are archived read-only under `spec/_legacy/` and are not a source of truth. Work items live in GitHub Issues.
 # Supabase dev setup
 
 The MVP uses one Supabase dev project. The browser connects directly with Supabase Auth and the Data API; do not put a service-role key in the frontend.
