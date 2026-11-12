@@ -46,7 +46,7 @@ SHOPPING AUREN
 ├── Trang chủ        → SC-05 Weekly Plan
 │                      ├── sa bàn 7 ngày (Thứ Hai … Chủ Nhật), tối đa 3 món/ngày
 │                      ├── danh sách sản phẩm đã chọn cho tuần
-│                      └── Tạo danh sách · Đặt lại mẫu
+│                      └── Tạo Checklist · Đặt lại mẫu
 ├── Checklist        → SC-06 (+ SC-07 là modal của nó)
 │                      ├── empty state khi chưa có phiên
 │                      ├── Active Checklist (nhóm theo placement, Sản phẩm, Khác (phát sinh))
@@ -244,7 +244,7 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-04 | Bỏ qua tới nội dung chính | skip-link đầu `app-shell` (`page.tsx:452`) | PO duyệt 2026-10-31 (UI-03) |
 | COPY-05 | Dữ liệu đồng bộ · Lưu trong Supabase, riêng tư theo tài khoản đăng nhập. | thẻ Tài khoản, Cài đặt (`page.tsx:493`) | PO duyệt 2026-10-31 (UI-03) |
 | COPY-06 | Món ăn chưa có nguyên liệu. Vui lòng thêm ít nhất một nguyên liệu trước khi đưa món ăn vào kế hoạch tuần. | toast khi chọn món 0 nguyên liệu trong Meal picker (`page.tsx:248`) | FR-05, BR-06 |
-| COPY-07 | Kế hoạch tuần đang trống. | toast khi bấm “Tạo danh sách” mà kế hoạch rỗng (`page.tsx:290`) | FR-06, BR-06 |
+| COPY-07 | Kế hoạch tuần đang trống. | toast khi bấm “Tạo Checklist” mà kế hoạch rỗng (`page.tsx:290`) | FR-06, BR-06 |
 
 ### 5.2 SC-01 — Authentication
 
@@ -279,7 +279,7 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-29 | Tài khoản | tên khối tài khoản ở sidebar khi chưa có email (`:457`); tiêu đề thẻ Tài khoản, Cài đặt (`:493`) | |
 | COPY-30 | Không gian của bạn | đoạn đầu breadcrumb ở topbar (`:462`) | |
 | COPY-31 | Trang chủ | nhãn tab 1 (`:26`) | DEC-030 |
-| COPY-32 | Danh sách | nhãn tab 2 (`:27`) | **lệch DEC-030 (“Checklist”)** — xem §7 |
+| COPY-32 | Checklist | nhãn tab 2 (`:27`) | PO chốt 2026-11-12 (DEC-045), khớp DEC-030 |
 | COPY-33 | Thư viện | nhãn tab 3 (`:28`) | |
 | COPY-34 | Cài đặt | nhãn tab 4 (`:29`) | |
 
@@ -313,10 +313,10 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-58 | Tất cả | option filter mặc định (danh mục sản phẩm, nguyên liệu trong món) (`:487`, `:488`, `:501`) | khác “Khác (phát sinh)” |
 | COPY-59 | Danh mục | nhãn select lọc danh mục (`:487`, `:501`); nhãn trường trong form sản phẩm (`:509`) | |
 | COPY-60 | Không có kết quả phù hợp. | 0 kết quả tìm/lọc — Product picker (`:501`), căn cứ Thư viện (`:488`), danh sách nguyên liệu trong form món (`:509`) | trùng chuỗi → một ID |
-| COPY-61 | Tạo danh sách | nút chính ở Trang chủ (`:471`) và ở empty state Checklist (`:482`); nút xác nhận dialog preview (`:505`) | |
+| COPY-61 | Tạo Checklist | nút chính ở Trang chủ (`:471`) và ở empty state Checklist (`:482`); nút xác nhận dialog preview (`:505`) | |
 | COPY-62 | Đặt lại mẫu | nút mở xác nhận đặt lại (`:471`) | |
 | COPY-63 | Đặt lại kế hoạch tuần? | tiêu đề dialog đặt lại (`:552`) | |
-| COPY-64 | Đặt lại mẫu sẽ xóa các món ăn và sản phẩm đã chọn trong kế hoạch tuần. Danh sách đang hoạt động vẫn được giữ nguyên. | nội dung dialog đặt lại (`:504`) | BR-12 |
+| COPY-64 | Đặt lại mẫu sẽ xóa các món ăn và sản phẩm đã chọn trong kế hoạch tuần. Checklist đang hoạt động vẫn được giữ nguyên. | nội dung dialog đặt lại (`:504`) | BR-12 |
 | COPY-65 | Không | lựa chọn từ chối trong mọi dialog Có/Không (`:504`, `:507`, `:510`) | trùng chuỗi → một ID |
 | COPY-66 | Có | lựa chọn xác nhận trong mọi dialog Có/Không (`:504`, `:507`, `:510`) | trùng chuỗi → một ID |
 | COPY-67 | {ngày} đã có món này. Mỗi món chỉ được đặt một lần trong một ngày. | toast khi thêm/kéo món trùng ngày (`:199`) | BR-14 |
@@ -333,13 +333,13 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-73 | Tên mục phát sinh | `aria-label` ô nhập mục phát sinh (`:479`) | nhãn trợ năng |
 | COPY-74 | Thêm mục phát sinh | placeholder ô nhập mục phát sinh (`:479`) | |
 | COPY-75 | Thêm | nút submit form mục phát sinh (`:479`) | |
-| COPY-76 | Chưa có danh sách đang hoạt động | tiêu đề empty state tab Checklist (`:481`) | |
+| COPY-76 | Chưa có Checklist đang hoạt động | tiêu đề empty state tab Checklist (`:481`) | |
 | COPY-77 | Xem trước nội dung từ kế hoạch tuần rồi xác nhận để tạo phiên mua sắm. | mô tả empty state tab Checklist (`:481`) | |
 | COPY-78 | Khác (phát sinh) | tiêu đề nhóm item phát sinh (`:532`) | khác danh mục “Khác” (`COPY-58`, `02` §4) |
 | COPY-79 | Hoàn tất | huy hiệu khi mọi mục trong nhóm đã tick (`:535`); nút xác nhận dialog hoàn tất (`:508`) | trùng chuỗi → một ID |
 | COPY-80 | Xóa Checklist | nút nguy hiểm ở chân tab Checklist (`:482`); nút xác nhận dialog xoá (`:503`) | BR-18 |
-| COPY-81 | Xóa checklist? | tiêu đề dialog xoá Checklist (`:554`) | |
-| COPY-82 | Xóa checklist đang hoạt động? | câu hỏi trong dialog xoá Checklist (`:503`) | |
+| COPY-81 | Xóa Checklist? | tiêu đề dialog xoá Checklist (`:554`) | |
+| COPY-82 | Xóa Checklist đang hoạt động? | câu hỏi trong dialog xoá Checklist (`:503`) | |
 | COPY-83 | Tất cả mục và trạng thái đã đánh dấu sẽ bị xóa. | cảnh báo trong dialog xoá Checklist (`:503`) | |
 | COPY-84 | Checklist đã được xóa. | toast sau khi xoá phiên (`:387`) | BR-18 |
 | COPY-85 | Bỏ đánh dấu | `aria-label` khi dòng đã tick (`:535`) | nhãn trợ năng |
@@ -347,17 +347,17 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-87 | Sửa {tên} | `aria-label` nút bút chì trên dòng (`:535`) | |
 | COPY-88 | Xóa {tên} | `aria-label` nút thùng rác trên dòng (`:535`) | |
 | COPY-89 | Lưu | nút lưu khi sửa tại chỗ (`:535`); nút submit form entity (`:509`) | trùng chuỗi → một ID |
-| COPY-90 | Danh sách mua sắm | tiêu đề dialog preview (`:555`) | |
-| COPY-91 | Xem trước danh sách được tạo từ kế hoạch tuần hiện tại. | câu dẫn dialog preview (`:505`) | |
-| COPY-92 | Tạo danh sách mới? | tiêu đề dialog ghi đè (`:556`) | |
-| COPY-93 | Danh sách đang hoạt động sẽ được thay bằng danh sách mới từ kế hoạch tuần. | nội dung dialog ghi đè (`:507`) | BR-05.7 |
-| COPY-94 | Mỗi lựa chọn được thêm thành một mục riêng trong danh sách. | câu dẫn dialog Add-from-library (`:506`) | |
+| COPY-90 | Checklist mua sắm | tiêu đề dialog preview (`:555`) | |
+| COPY-91 | Xem trước Checklist được tạo từ kế hoạch tuần hiện tại. | câu dẫn dialog preview (`:505`) | |
+| COPY-92 | Tạo Checklist mới? | tiêu đề dialog ghi đè (`:556`) | |
+| COPY-93 | Checklist đang hoạt động sẽ được thay bằng Checklist mới từ kế hoạch tuần. | nội dung dialog ghi đè (`:507`) | BR-05.7 |
+| COPY-94 | Mỗi lựa chọn được thêm thành một mục riêng trong Checklist. | câu dẫn dialog Add-from-library (`:506`) | |
 | COPY-95 | Tìm nguyên liệu hoặc sản phẩm | placeholder ô tìm trong Add-from-library (`:506`) | |
 | COPY-96 | Đóng | nút đóng footer dialog Meal picker (`:500`), Add-from-library (`:506`), nút X / đóng snapshot (`:499`, `:510`); `aria-label` nút X (`:499`) | trùng chuỗi → một ID |
 | COPY-97 | Nguyên liệu | nhãn tab Thư viện (`:486`); nhãn nhóm dòng nguyên liệu không thuộc placement (`:534`); phụ đề item trong Add-from-library (`:506`); legend khối chọn nguyên liệu (`:509`); nhãn bộ lọc nguyên liệu (`:487`) | trùng chuỗi → một ID |
-| COPY-98 | Danh sách đã được lưu. | toast sau khi tạo Checklist (`:297`) | |
+| COPY-98 | Checklist đã được lưu. | toast sau khi tạo Checklist (`:297`) | |
 | COPY-99 | Tên mục không được để trống. | lỗi khi thêm mục phát sinh rỗng (`:314`) | |
-| COPY-100 | Không lưu được danh sách: {lỗi} | toast khi lưu Active Checklist thất bại (`:230`) | `{lỗi}` đến từ §5.6 |
+| COPY-100 | Không lưu được Checklist: {lỗi} | toast khi lưu Active Checklist thất bại (`:230`) | `{lỗi}` đến từ §5.6 |
 
 ### 5.6 SC-02 / SC-03 / SC-04 — Thư viện
 
@@ -372,7 +372,7 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 | COPY-107 | Tìm nguyên liệu | placeholder ô tìm nguyên liệu trong form món (`:509`) | |
 | COPY-108 | Tên không được để trống. | lỗi form khi tên rỗng/toàn khoảng trắng (`:342`) | BR-02 |
 | COPY-109 | Tên này đã có trong thư viện. | lỗi form khi tên trùng sau chuẩn hoá (`:345`) | BR-03 |
-| COPY-110 | Không thể xóa. Ingredient đang được dùng trong: {danh sách món}. | toast chặn xoá nguyên liệu (`:364`) | BR-04.2; còn lẫn từ tiếng Anh — xem §7 |
+| COPY-110 | Không thể xóa. Nguyên liệu đang được dùng trong: {danh sách món}. | toast chặn xoá nguyên liệu (`:364`) | BR-04.2; PO chốt Việt hoá thuật ngữ 2026-11-12 (DEC-045) |
 | COPY-111 | Không thể xóa món ăn đang có trong kế hoạch tuần. | toast chặn xoá món (`:368`) | BR-04.1 |
 | COPY-112 | Không thể xóa sản phẩm đang có trong kế hoạch tuần. | toast chặn xoá sản phẩm (`:373`) | BR-04.1 |
 | COPY-113 | Xác nhận xóa | tiêu đề dialog xoá entity (`:553`) | |
@@ -412,24 +412,24 @@ Chỉ inputs / actions / states. Mọi điều kiện nghiệp vụ ghi bằng t
 
 ### 5.9 Phụ lục A — thông báo kỹ thuật do `messages.ts` sinh
 
-Hiển thị qua toast/lỗi trường. Chưa được chốt câu chữ ở tài liệu trước — **cần PO duyệt**; nếu PO gộp/bỏ, sửa bảng này chứ không sửa `messages.ts` trước.
+Hiển thị qua toast/lỗi trường. **PO đã duyệt toàn bộ COPY-137…150 ngày 2026-11-12 (DEC-045).** Nếu sau này gộp/bỏ, sửa bảng này trước rồi mới sửa `messages.ts`.
 
 | ID | Chuỗi | Nơi dùng | Ghi chú |
 |---|---|---|---|
-| COPY-137 | Email chưa được xác nhận. Kiểm tra hộp thư để xác nhận rồi đăng nhập. | `authRules` — `email not confirmed` | chờ duyệt |
-| COPY-138 | Bạn đã thử quá nhiều lần. Vui lòng thử lại sau. | `authRules` — rate limit | chờ duyệt |
+| COPY-137 | Email chưa được xác nhận. Kiểm tra hộp thư để xác nhận rồi đăng nhập. | `authRules` — `email not confirmed` | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-138 | Bạn đã thử quá nhiều lần. Vui lòng thử lại sau. | `authRules` — rate limit | PO duyệt 2026-11-12 (DEC-045) |
 | COPY-139 | Không kết nối được máy chủ. Kiểm tra kết nối mạng rồi thử lại. | `authRules` — network | BR-09 |
-| COPY-140 | Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại. | `authRules` — jwt/token | chờ duyệt |
-| COPY-141 | Không thể xác thực tài khoản. Vui lòng thử lại. | `authErrorMessage` fallback | chờ duyệt |
-| COPY-142 | Dữ liệu gửi lên không đủ thông tin bắt buộc. | `saveRules` — not-null | chờ duyệt |
-| COPY-143 | Dữ liệu bị trùng với dữ liệu đã có. | `saveRules` — unique | chờ duyệt |
-| COPY-144 | Dữ liệu liên kết không còn tồn tại. | `saveRules` — foreign key | chờ duyệt |
+| COPY-140 | Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại. | `authRules` — jwt/token | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-141 | Không thể xác thực tài khoản. Vui lòng thử lại. | `authErrorMessage` fallback | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-142 | Dữ liệu gửi lên không đủ thông tin bắt buộc. | `saveRules` — not-null | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-143 | Dữ liệu bị trùng với dữ liệu đã có. | `saveRules` — unique | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-144 | Dữ liệu liên kết không còn tồn tại. | `saveRules` — foreign key | PO duyệt 2026-11-12 (DEC-045) |
 | COPY-145 | Tài khoản này không được phép thực hiện thao tác đó. | `saveRules` — RLS/permission | BR-01 |
-| COPY-146 | Dữ liệu kế hoạch không hợp lệ. | `saveRules` — invalid shopping data | chờ duyệt |
-| COPY-147 | Danh sách không hợp lệ. | `saveRules` — checklist items must be an array | chờ duyệt |
-| COPY-148 | Danh sách trống, không có gì để lưu. | `saveRules` — checklist items must not be empty | chờ duyệt |
-| COPY-149 | Danh sách này đã kết thúc. Hãy tạo danh sách mới từ kế hoạch tuần. | `saveRules` — no active checklist | DEC-038 |
-| COPY-150 | Không lưu được dữ liệu lên Supabase. | `saveErrorMessage` fallback | chờ duyệt |
+| COPY-146 | Dữ liệu kế hoạch không hợp lệ. | `saveRules` — invalid shopping data | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-147 | Checklist không hợp lệ. | `saveRules` — checklist items must be an array | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-148 | Checklist trống, không có gì để lưu. | `saveRules` — checklist items must not be empty | PO duyệt 2026-11-12 (DEC-045) |
+| COPY-149 | Checklist này đã kết thúc. Hãy tạo Checklist mới từ kế hoạch tuần. | `saveRules` — no active checklist | DEC-038 |
+| COPY-150 | Không lưu được dữ liệu lên Supabase. | `saveErrorMessage` fallback | PO duyệt 2026-11-12 (DEC-045) |
 
 `date range is required` → `COPY-121`; `date_from must be <= date_to` → `COPY-122` (trùng nguyên văn, không cấp ID mới).
 
@@ -460,9 +460,9 @@ Hiển thị qua toast/lỗi trường. Chưa được chốt câu chữ ở tà
 
 Ghi lại để PO hoặc issue sau xử lý; **không** tự đổi hành vi.
 
-1. **Nhãn tab 2.** `DEC-030` gọi là “Checklist”; code render “Danh sách” (`COPY-32`). Doc giữ nguyên văn code. Cần một DEC để chọn: đổi nhãn code, hay sửa DEC-030.
-2. **Từ tiếng Anh lẫn trong copy.** `COPY-110` (“Ingredient đang được dùng trong…”), `COPY-84` (“Checklist đã được xóa.”), `COPY-80/81/82` (“Checklist”). Không phải lỗi chính tả — nhưng chưa có quyết định nào về việc có Việt hoá hay không.
+1. ~~**Nhãn tab 2.**~~ **Đã chốt 2026-11-12:** tab 2 mang nhãn **“Checklist”**; code đổi từ “Danh sách” sang “Checklist” theo `DEC-045` (khớp `DEC-030`).
+2. ~~**Từ tiếng Anh lẫn trong copy.**~~ **Đã chốt 2026-11-12 (`DEC-045`):** giữ **“Checklist”** là thuật ngữ tiếng Anh duy nhất; mọi thuật ngữ khác Việt hoá — `COPY-110` nay là “Nguyên liệu đang được dùng trong…”.
 3. **Copy chặn món chưa có nguyên liệu.** Screen Specification ghi câu tiếng Việt lẫn thuật ngữ (“Meal chưa có Ingredient…”). Code hiện dùng `COPY-06` thuần Việt. Doc lấy code làm chuẩn; Notion giữ làm lịch sử.
 4. **5 hay 7 danh mục.** Screen/Component Specification ghi 5; code và `02` §4 có 7 (`DEC-040`). `02` là nhà của danh mục — doc này chỉ tham chiếu.
-5. **`COPY-137…150`** chưa được PO duyệt câu chữ (Phụ lục A).
+5. ~~**`COPY-137…150`** chưa được PO duyệt.~~ **Đã duyệt 2026-11-12 (DEC-045).**
 6. **Toast 2,6 s** là hằng số hiện thực (`page.tsx:122`), chưa phải yêu cầu; nếu PO muốn khác thì thành yêu cầu mới.
