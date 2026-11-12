@@ -310,13 +310,11 @@ export default function HomePage() {
     setOtherName('');
   }
   async function completeShopping() {
-    if (!dateFrom || !dateTo) { setDateError(''); return; }
+    if (!dateFrom || !dateTo) { setDateError('Vui lòng nhập Từ ngày và Đến ngày.'); return; }
     if (dateFrom > dateTo) { setDateError('Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'); return; }
     if (!activeChecklist) return;
-    const done: Snapshot = { id: crypto.randomUUID(), from: dateFrom, to: dateTo, createdAt: new Date().toISOString(), items: structuredClone(activeChecklist) };
     try {
-      await shoppingRepository.addHistory(done);
-      await shoppingRepository.saveActiveChecklist(null);
+      const done = await shoppingRepository.completeShopping(dateFrom, dateTo, activeChecklist);
       setSnapshots((items) => [done, ...items]); setActiveChecklist(null); setDialog(''); setScreen('settings');
       flash('Bản ghi đã được lưu vào Lịch sử.', 'success');
     } catch (error) {

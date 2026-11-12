@@ -16,7 +16,7 @@ function unwrapOptional<T>(result: { data: T | null; error: { message: string } 
 }
 
 export class SupabaseShoppingRepository implements ShoppingRepository {
-  private pendingSave: Promise<void> = Promise.resolve();
+  private pendingSave: Promise<unknown> = Promise.resolve();
 
   async load(): Promise<ShoppingData> {
     const supabase = getSupabaseBrowserClient();
@@ -96,38 +96,56 @@ export class SupabaseShoppingRepository implements ShoppingRepository {
   }
 
   saveActiveChecklist(items: ChecklistItem[] | null): Promise<void> {
-    this.pendingSave = this.pendingSave.catch(() => undefined).then(() => this.persistActiveChecklist(items));
-    return this.pendingSave;
+    const result = this.pendingSave.catch(() => undefined).then(() => this.persistActiveChecklist(items));
+    this.pendingSave = result.catch(() => undefined);
+    return result;
   }
 
-  addHistory(snapshot: Snapshot): Promise<void> {
-    this.pendingSave = this.pendingSave.catch(() => undefined).then(async () => {
-      const { userId } = await this.requireUser();
-      unwrap(await getSupabaseBrowserClient().from('shopping_history').insert({
-        id: snapshot.id, user_id: userId, date_from: snapshot.from, date_to: snapshot.to,
-        created_at: snapshot.createdAt, items_snapshot: snapshot.items,
-      }));
-    });
-    return this.pendingSave;
+  /**
+   * Writes the History snapshot and closes the active Checklist in one database
+   * transaction (FR-08, DEC-038). Queued behind pending saves so an in-flight
+   * checklist write cannot resurrect the session after it has been closed.
+   */
+  completeShopping(from: string, to: string, items: ChecklistItem[]): Promise<Snapshot> {
+    const result = this.pendingSave
+      .catch(() => undefined)
+      .then(() => this.persistComplete(from, to, items));
+    this.pendingSave = result.catch(() => undefined);
+    return result;
   }
 
   deleteHistory(id: string): Promise<void> {
-    this.pendingSave = this.pendingSave.catch(() => undefined).then(async () => {
+    const result = this.pendingSave.catch(() => undefined).then(async () => {
       const { userId } = await this.requireUser();
       unwrap(await getSupabaseBrowserClient().from('shopping_history').delete().eq('user_id', userId).eq('id', id));
     });
-    return this.pendingSave;
+    this.pendingSave = result.catch(() => undefined);
+    return result;
   }
 
   save(data: ShoppingData): Promise<void> {
-    this.pendingSave = this.pendingSave.catch(() => undefined).then(() => this.persist(data));
-    return this.pendingSave;
+    const result = this.pendingSave.catch(() => undefined).then(() => this.persist(data));
+    this.pendingSave = result.catch(() => undefined);
+    return result;
   }
 
   private async persist(data: ShoppingData) {
     const supabase = getSupabaseBrowserClient();
     const { error } = await supabase.rpc('save_shopping_data', { p_data: data });
     if (error) throw new Error(error.message);
+  }
+
+  private async persistComplete(from: string, to: string, items: ChecklistItem[]): Promise<Snapshot> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.rpc('complete_shopping', {
+      p_date_from: from,
+      p_date_to: to,
+      p_items: items,
+    });
+    if (error) throw new Error(error.message);
+    const row = (Array.isArray(data) ? data[0] : data) as { id: string; created_at: string } | undefined;
+    if (!row?.id) throw new Error('Không nhận được bản ghi từ máy chủ.');
+    return { id: row.id, from, to, createdAt: row.created_at, items };
   }
 
   private async persistActiveChecklist(items: ChecklistItem[] | null) {

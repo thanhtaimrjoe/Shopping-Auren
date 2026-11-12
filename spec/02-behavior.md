@@ -84,7 +84,7 @@ Từ Checklist đang hoạt động, bấm "Hoàn tất mua sắm" → hộp tho
 Khi xác nhận, hệ thống lưu **snapshot bất biến** gồm: mọi item (đã tick và chưa tick), tên hiển thị, thông tin nhóm/món cần để hiển thị, trạng thái tick, khoảng ngày, thời điểm tạo; sau đó **kết thúc** Checklist đang hoạt động.
 
 **Toàn vẹn (DEC-038):** chỉ coi là hoàn tất khi **cả** việc lưu snapshot **và** việc đóng Checklist cùng thành công. Nếu một bước lỗi → không để lại snapshot mới, Checklist giữ nguyên để thử lại. Phiên đã kết thúc không được tạo snapshot lần thứ hai.
-**Kiểm chứng:** manual: thiếu 1 ngày → không lưu được; Từ ngày > Đến ngày → báo lỗi; còn 3 mục chưa tick vẫn lưu được và snapshot giữ đúng trạng thái; giả lập lỗi bước 2 → không có snapshot mới (AUR-03).
+**Kiểm chứng:** một lời gọi RPC `complete_shopping(date_from, date_to, items)` (migration `20261112090000`), không còn 2 request rời. *Đã chạy (harness):* thiếu ngày → `Date range is required`; Từ > Đến → `date_from must be <= date_to`; danh sách rỗng → `must not be empty`; lưu thành công → đúng 1 snapshot, Checklist đóng; gọi lại → `No active checklist`, không tạo snapshot trùng; trigger raise giữa transaction → **0 snapshot, Checklist còn nguyên** (rollback toàn bộ).
 
 ### FR-09 — Lịch sử
 Khu vực "Lịch sử" trong Cài đặt: liệt kê snapshot (mới nhất trước) với "Từ ngày", "Đến ngày", thời điểm tạo và số mục; mở từng snapshot ở chế độ **chỉ đọc** — mục đã tick hiện biểu tượng đã chọn, mục chưa tick hiện dấu X. Xoá được **từng** snapshot sau khi xác nhận "Có/Không" (BR-17); không có retention, không có xoá hàng loạt.
