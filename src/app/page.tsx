@@ -191,14 +191,24 @@ export default function HomePage() {
       flash(`Không lưu được lên Supabase: ${saveErrorMessage(raw)}`, 'error');
     });
   }
+  function placementBlockReason(day: Weekday, mealId: string): string | null {
+    if (data.plan[day].includes(mealId)) {
+      return `${day} đã có món này. Mỗi món chỉ được đặt một lần trong một ngày.`;
+    }
+    if (data.plan[day].length >= 3) {
+      return `${day} đã có tối đa 3 món. Hãy gỡ bớt một món trước khi thêm.`;
+    }
+    return null;
+  }
   function moveMeal(source: MealPlacement, destination: Weekday) {
     if (source.day === destination) return;
-    if (data.plan[destination].length >= 3) {
-      flash(`${destination} đã có tối đa 3 món ăn.`, 'info');
-      return;
-    }
     const mealId = data.plan[source.day][source.index];
     if (!mealId) return;
+    const reason = placementBlockReason(destination, mealId);
+    if (reason) {
+      flash(reason, 'info');
+      return;
+    }
     const plan = {
       ...data.plan,
       [source.day]: data.plan[source.day].filter((_, index) => index !== source.index),
@@ -217,6 +227,13 @@ export default function HomePage() {
   }
   function flash(message: string, tone: Toast['tone'] = 'info') { setToast({ message, tone }); }
   function openMealPicker(day: Weekday) { setTargetDay(day); setQuery(''); setDialog('meal-picker'); }
+  function openMealPickerFor(day: Weekday) {
+    if (data.plan[day].length >= 3) {
+      flash(`${day} đã có tối đa 3 món. Hãy gỡ bớt một món trước khi thêm.`, 'info');
+      return;
+    }
+    openMealPicker(day);
+  }
   function openProducts() {
     setDraftProducts(selectedProductIds());
     setQuery(''); setCategoryFilter('Tất cả'); setDialog('product-picker');
@@ -226,7 +243,8 @@ export default function HomePage() {
       flash('Món ăn chưa có nguyên liệu. Vui lòng thêm ít nhất một nguyên liệu trước khi đưa món ăn vào kế hoạch tuần.', 'info');
       return;
     }
-    if (data.plan[targetDay].length >= 3 || data.plan[targetDay].includes(meal.id)) return;
+    const reason = placementBlockReason(targetDay, meal.id);
+    if (reason) { flash(reason, 'info'); return; }
     const next = { ...data, plan: { ...data.plan, [targetDay]: [...data.plan[targetDay], meal.id] } };
     updateData(next); setDialog('');
   }
@@ -443,7 +461,7 @@ export default function HomePage() {
         <div className="day-grid">{weekdays.map((day) => <article className={`day-card ${dragOverDay === day ? 'drag-over' : ''}`} key={day} onDragOver={(event) => { event.preventDefault(); setDragOverDay(day); }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverDay(null); }} onDrop={(event) => { event.preventDefault(); const source = draggingPlacement; setDragOverDay(null); setDraggingPlacement(null); if (source) moveMeal(source, day); }}><header><b>{day}</b></header><div className="meal-list">{!data.plan[day].length && <p className="meal-empty"><UtensilsCrossed size={15} /><span>Chưa có món ăn</span></p>}{data.plan[day].map((id, index) => {
           const meal = data.meals.find((entry) => entry.id === id);
           return meal ? <div className={`meal-chip ${draggingPlacement?.day === day && draggingPlacement.index === index ? 'dragging' : ''}`} key={`${id}-${index}`} draggable onDragStart={(event) => { setDraggingPlacement({ day, index }); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', meal.name); }} onDragEnd={() => { setDraggingPlacement(null); setDragOverDay(null); }} title="Nhấn giữ rồi kéo sang ngày khác"><span className="meal-chip-copy"><b>{meal.name}</b><small>{meal.ingredientIds.map((ingredientId) => data.ingredients.find((ingredient) => ingredient.id === ingredientId)?.name).filter((name): name is string => Boolean(name)).join(' · ') || 'Chưa có nguyên liệu'}</small></span><button aria-label={`Gỡ ${meal.name}`} draggable={false} onClick={() => { updateData({ ...data, plan: { ...data.plan, [day]: data.plan[day].filter((_, i) => i !== index) } }); }}><X size={14} /></button></div> : null;
-        })}</div><button className="add-meal" disabled={data.plan[day].length >= 3} onClick={() => openMealPicker(day)}><Plus size={16} /><span>Thêm món ăn</span><small>{data.plan[day].length}/3</small></button></article>)}</div>
+        })}</div><button className="add-meal" onClick={() => openMealPickerFor(day)}><Plus size={16} /><span>Thêm món ăn</span><small>{data.plan[day].length}/3</small></button></article>)}</div>
         <section className="products-section"><div className="section-heading"><div><h2>Sản phẩm</h2><p>Sản phẩm cần mua trong tuần này.</p></div><button className="button secondary" onClick={openProducts}><Plus size={16} /> Chọn sản phẩm</button></div><div className="product-panel"><div className="product-panel-heading"><b>{selectedProductIds().length} sản phẩm</b><span>· được chọn cho tuần này</span></div><div className="product-chips">{selectedProductIds().map((id) => data.products.find((p) => p.id === id)).filter((p): p is Product => Boolean(p)).map((product) => <div className="product-chip" key={product.id}><ShoppingBasket size={15} /><span>{product.name}</span><button aria-label={`Bỏ ${product.name}`} onClick={() => changeProductSelection(selectedProductIds().filter((id) => id !== product.id))}><X size={14} /></button></div>)}{!selectedProductIds().length && <p className="empty-inline">Chưa có sản phẩm nào được chọn.</p>}</div></div></section>
         <div className="bottom-actions"><button className="button primary" onClick={startChecklist}>Tạo danh sách <ArrowRight size={16} /></button><button className="button secondary" onClick={() => setDialog('reset')}><RotateCcw size={15} /> Đặt lại mẫu</button></div>
       </section>}
