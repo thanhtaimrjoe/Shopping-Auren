@@ -27,7 +27,7 @@ Bằng chứng chi tiết: `_legacy/audit-2026-11-12.md` (audit 2026-11-12, read
 | AUR-05 | P1 | Không có chế độ xem theo món; TASK-022 vẫn đánh Done | FR-07, BR-05.3 | defer | DEC-041 |
 | AUR-06 | P1 | `RELEASE_READINESS_REPORT.md` khai TASK-029 Done/GO-LIVE trong khi backlog Draft 0% | — | accept | đã chuyển vào `_legacy/` |
 | AUR-07 | P2 | Bằng chứng "lưu 26 items" đúng trên prod nhưng không tái lập được từ repo | — | **fixed** (PR #13) | #1 |
-| AUR-08 | P2 | Seed migration gắn cứng UUID user production + dữ liệu cá nhân trong repo | `07` (P3) | fix | #7 |
+| AUR-08 | P2 | Seed migration gắn cứng UUID user production + dữ liệu cá nhân trong repo | `07` (P3) | **fixed** (PR #17) | #7 |
 | AUR-09 | P2 | Copy rải rác, lệch câu chữ spec cũ; product picker không disable khi chọn 0 | FR-05, FR-06 | fix | #8 |
 | AUR-10 | P2 | Chức năng "Xóa Checklist" không có trong spec cũ | BR-18 | accept | DEC-043 |
 | AUR-11 | P2 | Validation im lặng (tên toàn khoảng trắng, thiếu ngày) | BR-02 | **fixed** (PR #16) | #9 |
