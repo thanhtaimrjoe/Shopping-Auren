@@ -86,6 +86,8 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .day-card.drag-over { border-color: var(--sage); background: #F4F6F1; box-shadow: 0 0 0 2px rgba(80,95,77,.12); }
 .day-card header { display: flex; align-items: center; justify-content: space-between; min-height: 21px; font-size: 13px; }
 .day-card header span { color: var(--muted-soft); font-size: 12px; }
+.day-card header .day-meal-count { padding: 3px 8px; border-radius: 99px; color: var(--forest); background: #EEF0E9; font-size: 10px; font-weight: 700; }
+.week-day-tabs { display: none; }
 .meal-list { display: grid; gap: 5px; min-height: 50px; padding: 8px 0 4px; align-content: start; }
 .meal-empty { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; margin: 0; color: var(--muted-soft); font-size: 13px; }
 .meal-chip { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; padding: 8px 36px; border-radius: 8px; color: #4C5347; background: #EDF0E9; font-size: 13px; font-weight: 600; text-align: center; cursor: grab; user-select: none; -webkit-user-select: none; }
@@ -174,6 +176,12 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .entity-list { overflow: hidden; border: 1px solid var(--border); border-radius: 15px; background: var(--paper); }
 .entity-row { display: flex; align-items: center; gap: 11px; min-height: 66px; padding: 8px 12px; border-bottom: 1px solid #F0EFE9; }
 .entity-row:last-child { border-bottom: 0; }
+.entity-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; overflow: visible; border: 0; background: transparent; }
+.entity-grid .entity-row { min-width: 0; min-height: 86px; padding: 13px 12px 13px 15px; border: 1px solid var(--border); border-radius: 14px; background: var(--paper); }
+.entity-grid .entity-copy { padding-right: 4px; }
+.entity-grid .entity-copy b { white-space: normal; }
+.entity-grid .entity-actions { flex: 0 0 auto; }
+.entity-grid > .empty-list { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: 14px; background: var(--paper); }
 .entity-mark { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px; color: var(--sage); background: #EEF0E9; }
 .entity-copy { flex: 1; min-width: 0; }
 .entity-copy b, .entity-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -317,6 +325,7 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .page-content { padding-right: 27px; padding-left: 27px; }
   .day-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .checklist-layout { grid-template-columns: minmax(0,1fr); }
+  .entity-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 @media (max-width: 800px) {
   .app-shell { padding-left: 0; padding-top: 56px; padding-bottom: 76px; }
@@ -334,13 +343,25 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .button { min-height: 44px; padding: 0 12px; font-size: 13px; }
   .text-button { font-size: 13px; }
   .week-caption { font-size: 14px; }
+  .week-caption { display: none; }
+  .week-day-tabs { display: flex; align-items: stretch; justify-content: space-between; gap: 5px; margin: 0 0 15px; }
+  .week-day-tabs button { display: grid; justify-items: center; align-content: start; gap: 4px; flex: 1 1 0; min-width: 0; min-height: 48px; padding: 5px 2px; border: 0; border-radius: 11px; color: #343932; background: transparent; cursor: pointer; }
+  .week-day-tabs button b { font-size: 11px; font-weight: 700; }
+  .week-day-tabs button span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--muted-soft); background: #EFEEE8; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .week-day-tabs button.active { color: #fff; background: var(--forest); box-shadow: 0 3px 10px rgba(63,81,64,.16); }
+  .week-day-tabs button.active span { color: var(--forest); background: #fff; }
   .day-grid { grid-template-columns: 1fr; gap: 9px; }
+  .day-card:not(.active-day) { display: none; }
   .day-card { min-height: 112px; padding: 12px 13px 11px; }
   .day-card header { min-height: 24px; font-size: 15px; }
+  .day-card header .day-meal-count { padding: 4px 8px; font-size: 10px; }
   .meal-list { gap: 7px; min-height: 31px; padding: 8px 0 6px; }
   .meal-empty { min-height: 32px; font-size: 13px; }
   .meal-empty svg { width: 18px; height: 18px; }
-  .meal-chip { min-height: 42px; padding: 8px 42px; border-radius: 10px; font-size: 14px; }
+  .meal-chip { min-height: 48px; justify-content: flex-start; padding: 7px 38px 7px 3px; border-bottom: 1px solid #EEECE5; border-radius: 0; background: transparent; font-size: 13px; text-align: left; }
+  .meal-chip:last-child { border-bottom: 0; }
+  .meal-chip-copy b { font-size: 13px; }
+  .meal-chip-copy small { font-size: 10px; }
   .placement-dot { width: 7px; height: 7px; }
   .meal-chip > button, .product-chip button { width: 30px; height: 30px; }
   .add-meal { min-height: 44px; border-radius: 10px; font-size: 14px; }
@@ -390,6 +411,8 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .search-field { height: 48px; }
   .search-field input { font-size: 16px; }
   .entity-row { min-height: 70px; }
+  .entity-grid { grid-template-columns: minmax(0,1fr); gap: 9px; }
+  .entity-grid .entity-row { min-height: 70px; }
   .entity-mark { width: 42px; height: 42px; }
   .entity-copy b { font-size: 15px; }
   .entity-copy small { margin-top: 4px; font-size: 13px; }
@@ -407,10 +430,8 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .history-row small { font-size: 12px; }
   .history-empty b { font-size: 15px; }
   .history-empty p { font-size: 13px; }
-  .dialog-backdrop { align-items: end; padding: 0; }
-  .dialog-backdrop.dialog-backdrop-centered { align-items: center; padding: 18px; }
-  .dialog-backdrop-centered .dialog { width: min(500px,100%); max-height: min(82vh,760px); border-radius: 20px; }
-  .dialog { width: 100%; max-height: 88vh; border-radius: 20px 20px 0 0; }
+  .dialog-backdrop { place-items: center; padding: 18px; }
+  .dialog { width: min(500px,100%); max-height: min(82vh,760px); border-radius: 20px; }
   .dialog > header { min-height: 62px; padding: 0 15px; }
   .dialog > header h2 { font-size: 21px; }
   .dialog-content { padding: 14px 15px max(15px,env(safe-area-inset-bottom)); }
